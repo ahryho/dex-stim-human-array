@@ -1,0 +1,528 @@
+***
+## The data from DC with window = 50 and shift  = 5
+***
+
+### __Roadmap__
+
+Roadmap for imputed genotype data analysis:
+
+1. Subset data:
+    + MAF >= 5%
+    + filter only SNPs
+    + exclude MHC region
+2. LD pruning based on pairwise correlation with the following options:
+    + a window of 50 SNPs: to calculate LD between each pair of SNPs
+    + remove one of a pair if the LD is greater than 0.2
+    + short the window 5 SNPs forward
+3. MDS / PCA in PLINK
+4. Analysis in R
+
+### __Files location__
+
+The raw imputed data from Darina Czamara are stored at `/binder/common/genotypes/qc_imputations/DexStim_Mar2015/bggt`
+
+The workspace directory is: `/binder/mgp/workspace/2020_DexStim_Array_Human/snps/imputed_qc/from_darina`
+
+### __Subset data__
+
+```{sh eval = F}
+plink --bfile qc/dex_imputed_bggt_all_qc --maf 0.05 --exclude range ../../remove_prune.txt --snps-only --make-bed --out qc/subset/dex_imputed_bggt_all_qc
+```
+
+__Log file:__
+
+```{yaml}
+Options in effect:
+  --bfile qc/dex_imputed_bggt_all_qc
+  --exclude range ../../remove_prune.txt
+  --maf 0.05
+  --make-bed
+  --out qc/subset/dex_imputed_bggt_all_qc
+  --snps-only
+
+64168 MB RAM detected; reserving 32084 MB for main workspace.
+5229301 out of 5617712 variants loaded from .bim file.
+293 people (0 males, 0 females, 293 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to qc/subset/dex_imputed_bggt_all_qc.nosex .
+--exclude range: 30164 variants excluded.
+--exclude range: 5199137 variants remaining.
+Using 1 thread (no multithreaded calculations invoked).
+Before main variant filters, 293 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+Total genotyping rate is 0.99537.
+1262904 variants removed due to minor allele threshold(s)
+(--maf/--max-maf/--mac/--max-mac).
+3936233 variants and 293 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to qc/subset/dex_imputed_bggt_all_qc.bed +
+qc/subset/dex_imputed_bggt_all_qc.bim + qc/subset/dex_imputed_bggt_all_qc.fam
+... done.
+```
+
+### __LD Pruning__
+
+1. Run LD pruning and exclude te set of SNOs licated in the MHC region:
+
+```{sh, eval = F}
+plink --bfile qc/subset/dex_imputed_bggt_all_qc --indep-pairwise 50 5  0.2 --out ld_50_5/ld/dex_geno_imputed_ld
+```
+
+__Log file:__
+
+```{yaml}
+Options in effect:
+  --bfile qc/subset/dex_imputed_bggt_all_qc
+  --indep-pairwise 50 5 0.2
+  --out ld_50_5/ld/dex_geno_imputed_ld
+
+64168 MB RAM detected; reserving 32084 MB for main workspace.
+3936233 variants loaded from .bim file.
+293 people (0 males, 0 females, 293 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to ld_50_5/ld/dex_geno_imputed_ld.nosex .
+Using 1 thread (no multithreaded calculations invoked).
+Before main variant filters, 293 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+Total genotyping rate is 0.99561.
+3936233 variants and 293 people pass filters and QC.
+Note: No phenotypes present.
+Pruned 293557 variants from chromosome 1, leaving 12625.
+Pruned 328431 variants from chromosome 2, leaving 13198.
+Pruned 279668 variants from chromosome 3, leaving 11550.
+Pruned 282014 variants from chromosome 4, leaving 10891.
+Pruned 257390 variants from chromosome 5, leaving 10574.
+Pruned 247684 variants from chromosome 6, leaving 10478.
+Pruned 219982 variants from chromosome 7, leaving 9199.
+Pruned 210668 variants from chromosome 8, leaving 8517.
+Pruned 164505 variants from chromosome 9, leaving 7297.
+Pruned 205350 variants from chromosome 10, leaving 8798.
+Pruned 200231 variants from chromosome 11, leaving 8696.
+Pruned 187115 variants from chromosome 12, leaving 8170.
+Pruned 150378 variants from chromosome 13, leaving 6385.
+Pruned 126560 variants from chromosome 14, leaving 5609.
+Pruned 100292 variants from chromosome 15, leaving 4642.
+Pruned 96525 variants from chromosome 16, leaving 4591.
+Pruned 84244 variants from chromosome 17, leaving 4252.
+Pruned 107175 variants from chromosome 18, leaving 4877.
+Pruned 64048 variants from chromosome 19, leaving 3334.
+Pruned 73451 variants from chromosome 20, leaving 3598.
+Pruned 52358 variants from chromosome 21, leaving 2395.
+Pruned 42666 variants from chromosome 22, leaving 2265.
+Pruning complete.  3774292 of 3936233 variants removed.
+Marker lists written to ld_50_5/ld/dex_geno_imputed_ld.prune.in and
+ld_50_5/ld/dex_geno_imputed_ld.prune.out .
+```
+
+2. Generate genome file for MDS
+
+```{sh, eval = F}
+plink --bfile qc/subset/dex_imputed_bggt_all_qc --extract ld_50_5/ld/dex_geno_imputed_ld.prune.in --make-bed --out ld_50_5/pca/ld_extracted/dex_geno_imputed_ld
+```
+
+__Log file:__
+
+```{yaml}
+Options in effect:
+  --bfile qc/subset/dex_imputed_bggt_all_qc
+  --extract ld_50_5/ld/dex_geno_imputed_ld.prune.in
+  --make-bed
+  --out ld_50_5/pca/ld_extracted/dex_geno_imputed_ld
+
+64168 MB RAM detected; reserving 32084 MB for main workspace.
+3936233 variants loaded from .bim file.
+293 people (0 males, 0 females, 293 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to ld_50_5/pca/ld_extracted/dex_geno_imputed_ld.nosex
+.
+--extract: 161941 variants remaining.
+Using 1 thread (no multithreaded calculations invoked).
+Before main variant filters, 293 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+Total genotyping rate is 0.995116.
+161941 variants and 293 people pass filters and QC.
+Note: No phenotypes present.
+--make-bed to ld_50_5/pca/ld_extracted/dex_geno_imputed_ld.bed +
+ld_50_5/pca/ld_extracted/dex_geno_imputed_ld.bim +
+ld_50_5/pca/ld_extracted/dex_geno_imputed_ld.fam ... done.
+```
+
+### __MDS with PLINK__
+
+```{sh, eval = F}
+plink --bfile ld_50_5/pca/ld_extracted/dex_geno_imputed_ld  --cluster --mds-plot 293 'eigvals' 'eigendecomp' --out ld_50_5/pca/mds/dex_geno_imputed_ld_mds
+```
+
+__Log file:__
+
+```{yaml}
+Options in effect:
+  --bfile ld_50_5/pca/ld_extracted/dex_geno_imputed_ld
+  --cluster
+  --mds-plot 293 eigvals eigendecomp
+  --out ld_50_5/pca/mds/dex_geno_imputed_ld_mds
+
+64168 MB RAM detected; reserving 32084 MB for main workspace.
+161941 variants loaded from .bim file.
+293 people (0 males, 0 females, 293 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to ld_50_5/pca/mds/dex_geno_imputed_ld_mds.nosex .
+Using up to 31 threads (change this with --threads).
+Before main variant filters, 293 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+Total genotyping rate is 0.995116.
+161941 variants and 293 people pass filters and QC.
+Note: No phenotypes present.
+Distance matrix calculation complete.
+Clustering... done.
+Cluster solution written to ld_50_5/pca/mds/dex_geno_imputed_ld_mds.cluster1 ,
+ld_50_5/pca/mds/dex_geno_imputed_ld_mds.cluster2 , and
+ld_50_5/pca/mds/dex_geno_imputed_ld_mds.cluster3 .
+Performing multidimensional scaling analysis (eigendecomposition algorithm,
+293 dimensions)... done.
+MDS solution written to ld_50_5/pca/mds/dex_geno_imputed_ld_mds.mds
+(eigenvalues in ld_50_5/pca/mds/dex_geno_imputed_ld_mds.mds.eigvals ).
+```
+
+<!-- ### Analysis in R -->
+
+
+```{sh, include = F, eval = F}
+scp -C -r -o ProxyCommand="ssh cluser@biocomp.psych.mpg.de nc slurmgate 22" ahryhorzhevska@slurmgate:/binder/mgp/workspace/2020_DexStim_Array_Human/snps/imputed_qc/from_darina/ld_50_5 .
+```
+
+```{r, include = F, eval = T}
+eigenvec.fn  <- "~/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_darina/ld_50_5/pca/mds/dex_geno_imputed_ld_mds.mds"
+eigenval.fn  <- "~/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_darina/ld_50_5/pca/mds/dex_geno_imputed_ld_mds.mds.eigvals"
+
+eigenvec     <- fread(eigenvec.fn)
+eigenval     <- fread(eigenval.fn)
+```
+
+### __Eigenvalues analysis__ {.tabset .tabset-fade .tabset-pills}
+
+#### Table
+
+```{r out.width="80%"}
+pve <- data.frame(PC = 1:nrow(eigenval), eigenval, pve = eigenval/sum(eigenval) * 100)
+pve[["CumSum"]] <- cumsum(pve$V1.1)
+colnames(pve)   <- c("PC", "Eigenvalue", "pve", "CumSum (%)")
+pve
+```
+
+#### Plot
+```{r out.width="80%", fig.cap = "Percentage of variance explained by eigenvalues"}
+ggplot(pve[1:30,], aes(PC, `pve`)) +
+  geom_bar(stat = "identity", width = 0.7, fill = "#00688B") +
+  ylab("Percentage variance explained") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "none")
+```
+
+
+```{r, include = F, eval = T}
+# Load pheno data
+pheno.methyl.fn <- "~/bio/datasets/pheno/pheno_full_for_kimono.csv"
+pheno           <- fread(pheno.methyl.fn)
+pheno$Status    <- as.factor(as.character(pheno$Status))
+pheno$Sex       <- as.factor(pheno$Sex)
+
+levels(pheno$Status) <- c("Cases", "Controls")
+levels(pheno$Sex)    <- c("Male", "Female")
+# pheno           <- pheno[!is.na(DNAm_ID),]
+# eigenval        <- eigenval[eigenvec$FID %in% pheno$DNA_ID, ]
+eigenvec        <- eigenvec[eigenvec$FID %in% pheno$DNA_ID, ]
+```
+
+### __Eigenvectors analysis__ {.tabset .tabset-fade .tabset-pills}
+
+#### PLINK
+
+```{r out.width="80%", fig.cap = "Plink MDS Inviduals Map"}
+ggplot(data = eigenvec, aes(C1, C2, col = as.factor(SOL))) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  labs(col = "Land") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "none")
+```
+
+#### Clustering {.tabset .tabset-fade .tabset-pills}
+
+##### K-means
+
+```{r out.width="80%", include = F, eval = T}
+kmeans.mdl <- kmeans(eigenvec[, -c(1:3)], centers = 2, nstart = 100)
+clusters   <- kmeans.mdl$cluster
+pca        <- cbind(eigenvec,  clusters)
+```
+
+
+```{r out.width="80%", include = T, eval = T}
+ggplot(data = pca, aes(C1, C2, col = as.factor(clusters))) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "none")
+
+```
+
+##### Hierarhical {.tabset .tabset-fade .tabset-pills}
+
+###### Dendogram
+
+```{r out.width="80%", fig.cap = "Hierarhcical Clustering. Cluter Dendogram", include = T, eval = T}
+d      <- dist(eigenvec[, -c(1:3)], method = "euclidean")
+hc.mdl <- hclust(d, method = "complete" )
+plot(hc.mdl, ylab = "Height", xlab = " ", main = " ")
+```
+
+###### Map
+
+```{r include = F, eval = T}
+sub.grp  <- as.factor(cutree(hc.mdl, k = 3)) # length(kmeans.mdl$size))
+pca      <- left_join(eigenvec, pheno[Dex == 1, .(DNA_ID, Status, SNP_Chip, Sex)], by = c("FID" = "DNA_ID"))
+```
+
+```{r out.width="80%", fig.cap = "Hierarchical clustering results by obtained clusters", include = T, eval = T}
+ggplot(data = pca, aes(C1, C2, col = sub.grp)) + # as.factor(Status))) + # sub_grp)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "bottom")
+```
+
+```{r include = F, eval = T, include = F, eval = F}
+sub.grp  <- as.factor(cutree(hc.mdl, k = 2)) # length(kmeans.mdl$size))
+pca      <- left_join(eigenvec, pheno[Dex == 1, .(DNA_ID, Status, SNP_Chip, Sex)], by = c("FID" = "DNA_ID"))
+```
+
+```{r fig.cap = "Hierarchical clustering results by obtained clusters", include = F, eval = F}
+ggplot(data = pca, aes(C1, C2, col = sub.grp)) + # as.factor(Status))) + # sub_grp)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "bottom")
+```
+
+<!-- ### Additional plots {.tabset .tabset-fade .tabset-pills} -->
+
+```{r include = F, eval = T, include = F, eval = T}
+pca      <- left_join(eigenvec, pheno[Dex == 1, .(DNA_ID, Status, SNP_Chip, Sex)], by = c("FID" = "DNA_ID"))
+```
+
+#### by Chip
+
+```{r out.width="80%", fig.cap = "MDS results by chip"}
+ggplot(data = pca, aes(C1, C2, col = SNP_Chip)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "bottom")
+```
+
+#### by MDD Status 
+
+```{r out.width="80%", fig.cap = "MDS results by status"}
+ggplot(data = pca, aes(C1, C2, col = Status)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "bottom") +
+  labs(fill = "MDD Status")
+```
+
+#### by Sex
+
+```{r out.width="80%"}
+ggplot(data = pca, aes(C1, C2, col = Sex)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "bottom") 
+```
+
+#### Ethnicity information
+
+
+```{r out.width="80%", include = T, eval = T}
+library(haven)
+etnicity.fn <- "/Users/anastasiia_hry/bio/datasets/pheno/MAD_GSK_Phenotype_20191009_for_ah_02072021.sav"
+etnicity    <- read_sav(etnicity.fn)
+
+etnicity    <- etnicity[etnicity$NID %in% pheno$DNA_ID, ]
+pheno       <- left_join(pheno, etnicity[, c("NID", "S_Land")], by = c("DNA_ID" = "NID"))
+eigenvec    <- left_join(eigenvec, etnicity[, c("NID", "S_Land")], by = c("FID" = "NID"))
+
+na.id <- pheno[!(DNA_ID %in% etnicity$NID), "DNA_ID"]
+na.id <- na.id[!duplicated(na.id$DNA_ID), ]
+```
+
+```{r include = F, eval = F}
+write.csv2(na.id,
+           "~/bio/datasets/pheno/missed_etnicity_ids.csv",
+           row.names = F,
+           quote = F)
+```
+
+```{r out.width="80%", fig.cap = "MDS result with enthnicity infromation"}
+ggplot(data = eigenvec, aes(C1, C2, color = S_Land)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 1, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  labs(col = "Land") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "right")
+```
+
+### __Outliers detedtion__ {.tabset .tabset-fade .tabset-pills}
+
+#### 4 SD 
+
+__List of samples which are located 4 mean distances far from the mean of PC1 and PC2__
+
+```{r out.width="80%", include = T, eval = T}
+eps     <- 0.01
+pc.mean <- mean(eigenvec$C1)
+pc.std  <- sd(eigenvec$C1)
+cut.off <- 4 * pc.std
+lower   <- pc.mean - cut.off + eps
+upper   <- pc.mean + cut.off - eps
+
+outliers <- eigenvec[C1 < lower | C1 > upper, FID ]
+outliers
+```
+
+```{r out.width="80%", fig.cap = "MDS results with labeled outliers"}
+ggplot(data = pca, aes(C1, C2, col = Status)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_label_repel(data = pca[pca$FID %in% outliers, ],
+                   aes(label = outliers, size = NULL)) + 
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "bottom")
+```
+
+#### 5 SD
+
+__List of samples which are located 5 mean distances far from the mean of PC1 and PC2__
+
+```{r out.width="80%", include = T, eval = T}
+eps     <- 0.01
+pc.mean <- mean(eigenvec$C1)
+pc.std  <- sd(eigenvec$C1)
+cut.off <- 5 * pc.std
+lower   <- pc.mean - cut.off + eps
+upper   <- pc.mean + cut.off - eps
+
+outliers <- eigenvec[C1 < lower | C1 > upper, FID ]
+outliers
+```
+
+```{r out.width="80%", fig.cap = "MDS results with labeled outliers"}
+ggplot(data = pca, aes(C1, C2, col = Status)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_label_repel(data = pca[pca$FID %in% outliers, ],
+                   aes(label = outliers, size = NULL)) + 
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "bottom")
+```
+
+#### 6 SD
+
+__List of samples which are located 6 mean distances far from the mean of PC1 and PC2__
+
+```{r out.width="80%", include = T, eval = T}
+eps     <- 0.01
+pc.mean <- mean(eigenvec$C1)
+pc.std  <- sd(eigenvec$C1)
+cut.off <- 6 * pc.std
+lower   <- pc.mean - cut.off + eps
+upper   <- pc.mean + cut.off - eps
+
+outliers <- eigenvec[C1 < lower | C1 > upper, FID ]
+outliers
+```
+
+```{r out.width="80%", fig.cap = "MDS results with labeled outliers"}
+ggplot(data = pca, aes(C1, C2, col = Status)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_label_repel(data = pca[pca$FID %in% outliers, ],
+                   aes(label = outliers, size = NULL)) + 
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "bottom")
+```
+
+<!-- ```{r include = F, eval = F} -->
+<!-- # Export individuals for dex stim inegrative analysis -->
+<!--  -->
+<!--  sample.ids <- (pheno[!(DNA_ID %in% outliers),][, .(Sample_ID, DNA_ID, RNA_ID, DNAm_ID)] ) -->
+<!--   -->
+<!--  write.csv2(sample.ids, -->
+<!--              file = "~/bio/code/mpip/dex-stim-human-array/data/sample_ids_for_analysis.csv", -->
+<!--              row.names = F, quote = F) -->
+<!--  ``` -->

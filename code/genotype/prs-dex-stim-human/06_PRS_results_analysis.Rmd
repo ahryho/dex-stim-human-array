@@ -1,0 +1,180 @@
+---
+title: "PRS Analysis"
+author: "Anastasiia"
+date: "6/22/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(data.table)
+library(dplyr)
+library(corrplot)
+
+prs.res.dir <- "~/bio/datasets/PRS/"
+
+cohorts.list <- c("MARS_DexStim")
+traits.list  <- list.dirs(path = prs.res.dir, full.names = F, recursive = F)
+# traits.list
+
+result.tbl <- data.frame(FID = character(),
+                         IID = character(),
+                         score_avg = numeric(),
+                         Cohort = character(),
+                         Trait = character())
+
+# Go through all cohorts and traits
+for (cohort in cohorts.list){
+  for (trait in traits.list){
+    print(paste(cohort, trait))
+    prs.sumstat.tmp <- fread(paste0(prs.res.dir, trait, "/", cohort, "_", trait, "_individual_rs_plink_out_no_flip.sscore"), 
+                                header = TRUE)
+    prs.sumstat.tmp <- cbind(prs.sumstat.tmp[, c("#FID", "IID", "SCORE1_AVG")], rep(cohort, nrow(prs.sumstat.tmp)), rep(trait, nrow(prs.sumstat.tmp)))
+    colnames(prs.sumstat.tmp) <- colnames(result.tbl)
+    result.tbl <- rbind(result.tbl, prs.sumstat.tmp)
+  }
+}
+
+# Plot results
+ggplot(result.tbl, aes(x = Trait, y = score_avg)) +
+  geom_boxplot(alpha = 0.2, aes(color = Trait)) +
+  theme(legend.position = "none", 
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10),
+        axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(x = "Trait", y = "PRS")
+```
+
+```{r}
+pheno.fn  <- "~/bio/datasets/pheno/pheno_full_for_kimono.csv"
+pheno     <- read.csv2(pheno.fn, na.strings = c("#N/A", "NA")) 
+pheno     <- pheno[!is.na(pheno$DNAm_ID), ] %>% setDT()
+
+pheno$Status  <- as.factor(pheno$Status)
+pheno$Sex     <- as.factor(pheno$Sex)
+levels(pheno$Sex) <- c("Male", "Female")
+
+pheno$DNAm_SV1 <- as.numeric(pheno$DNAm_SV1)
+pheno$DNAm_SV2 <- as.numeric(pheno$DNAm_SV2)
+pheno$DNAm_SV3 <- as.numeric(pheno$DNAm_SV3)
+
+pheno$Status         <- as.factor(pheno$Status)
+levels(pheno$Status) <- c("Controls", "MDD")
+
+prs.df    <- inner_join(result.tbl, pheno[Dex == 1, ], by = c("FID" = "DNA_ID"))
+```
+
+```{r}
+# Plot results
+ggplot(prs.df, aes(x = Trait, y = score_avg, fill = Status)) +
+  geom_boxplot(alpha = 0.2, aes(color = Status)) +
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10),
+        axis.text.x = element_text(angle = 45, hjust = 1)) + 
+  labs(x = "Trait", y = "PRS")
+```
+```{r}
+selected.traits <- c("ADHD", "insomnia", "MDD", "resilience", "SESA")
+prs.selected.df <- prs.df[Trait %in% selected.traits,]
+ggplot(prs.selected.df, aes(x = Trait, y = score_avg)) +
+  geom_boxplot(alpha = 0.2, aes(color = Status)) +
+  facet_wrap(~ Trait, ncol = length(selected.traits), scales = "free") +
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 6),
+        axis.title.x = element_blank(), 
+        axis.text.x = element_blank()) + 
+  labs(x = "Trait", y = "PRS")
+```
+
+```{r}
+selected.traits <- c("ADHD", "insomnia", "MDD", "resilience", "SESA")
+prs.selected.df <- prs.df[Trait %in% selected.traits,]
+ggplot(prs.selected.df, aes(x = Trait, y = score_avg)) +
+  geom_boxplot(alpha = 0.2, aes(color = Sex)) +
+  facet_wrap(~ Trait, ncol = length(selected.traits), scales = "free") +
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 6),
+        axis.title.x = element_blank(), 
+        axis.text.x = element_blank()) + 
+  labs(x = "Trait", y = "PRS")
+```
+
+# Relationship of the selected PRS score with available and derived covariates. 
+
+```{r}
+sv.gex   <- prs.selected.df[, c("V1", "V2", "V3", "V4", "V5")]
+sv.meth  <- prs.selected.df[, c("DNAm_SV1", "DNAm_SV2", "DNAm_SV3")]
+
+prs.cor.df <- dcast(prs.selected.df[, c("FID", "score_avg", "Trait")], FID ~ Trait, value.var = "score_avg") %>% dplyr::select(-FID)
+
+tmp.df <- data.frame(gex = sv.gex, sv.meth, 
+                     Status = as.numeric(prs.selected.df$Status), Sex = as.numeric(prs.selected.df$Sex), BMI = as.numeric(prs.selected.df$BMI_D1), 
+                     Age = prs.selected.df$Age, DNAm_Age = prs.selected.df$DNAm_Age, SmokingScore = prs.selected.df$DNAm_SmokingScore, prs.cor.df) %>% 
+  na.omit() %>% 
+  scale()
+
+cor.mtrx <- cor(tmp.df)
+cor.mtrx.plt <- cor.mtrx[15:nrow(cor.mtrx), 1:14]
+corrplot(cor.mtrx.plt, method = "ellipse")
+```
+# Logistic regression to test the case-control differences in polygenic score
+
+```{r}
+colnames(prs.selected.df)[colnames(prs.selected.df) == "score_avg"] <- "PRS"
+levels(prs.selected.df$Status) <- c("0", "1")
+prs.selected.df$Status <- as.numeric(as.character(factor(prs.selected.df$Status)))
+```
+
+```{r}
+prs.mdd.df <- prs.selected.df[Trait == "MDD"]
+glmm <- glm(Status ~ PRS, family = "binomial", data = prs.mdd.df)
+# summary(glmm)
+anova(lmm)
+```
+
+```{r}
+prs.adhd.df <- prs.selected.df[Trait == "ADHD"]
+glmm <- glm(Status ~ PRS, family = "binomial", data = prs.adhd.df)
+summary(glmm)
+# anova(glmm)
+```
+
+
+```{r}
+prs.insomnia.df <- prs.selected.df[Trait == "insomnia"]
+glmm <- glm(Status ~ PRS, family = "binomial", data = prs.insomnia.df)
+summary(glmm)
+# anova(glmm)
+```
+
+```{r}
+prs.sesa.df <- prs.selected.df[Trait == "SESA"]
+glmm <- glm(Status ~ PRS, family = "binomial", data = prs.sesa.df)
+summary(glmm)
+# anova(glmm)
+```
+
+```{r}
+prs.resilience.df <- prs.selected.df[Trait == "resilience"]
+glmm <- glm(Status ~ PRS, family = "binomial", data = prs.resilience.df)
+summary(glmm)
+# anova(glmm)
+```

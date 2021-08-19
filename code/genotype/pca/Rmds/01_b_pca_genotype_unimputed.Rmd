@@ -1,0 +1,387 @@
+---
+title: "PCA Genotype Analysis"
+author: "Anastasiia"
+output: 
+  html_document:
+    toc: TRUE
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+options(digits = 4, width = 100, stringsAsFactors = T)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 100),
+                      tidy=TRUE,
+                      fig.pos = "H",
+                      dpi = 600,
+                      warning = FALSE, 
+                      message = FALSE, 
+                      cache = F, 
+                      cache.lazy = FALSE)
+```
+
+```{r}
+library(ggplot2)
+library(tidyverse)
+library(plyr)
+library(data.table)
+library(viridis)
+```
+
+Before running MDS/PCA, LD pruning was done in PLINK based on pairwise correlation with the following options:
+
+- a window of 50 SNPs: to calculate LD between each pair of SNPs 
+
+- remove one of a pair if the LD is greater than 0.2
+
+- short the window 5 SNPs forward
+
+Unimputed QCed SNP data for the dex samples are located:
+
+```
+/binder/common/genotypes/raw_genotypes/genotypes_DexStim/610K/02_Merge/610k_Dex_Batch1_Batch2_QC
+```
+
+```
+/binder/common/genotypes/raw_genotypes/genotypes_DexStim/OmniExpress/02_Merge/OmniExpress_Dex_Batch1_Batch2_Batch3_Batch4_QC
+```
+
+
+### Merge 610K and Omnni data
+
+Workspace folder with data: ```/binder/mgp/workspace/2020_DexStim_Array_Human/snps/unimputed_qc```
+
+```{sh include = T, eval = F}
+cd /binder/mgp/workspace/2020_DexStim_Array_Human/snps/unimputed_qc
+plink --bfile 610K/610k_Dex_Batch1_Batch2_QC --bmerge OmniExpress/OmniExpress_Dex_Batch1_Batch2_Batch3_Batch4_QC --make-bed --out merged/610K_OmniExpress_QC
+```
+
+Output:
+
+```
+Merged fileset written to merged/610K_OmniExpress_QC-merge.bed +
+merged/610K_OmniExpress_QC-merge.bim + merged/610K_OmniExpress_QC-merge.fam .
+782538 variants loaded from .bim file.
+301 people (141 males, 53 females, 107 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to merged/610K_OmniExpress_QC.nosex .
+26 phenotype values loaded from .fam.
+Using 1 thread (no multithreaded calculations invoked).
+Before main variant filters, 301 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+Warning: 17 het. haploid genotypes present (see merged/610K_OmniExpress_QC.hh
+); many commands treat these as missing.
+Warning: Nonmissing nonmale Y chromosome genotype(s) present; many commands
+treat these as missing.
+Total genotyping rate is 0.663868.
+782538 variants and 301 people pass filters and QC.
+Among remaining phenotypes, 9 are cases and 17 are controls.  (275 phenotypes
+are missing.)
+--make-bed to merged/610K_OmniExpress_QC.bed + merged/610K_OmniExpress_QC.bim +
+merged/610K_OmniExpress_QC.fam ... done.
+```
+
+### QC of merged data
+
+```{sh include = T, eval = F}
+plink --bfile merged/610K_OmniExpress_QC --geno 0.02 --hwe 1e-3 --maf 0.1  --make-bed —-out qc/dex_geno_unimputed_qc
+```
+
+Output:
+
+```
+64168 MB RAM detected; reserving 32084 MB for main workspace.
+782538 variants loaded from .bim file.
+301 people (141 males, 53 females, 107 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to qc/dex_geno_unimputed_qc.nosex .
+26 phenotype values loaded from .fam.
+Using 1 thread (no multithreaded calculations invoked).
+Before main variant filters, 301 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+Warning: 17 het. haploid genotypes present (see qc/dex_geno_unimputed_qc.hh );
+many commands treat these as missing.
+Warning: Nonmissing nonmale Y chromosome genotype(s) present; many commands
+treat these as missing.
+Total genotyping rate is 0.663868.
+513297 variants removed due to missing genotype data (--geno).
+--hwe: 42 variants removed due to Hardy-Weinberg exact test.
+29899 variants removed due to minor allele threshold(s)
+(--maf/--max-maf/--mac/--max-mac).
+239300 variants and 301 people pass filters and QC.
+Among remaining phenotypes, 9 are cases and 17 are controls.  (275 phenotypes
+are missing.)
+```
+
+### LD Pruning
+
+
+```{sh include = T, eval = F}
+scp -C -r -o ProxyCommand="ssh cluser@biocomp.psych.mpg.de nc slurmgate 22" ~/bio/code/mpip/dex-stim-human-array/data/snps/remove_prune.txt ahryhorzhevska@slurmgate:/binder/mgp/workspace/2020_DexStim_Array_Human/snps/
+```
+
+```{sh include = T, eval = F}
+plink --bfile qc/dex_geno_unimputed_qc --exclude range ../remove_prune.txt --indep-pairwise 50 5  0.2 --out ld/dex_geno_unimputed_ld
+```
+Output:
+
+```
+
+64168 MB RAM detected; reserving 32084 MB for main workspace.
+239300 variants loaded from .bim file.
+301 people (141 males, 53 females, 107 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to ld/dex_geno_unimputed_ld.nosex .
+26 phenotype values loaded from .fam.
+--exclude range: 2304 variants excluded.
+--exclude range: 236996 variants remaining.
+Using 1 thread (no multithreaded calculations invoked).
+Before main variant filters, 301 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+Total genotyping rate is 0.999222.
+236996 variants and 301 people pass filters and QC.
+Among remaining phenotypes, 9 are cases and 17 are controls.  (275 phenotypes
+are missing.)
+Pruned 13482 variants from chromosome 1, leaving 5502.
+Pruned 13972 variants from chromosome 2, leaving 5265.
+Pruned 11676 variants from chromosome 3, leaving 4457.
+Pruned 9679 variants from chromosome 4, leaving 4084.
+Pruned 10384 variants from chromosome 5, leaving 4204.
+Pruned 10466 variants from chromosome 6, leaving 3986.
+Pruned 9278 variants from chromosome 7, leaving 3683.
+Pruned 9624 variants from chromosome 8, leaving 3342.
+Pruned 8764 variants from chromosome 9, leaving 3309.
+Pruned 9235 variants from chromosome 10, leaving 3633.
+Pruned 8941 variants from chromosome 11, leaving 3314.
+Pruned 8484 variants from chromosome 12, leaving 3434.
+Pruned 6265 variants from chromosome 13, leaving 2531.
+Pruned 5666 variants from chromosome 14, leaving 2303.
+Pruned 5162 variants from chromosome 15, leaving 2201.
+Pruned 5300 variants from chromosome 16, leaving 2409.
+Pruned 4494 variants from chromosome 17, leaving 2312.
+Pruned 5081 variants from chromosome 18, leaving 2280.
+Pruned 3048 variants from chromosome 19, leaving 1803.
+Pruned 4339 variants from chromosome 20, leaving 2039.
+Pruned 2666 variants from chromosome 21, leaving 1155.
+Pruned 2507 variants from chromosome 22, leaving 1237.
+Pruning complete.  168513 of 236996 variants removed.
+Marker lists written to ld/dex_geno_unimputed_ld.prune.in and
+ld/dex_geno_unimputed_ld.prune.out .
+```
+
+```{sh include = T, eval = F}
+plink --bfile qc/dex_geno_unimputed_qc --extract ld/dex_geno_unimputed_ld.prune.in --genome --min 0.0625 --make-bed --out pca/ld_extracted/dex_geno_unimputed_ld
+```
+
+Output:
+```
+64168 MB RAM detected; reserving 32084 MB for main workspace.
+239300 variants loaded from .bim file.
+301 people (141 males, 53 females, 107 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to pca/ld_extracted/dex_geno_unimputed_ld.nosex .
+26 phenotype values loaded from .fam.
+--extract: 68483 variants remaining.
+Using up to 31 threads (change this with --threads).
+Before main variant filters, 301 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+Total genotyping rate is 0.999235.
+68483 variants and 301 people pass filters and QC.
+Among remaining phenotypes, 9 are cases and 17 are controls.  (275 phenotypes
+are missing.)
+--make-bed to pca/ld_extracted/dex_geno_unimputed_ld.bed +
+pca/ld_extracted/dex_geno_unimputed_ld.bim +
+pca/ld_extracted/dex_geno_unimputed_ld.fam ... done.
+IBD calculations complete.
+Finished writing pca/ld_extracted/dex_geno_unimputed_ld.genome .
+```
+
+### MDS with plink
+
+<!-- ```{sh include = T, eval = F} -->
+<!-- plink --bfile qc/dex_geno_unimputed_qc --extract ld/dex_geno_unimputed_ld.prune.in --read-genome pca/ld_extracted/dex_geno_unimputed_ld  --cluster --mds-plot 20 'eigvals' 'eigendecomp' --pca --out pca/mds/dex_geno_unimputed_ldpruned_mds -->
+<!-- ``` -->
+
+```{sh include = T, eval = F}
+plink --bfile pca/ld_extracted/dex_geno_unimputed_ld  --cluster --mds-plot 20 'eigvals' 'eigendecomp' --pca --out pca/mds/dex_geno_unimputed_ld_mds
+```
+
+Output:
+
+```
+64168 MB RAM detected; reserving 32084 MB for main workspace.
+68483 variants loaded from .bim file.
+301 people (141 males, 53 females, 107 ambiguous) loaded from .fam.
+Ambiguous sex IDs written to pca/mds/dex_geno_unimputed_ld_mds.nosex .
+26 phenotype values loaded from .fam.
+Using up to 31 threads (change this with --threads).
+Before main variant filters, 301 founders and 0 nonfounders present.
+Calculating allele frequencies... done.
+Total genotyping rate is 0.999235.
+68483 variants and 301 people pass filters and QC.
+Among remaining phenotypes, 9 are cases and 17 are controls.  (275 phenotypes
+are missing.)
+Relationship matrix calculation complete.
+--pca: Results saved to pca/mds/dex_geno_unimputed_ld_mds.eigenval and
+pca/mds/dex_geno_unimputed_ld_mds.eigenvec .
+Distance matrix calculation complete.
+Clustering... done.
+Cluster solution written to pca/mds/dex_geno_unimputed_ld_mds.cluster1 ,
+pca/mds/dex_geno_unimputed_ld_mds.cluster2 , and
+pca/mds/dex_geno_unimputed_ld_mds.cluster3 .
+Performing multidimensional scaling analysis (eigendecomposition algorithm,
+20 dimensions)... done.
+MDS solution written to pca/mds/dex_geno_unimputed_ld_mds.mds (eigenvalues in
+pca/mds/dex_geno_unimputed_ld_mds.mds.eigvals ).
+```
+
+### MDS analysis
+
+```{sh include = T, eval = F}
+cd ~/bio/workspace/dex/dex-genotype/pca/
+scp -C -r -o ProxyCommand="ssh cluser@biocomp.psych.mpg.de nc slurmgate 22" ahryhorzhevska@slurmgate:/binder/mgp/workspace/2020_DexStim_Array_Human/snps/unimputed_qc/ .
+```
+
+```{r}
+eigenvec.fn  <- "~/bio/workspace/dex/dex-genotype/pca/unimputed_qc/pca/mds/dex_geno_unimputed_ld_mds.mds"
+eigenval.fn  <- "~/bio/workspace/dex/dex-genotype/pca/unimputed_qc/pca/mds/dex_geno_unimputed_ld_mds.mds.eigvals"
+
+eigenvec     <- fread(eigenvec.fn)
+eigenval     <- fread(eigenval.fn)
+```
+
+#### Eigenvalues: % of variance
+
+```{r}
+pve <- data.frame(PC = 1:nrow(eigenval), pve = eigenval/sum(eigenval) * 100)
+names(pve)[2] <- "pve" 
+
+ggplot(pve[1:30,], aes(PC, pve)) + 
+  geom_bar(stat = "identity") + 
+  ylab("Percentage variance explained") + 
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "none")
+```
+
+#### Take only individuals who are in the Dex Stim Study
+
+```{r}
+pheno.methyl.fn <- "/Users/anastasiia_hry/bio/datasets/pheno/pheno_full_for_kimono.csv"
+pheno           <- fread(pheno.methyl.fn)
+
+pheno           <- pheno[!is.na(DNAm_ID),]
+# eigenval        <- eigenval[eigenvec$FID %in% pheno$DNA_ID, ]
+eigenvec        <- eigenvec[eigenvec$FID %in% pheno$DNA_ID, ]
+```
+
+
+#### MDS Individual plot
+
+```{r}
+ggplot(data = eigenvec, aes(C1, C2, col = as.factor(SOL))) + 
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 1, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) + 
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  labs(col = "Land") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "none")
+```
+
+#### K-means clustering
+
+```{r}
+kmeans.mdl <- kmeans(eigenvec[, -c(1:3)], centers = 2, nstart = 10)            
+clusters   <- kmeans.mdl$cluster
+```
+
+
+```{r include=F}
+pca        <- cbind(eigenvec,  clusters)
+ggplot(data = pca, aes(C1, C2, col = as.factor(clusters))) + 
+  geom_point() +
+  theme(legend.position = "none") + 
+ # xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) + 
+ #  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "none")
+  
+```
+#### Hierarhical clustering
+
+```{r}
+d      <- dist(eigenvec[, -c(1:3)], method = "euclidean")
+hc.mdl <- hclust(d, method = "ward" )
+plot(hc.mdl)
+```
+
+```{r}
+sub_grp <- as.factor(cutree(hc.mdl, k = 2)) # length(kmeans.mdl$size))
+eigenvec <- left_join(eigenvec, pheno[Dex == 1, .(DNA_ID, Status, SNP_Chip)], by = c("FID" = "DNA_ID"))
+ggplot(data = eigenvec, aes(C1, C2, col = sub_grp)) + # as.factor(SNP_Chip))) + # as.factor(Status))) +  
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+ # geom_text(aes(label = FID), hjust = 0.8, nudge_y = 0.003) + 
+  # scale_color_brewer(palette = "Paired", na.value = "light grey") +
+  # scale_color_viridis(discrete = TRUE, option = "plasma", na.value = "light grey") +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) + 
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "bottom")
+```
+
+#### Calculate mean distance of each sample from teh mean of PC1 and OC2
+
+```{r}
+eps     <- 0.01
+pc.mean <- mean(eigenvec$C1)
+pc.std  <- sd(eigenvec$C1)
+cut.off <- 4 * pc.std
+lower   <- pc.mean - cut.off + eps
+upper   <- pc.mean + cut.off - eps
+
+outliers <- eigenvec[C1 < lower | C1 > upper, FID ]
+outliers
+```
+
+
+#### Add etnicity information
+
+
+```{r}
+library(haven)
+etnicity.fn <- "/Users/anastasiia_hry/bio/datasets/pheno/MAD_GSK_Phenotype_20191009_for_ah_02072021.sav"
+etnicity    <- read_sav(etnicity.fn)
+
+etnicity    <- etnicity[etnicity$NID %in% pheno$DNA_ID, ]
+pheno       <- left_join(pheno, etnicity[, c("NID", "S_Land")], by = c("DNA_ID" = "NID"))
+eigenvec    <- left_join(eigenvec, etnicity[, c("NID", "S_Land")], by = c("FID" = "NID"))
+
+na.id <- pheno[!(DNA_ID %in% etnicity$NID), "DNA_ID"]
+na.id <- na.id[!duplicated(na.id$DNA_ID), ]
+```
+
+```{r}
+ggplot(data = eigenvec, aes(C1, C2, color = S_Land)) +  
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 1, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) + 
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  labs(col = "Land") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "right")
+```

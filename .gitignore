@@ -10,12 +10,22 @@
 data/
 output/data/
 *.png
+*.jpg
+*.jpeg
 
 # Example code in package build process
 *-Ex.R
 
 # Output files from R CMD build
 /*.tar.gz
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
 
 # Output files from R CMD check
 /*.Rcheck/
@@ -38,5 +48,23 @@ vignettes/*.pdf
 *.utf8.md
 *.knit.md
 
+# OS generated files
+.DS_Store
+.Trashes
+slurm*
+
 # R Environment Variables
 .Renviron
+
+# Logs and databases
+*.log
+*.sql
+*.sqlite
+
+# Compiled source
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so

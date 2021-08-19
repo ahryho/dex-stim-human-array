@@ -7,6 +7,9 @@
 
 # User-specific files
 .Ruserdata
+data/
+output/data/
+*.png
 
 # Example code in package build process
 *-Ex.R

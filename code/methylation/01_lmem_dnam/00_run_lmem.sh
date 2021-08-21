@@ -1,10 +1,13 @@
 #!/bin/bash
 
-if [ $# -ne 3 ]; then
+if [ $# -ne 6 ]; then
     echo "$0: usage: Not enough arguments
           First argument: path to the R Script
           Second argument: result file name
-	  Third argument: model"
+	        Third argument: model
+	        Fourth argument: partition
+	        Fifth argiment: node
+	        Sixth argument: memoty in Gb"
     exit 1
 fi
 
@@ -17,16 +20,16 @@ pheno_fn=/binder/mgp/datasets/2020_DexStim_Array_Human/pheno/pheno_full_for_kimo
 # out_fn=lmem_dex.out
 # err_fn=.err
 
-# module load R
+module load R
 
-partition=pe
-node=7
-memory=200G
 # job_name=lme_dex
 
 r_script=$1
 rslt_lmem_fn=$2
 model=$3
+partition=$4
+node=$5
+memory=$6
 
 job_name=lmem_$3_dex
 out_fn=lmem_dex_$3.out

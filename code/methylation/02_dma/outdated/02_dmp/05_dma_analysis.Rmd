@@ -1,0 +1,1271 @@
+---
+title: "EPIC DMA analysis"
+author: "Anastasiia"
+output:
+  html_document:
+  toc: TRUE
+df_print: paged
+---
+  
+```{r setup, include=FALSE}
+library(knitr)
+options(digits = 4, width = 100, stringsAsFactors = T)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 100),
+                      tidy=TRUE,
+                      fig.pos = "H",
+                      dpi = 600,
+                      warning = FALSE, 
+                      message = FALSE, 
+                      cache = F, 
+                      cache.lazy = FALSE)
+```
+
+<!-- pkg.list <- c("BiocManager", "tidyverse", "dplyr", "ggplot2", "Gviz", "RColorBrewer", "glue") -->
+<!-- biocmanager.pkg.list <- c("ggman", "GenomicRanges") -->
+
+<!-- LoadPackages(pkg.list) -->
+<!-- LoadPackagesBio(biocmanager.pkg.list) -->
+
+```{r, include = F}
+libraries <- c("data.table", "tibble", "tidyr", "dplyr", "ggplot2","scales", "RColorBrewer", "ggthemes", "DT", "GenomicRanges", "Repitools", "rGREAT", "limma", "factoextra", "broman", "formattable", "hrbrthemes", "corrplot", "eulerr")
+lapply(libraries, require, character.only = TRUE)
+```
+
+```{r}
+library(tidyverse)
+library(ggthemes)  # for a mapping theme
+library(ggrepel)  # for annotations
+library(viridis)  # for nice colours
+
+theme_niwot <- function(){
+  theme_bw() +
+    theme(# text = element_text(family = "Helvetica Light"),
+          axis.text = element_text(size = 12), 
+          axis.title = element_text(size = 12),
+          axis.line.x = element_line(color="black"), 
+          axis.line.y = element_line(color="black"),
+          panel.border = element_blank(),
+          panel.grid.major.x = element_blank(),                                          
+          panel.grid.minor.x = element_blank(),
+          panel.grid.minor.y = element_blank(),
+          panel.grid.major.y = element_blank(),  
+          plot.margin = unit(c(1, 1, 1, 1), units = , "cm"),
+          plot.title = element_text(size = 12, vjust = 1, hjust = 0),
+          legend.text = element_text(size = 12),          
+          legend.title = element_blank(),                              
+          legend.position = "none" , # c(0.95, 0.15), 
+          legend.key = element_blank(),
+          legend.background = element_rect(color = "black", 
+                                           fill = "transparent", 
+                                           size = 2, linetype = "blank"))
+}
+```
+
+A linear regression model was used to test for differentially methylated sites associated with stress. DNA methylation values for each probe were regressed against dex-veh treatment with covariates for age, gender, BMI, MDD status and cell composition (represented as SVs). Cell count data were estimated from the DNA methylation data. Additional regression models including smoking score and principal components, also derived from DNA methylation, were also performed.
+
+# Validation of smoking score derived from DNA methylation data
+
+Since actual smoking status data wasn't available, we calculated a weighted score from the DNA methylation data that captures smoking behavior by using the previously published results from an EWAS of cigarette smoking [1, 2]. The figure shows the distribution of these scores split into cases and controls. Across the full sample, DNA methylation-derived smoking scores are higher in patients with MDD compared to controls
+
+```{r load-pheno-data}
+pheno.fn  <- "~/bio/datasets/pheno/pheno_full_for_kimono.csv"
+pheno     <- read.csv2(pheno.fn, na.strings = "NA") 
+pheno     <- pheno[!is.na(pheno$DNAm_ID), ] %>% setDT()
+
+pheno$DNAm_ID <- as.character(pheno$DNAm_ID)
+pheno$Status  <- as.factor(pheno$Status)
+pheno$Sex     <- as.factor(pheno$Sex)
+
+levels(pheno$Sex) <- c("Male", "Female")
+levels(pheno$Status) <- c("Control", "MDD")
+
+pheno$DNAm_SV1 <- as.numeric(pheno$DNAm_SV1)
+pheno$DNAm_SV2 <- as.numeric(pheno$DNAm_SV2)
+pheno$DNAm_SV3 <- as.numeric(pheno$DNAm_SV3)
+
+dex.samples <- pheno[pheno$Dex == 1, ][["DNAm_ID"]]
+veh.samples <- pheno[pheno$Dex == 0, ][["DNAm_ID"]]
+```
+
+```{r smoking-score}
+src.data.pre  <- "~/bio/datasets/methylation/30_Epigenetic_Smoking_Score/" # "/binder/mgp/datasets/2020_DexStim_Array_Human/methylation/"
+score.qn.fn   <- "smoking_score_DexStim_EPIC_2020_QN.csv"
+
+# Load data
+
+score.qn.df    <- fread(paste0(src.data.pre, score.qn.fn), sep = ";", header = T, dec = ",")
+score.illig.df <- left_join(score.qn.df, pheno, by = c("Sample_Name" = "DNAm_ID")) %>% 
+  dplyr::select(DNAm_ID = Sample_Name, Individual, SmokingScore = smokingScoreElliott, Status)
+summary(score.illig.df)
+
+ggplot(score.illig.df, aes(x = SmokingScore, fill = Status)) + 
+  geom_density(alpha = 0.2, aes(color = Status)) +
+  theme(legend.position = c(.8,.75), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10)) +
+  labs(title = "Density plot of DNA methylation smoking score split by MDD case status", x = "DNAm Elliot Smoking Score", y = "") 
+  theme_niwot()
+
+```
+
+# Relate DNAm age to chronological age
+
+```{r include=F, eval=F}
+hov.dnam.age.fn <- "~/bio/datasets/methylation/12_DNAm_age/dex_stim_array_human_meth_age_veh.csv"
+hov.dnam.age    <- fread(hov.dnam.age.fn)
+
+pheno <- left_join(pheno[, 1:78], hov.dnam.age[, c("Individual", "mAge_Hovath")], by = c("DNA_ID" = "Individual"))
+# colnames(pheno)[colnames(pheno) == "DNAm_Age"] <- "mAge_Pheno"
+
+# write.csv2(pheno,
+#             "~/bio/datasets/pheno/pheno_full_for_kimono.csv",
+#            row.names = F,
+#            quote = F)
+
+```
+
+```{r dnam-age}
+library(Metrics)
+MedianAbsDevHelp <- function(x, y) median(abs(x - y), na.rm=TRUE)
+# MedianAbsDevHelp <- function(x, y) abs(mean(y - x))
+MedianAbsDev     <- function(dnam.age.method, real.age) signif(MedianAbsDevHelp(dnam.age.method, real.age), 2)
+
+pheno.dex <- pheno[Dex == 1]
+pheno.veh <- pheno[Dex == 0]
+
+err <- MedianAbsDev(pheno.veh$mAge_Hovath, pheno.veh$Age)
+ggplot(pheno[Dex == 0], aes(x = mAge_Hovath, y = Age, color = Sex)) + 
+  geom_point() +
+  geom_smooth() +
+  facet_wrap(~ Status, ncol = 2) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 8),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "bottom") +
+  labs(title = paste("DNAm Hovath Age vs Chronological age, MAD = ", err),
+       x = "DNAm Age (years)", y = "Chronological Age (years)",
+       col = " ")
+
+```
+
+
+```{r}
+err <- MedianAbsDev(pheno.veh$mAge_Hovath, pheno.veh$Age)
+ggplot(pheno[Dex == 0], aes(x = mAge_Hovath, y = Age, color = Status)) + 
+  geom_point() +
+  geom_smooth() +
+  facet_wrap(~ Sex, ncol = 2) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 8),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "bottom") +
+  labs(title = paste("DNAm Hovath Age vs Chronological age, MAD = ", err),
+       x = "DNAm Age (years)", y = "Chronological Age (years)",
+       col = " ")
+
+```
+
+```{r dnam-age-boxplot}
+pheno.melt.df     <- pheno[Dex == 0][, .(mAge_Hovath, Age, Status, Sex)] %>% melt() 
+pheno.melt.all.df <- pheno.melt.df 
+pheno.melt.all.df$Sex <- "All"
+pheno.melt.df     <- rbind(pheno.melt.df, pheno.melt.all.df)
+
+ggplot(pheno.melt.df, aes(y = value, x = variable, fill = variable)) +
+ # geom_violin(width = 0.4) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha = 0.3, option = "C") +
+  labs(title = "Box-plots showing differences DNAm Age vs Chronological age between MDD cases and controls", y = "Age", x = " ") + 
+  facet_wrap(~ Sex, ncol = 3) +
+  theme(legend.position = "none", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.title.x = element_blank())
+        # axis.text.x = element_text(angle = 0, hjust = 1)) 
+```
+
+
+```{r delta-age-boxplot}
+
+delta.age.df <- pheno[Dex == 0][, .(mAge_Hovath, Age, Status, Sex)] 
+delta.age.df[, delta_Age :=  mAge_Hovath - Age ] #<- delta.age.df$ 
+
+delta.age.melted.df <- delta.age.df[, .(delta_Age, Status, Sex)]
+delta.age.df$Sex <- "All"
+delta.age.melted.df <- rbind(delta.age.melted.df, delta.age.df[, .(delta_Age, Status, Sex)])
+
+  ggplot(delta.age.melted.df, aes(y = delta_Age, x = Status, fill = Sex)) +
+  geom_violin(trim = F, width = 0.8) +
+  geom_boxplot(width = 0.1, color = "black", fill = "white") +
+  scale_fill_viridis(discrete = TRUE, alpha = 0.5) +
+  facet_wrap(~ Sex, ncol = 3) +
+  labs(title = "Box-plots of Delta-age by case-control status", y = "DNAm Age Hovath - Chronological Age", x = " ") + 
+#  theme_ipsum() +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "none")
+```
+```{r}
+
+tmp.all  <- delta.age.melted.df %>% setDT()
+levels(tmp.all$Status) <- c("0", "1")
+tmp.all$Status <- as.numeric(as.character(factor(tmp.all$Status)))
+
+glmm <- glm(Status ~ delta_Age, data = tmp.all[Sex == "Male"], family = "binomial")
+summary(glmm)
+
+glmm <- glm(Status ~ delta_Age, data = tmp.all[Sex == "Female"], family = "binomial")
+summary(glmm)
+
+glmm <- glm(Status ~ delta_Age,  data = tmp.all[Sex == "All"], family = "binomial")
+summary(glmm)
+aov(delta_Age ~ Status,  data = tmp.all[Sex == "All"])
+```
+# Set up parameters
+
+```{r setup-param}
+# src.data.pre <- "/binder/mgp/datasets/2020_DexStim_Array_Human/methylation/" 
+src.data.pre <- "~/bio/datasets/methylation/20_DMA/" 
+
+# lmem.rslt.fn <- "/Users/anastasiia_hry/bio/workspace/dex/dex-methylation/dmps_pval_adj_pcs.txt"
+lmem.rslt.fn <- paste0(src.data.pre, "01_lme_models/lme_dex_svs.txt")
+dmps.anno.fn <- paste0(src.data.pre, "02_dmp/dmps_annotated.csv") #"02_dmp/dmp_bcc_pcs_anno.csv")#dmps_significant_with_beta_stat_bcc_pcs_beta_0_p_5.txt")
+```
+
+# Load data
+```{r load-data}
+lmem.rslt    <- fread(lmem.rslt.fn, sep = "\t") %>% setDT()
+dmps.anno.df <- fread(dmps.anno.fn, sep = "\t")
+
+# colnames(lmem.rslt) <- c("Probe_Id", "FC", "FDR_FDR")
+# dmps.anno.df$FC       <- as.numeric(dmps.anno.df$FC)
+# dmps.anno.df$Pval_adj <- as.numeric(dmps.anno.df$Pval_adj)
+```
+
+# Calculate FDR Bonferroni and 
+```{r calc-fdr}
+# lmem.rslt[["FDR_FDR"]]  <- p.adjust(lmem.rslt[["PVAL"]], method = "fdr")
+lmem.rslt[["FDR_BON"]] <- p.adjust(lmem.rslt[["PVAL"]], method = "bonferroni")
+
+# lmem.rslt <- inner_join(lmem.rslt, lmem.sva.rslt[, c("PROBE_ID", "FC")], by = "PROBE_ID")
+# lmem.rslt[["FC"]] <- lmem.rslt$FC.y
+```
+
+# Tune FDR and FC thresholds
+
+```{r}
+pval.list <- c(0.0001, 0.001, 0.01, 0.02, 0.03, 0.04, 0.05)
+beta.list <- c(0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.2)
+
+# beta.list <- c(0, 0.2, 0.3, 0.4, 0.5, 0.7, 0.1)
+
+est.df           <- data.frame(matrix(NaN, nrow = length(pval.list), ncol = length(beta.list)))
+colnames(est.df) <- beta.list
+rownames(est.df) <- pval.list
+
+for (p.thr in pval.list)
+  for (delta.beta in beta.list){
+    dmp.sign.df  <- lmem.rslt[abs(FC) > delta.beta & FDR < p.thr, ]
+    est.df[as.character(p.thr), as.character(delta.beta)] <- nrow(dmp.sign.df)
+  }
+
+est.df <- rownames_to_column(est.df, var = "p-value")
+est.df <- est.df %>% pivot_longer(cols = colnames(est.df)[-1], names_to = "Beta", values_to = "Nr_DMPs")
+
+est.df$`p-value` <- as.numeric(est.df$`p-value`)
+est.df$Beta      <- est.df$Beta
+
+ggplot(est.df, aes(`p-value`, Nr_DMPs, color = Beta, group = Beta)) + 
+  geom_point() + geom_line() +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 12),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "bottom") +
+  labs(title = " ", y = "Number of DMPs", x = "p-value")
+```
+
+```{r }
+delta.beta <- 0.01
+pval.list <- c(0.001, 0.01, 0.02, 0.03, 0.04, 0.05)
+nr.dmps.list <- c()
+for (p.thr in pval.list){
+  dmp.sign.df  <- lmem.bcc.rslt[abs(FC) > delta.beta & FDR < p.thr, ]
+  nr.dmps.list <- append(nr.dmps.list, dim(dmp.sign.df)[1])
+}
+
+pval.est <- as.data.frame(cbind(PVAL = pval.list, Nr_DMPs = nr.dmps.list, Pr_DMPs = round(nr.dmps.list / nrow(lmem.rslt) * 100, 2)))
+
+ggplot(pval.est, aes(x = PVAL, y = Nr_DMPs)) + 
+  geom_line(linetype="dotted", size=2) +
+  geom_point( size = 3) +
+  geom_label(aes(label = Nr_DMPs), vjust = 0, nudge_y = 0) +
+  theme(legend.position = "bottom")
+```
+
+# # Get significant dmps
+
+```{r}
+beta.list <- myround(c(0.00, 0.01, 0.02, 0.05, 0.10, 0.15, 0.2), digits = 2)
+p.thr     <- 9e-08
+
+res <- c()
+
+for (delta.beta in beta.list){
+  dmps.sign.df   <- lmem.rslt[abs(FC) > delta.beta & FDR < p.thr,]
+  nr.hypermethyl <- nrow(dmps.sign.df[FC > delta.beta & FDR < p.thr,])
+  nr.hypomethyl  <- nrow(dmps.sign.df[FC < delta.beta & FDR < p.thr,])
+  
+  per.hypermethyl <-  myround(nr.hypermethyl / nrow(dmps.sign.df), 4)
+  per.hypomethyl <-  myround(nr.hypomethyl / nrow(dmps.sign.df), 4)
+  
+  res <- rbind(res, c(delta.beta, nrow(dmps.sign.df), nr.hypermethyl, per.hypermethyl, nr.hypomethyl, per.hypomethyl))
+}
+
+# datatable(res)
+# pander(res)
+# kable(res)
+
+res <- data.frame(res, stringsAsFactors = F)
+colnames(res) <- c("FC", "NrDMPs", "HyperDMPs", "HyperDMPs (%)", "HypoDMPs", "HypoDMPs (%)") 
+
+res$`HyperDMPs (%)` <- percent(res$`HyperDMPs (%)`)
+res$`HypoDMPs (%)` <- percent(res$`HypoDMPs (%)`)
+res$NrDMPs <- accounting(res$NrDMPs, big.mark = " ", digits = 0)
+res$HyperDMPs <- accounting(res$HyperDMPs, big.mark = " ", digits = 0)
+res$HypoDMPs <- accounting(res$HypoDMPs, big.mark = " ", digits = 0)
+
+formattable(res, list(
+  area(col = c(`HyperDMPs (%)`)), #~ color_tile("transparent", "lightgray"),
+  area(col = c(`HypoDMPs (%)`)) #~ color_tile("transparent", "lightgray") # normalize_bar("lightgray", 0.05) 
+))
+
+# formattable(df, list(
+#   age = color_tile("white", "orange"),
+#   grade = formatter("span", style = x ~ ifelse(x == "A",
+#     style(color = "green", font.weight = "bold"), NA)),
+#   area(col = c(test1_score, test2_score)) ~ normalize_bar("pink", 0.2),
+#   final_score = formatter("span",
+#     style = x ~ style(color = ifelse(rank(-x) <= 3, "green", "gray")),
+#     x ~ sprintf("%.2f (rank: %02d)", x, rank(-x))),
+#   registered = formatter("span",
+#     style = x ~ style(color = ifelse(x, "green", "red")),
+#     x ~ icontext(ifelse(x, "ok", "remove"), ifelse(x, "Yes", "No")))
+# ))
+```
+
+```{r}
+delta.beta <- 0.0
+p.thr      <- 0.05
+dmps.sign.df <- lmem.bcc.rslt[abs(FC) > delta.beta & FDR < p.thr,]
+
+nr.hypermethyl <- nrow(dmps.sign.df[FC > delta.beta & FDR < p.thr,])
+nr.hypomethyl  <- nrow(dmps.sign.df[FC < delta.beta & FDR < p.thr,])
+
+lmem.bcc.rslt[, "threshold"] <- as.factor(abs(lmem.bcc.rslt$FC) > delta.beta & lmem.bcc.rslt$FDR < p.thr)
+cols <- c("TRUE" = "green", "FALSE" = "grey")
+# pdf(file = paste0(report.dir, 
+#                   "Volcano_plot_model_", mdl, 
+#                   "beta_", delta.beta * 100, 
+#                   "_p_", p.thr * 100,
+#                   ".pdf" ))
+
+ggplot(lmem.bcc.rslt, aes(y = -log10(FDR), x = FC, color = threshold)) +
+  geom_point(alpha = .5, size = 1.2) +
+  scale_colour_manual(values = cols) +
+  geom_vline(xintercept = delta.beta, colour="#990000", linetype="dashed") + 
+  geom_vline(xintercept = -delta.beta, colour="#990000", linetype="dashed") +
+  geom_hline(yintercept = -log10(p.thr), colour="#990000", linetype="dashed") +
+  theme(legend.position = "none") +
+  xlab("Fold Change") +
+  ylab("-log10 p value") +
+  theme_bw() +
+  theme(legend.position = "none") +
+  ggtitle(paste0("Volcano plot\nP-value threshold = ", p.thr, "\n", nr.hypermethyl, " hypermethyl CpGs\n", nr.hypomethyl, " hypomethyl CpGs"))
+
+```
+
+
+# Box-plots showing differences in DNA methylation between DEX and VEH, MDD cases and controls  at the 10 top-ranked DMPs.
+
+```{r load-data}
+library(lumi)
+
+beta.mtrx.fn <- "~/bio/datasets/methylation/10_final_qc_data/dex_methyl_beta_combat_mtrx.rds"
+beta.mtrx    <- readRDS(beta.mtrx.fn)
+
+beta.mtrx <- beta.mtrx[, match(pheno$DNAm_ID, colnames(beta.mtrx))]
+mval.mtrx <- beta2m(beta.mtrx)
+```
+
+```{r}
+dmps.top.10 <- dmps.sign.df[order(FDR_FDR)][1:10, PROBE_ID]
+
+beta.dex.df <- beta.mtrx[rownames(beta.mtrx) %in% dmps.top.10, colnames(beta.mtrx) %in% dex.samples]
+beta.dex.df <- as.data.frame(t(beta.dex.df))
+beta.dex.df[["Treatment"]] <- "DEX"
+
+beta.veh.df <- beta.mtrx[rownames(beta.mtrx) %in% dmps.top.10, colnames(beta.mtrx) %in% veh.samples]
+beta.veh.df <- as.data.frame(t(beta.veh.df))
+beta.veh.df[["Treatment"]] <- "VEH"
+
+beta.top.dmps <- rbind(beta.dex.df, beta.veh.df)
+beta.top.dmps[["DNAm_ID"]] <- rownames(beta.top.dmps)
+beta.top.dmps <- left_join(beta.top.dmps, pheno[, c("DNAm_ID", "Status")]) %>% setDT()
+
+beta.top.dmps %>% 
+  melt() %>%
+  ggplot(aes(y = value, x = Treatment, fill = Status)) +
+  geom_boxplot() +
+  # geom_jitter(width = 0.1, alpha = 0.1) +
+  ylab("DNAm beta value") + 
+  xlab(" Treatment") +
+  labs(title = "Box-plots showing differences in DNA methylation between DEX and VEH, MDD cases and controls at the 10 top-ranked DMPs") + 
+  facet_wrap(~ variable, ncol = 5) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), legend.position = "bottom", legend.title = element_blank())
+```
+
+# PCA
+
+Relationship of the top 10 principal components (PCs) derived from DNA methylation data with available and derived covariates. 
+
+```{r pca}
+pal <- brewer.pal(8, "Set2")
+
+pca.obj <- prcomp(t(mval.mtrx[dmps.sign.df$PROBE_ID,]), retx = T, center = T, scale. = T)  
+nr.pcs <- 10
+
+propvar <- round(summary(pca.obj)$importance["Proportion of Variance", 1:nr.pcs] * 100, 2 )
+cummvar <- round(summary(pca.obj)$importance["Cumulative Proportion", 1:nr.pcs] * 100, 2) 
+
+pcs <- pca.obj$x[, 1:nr.pcs]
+```
+
+# Relationship of the top 10 principal components derived from DNA methylation data with available and derived covariates. 
+
+Because it is likely that other unmeasured environmental exposures also confound the analysis of methylomic variation associated with dex treatment, we investigated the impact of additional surrogate variables capturing variation in DNA methylation on the association statistics for dex-associated DMPs. We first compared each of the first 10 principal components (PCs) derived from the DNA methylation data to the available phenotype data to identify potential sources of additional variation between samples. For example, we observed strong correlations (r > 0.5) between the first three PCs and estimated blood cell composition measures, reflecting the likely effect of epigenetic differences between cell types. 
+
+Heat-map of correlations between each PC (1-10) and the available phenotype information (SCZ – schizophrenia
+status; sex) and variables derived from the DNA methylation data (DNAmAge – age estimated from DNA methylation data; DNAm Smoking - smoking score estimated from DNA methylation data; CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm
+
+```{r}
+bcc.gex  <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
+bcc.gex <- bcc.gex %>% 
+  mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
+bcc.meth <- pheno[, c("CD8T", "CD4T", "NK", "Bcell", "Mono", "Gran")]
+sv.gex   <- pheno[, c("V1", "V2", "V3", "V4", "V5")]
+sv.meth  <- pheno[, c("DNAm_SV1", "DNAm_SV2", "DNAm_SV3")]
+
+tmp.df <- data.frame(gex = bcc.gex, meth = bcc.meth, gex = sv.gex, sv.meth, 
+                     Dex = as.numeric(pheno$Dex), Status = as.numeric(pheno$Status), Sex = as.numeric(pheno$Sex), BMI = pheno$BMI_D1, 
+                     Age = pheno$Age, DNAm_Age = pheno$DNAm_Age, DNAm_SmokingScore = pheno$DNAm_SmokingScore, pcs) %>% 
+  na.omit() %>% 
+  scale()
+
+cor.mtrx <- cor(tmp.df)
+cor.mtrx.plt <- cor.mtrx[28:nrow(cor.mtrx), c(7:12, 18:27)]
+corrplot(cor.mtrx.plt, method = "color",
+         addCoef.col = "black", # Add coefficient of correlation
+         tl.col="black", tl.srt=45, #Text label color and rotation
+         sig.level = 0.01) 
+```
+```{r}
+corrplot(cor.mtrx[1:27, 1:27], method = "color", type = "upper")
+```
+
+```{r pca-plot-dex}
+fviz_pca_ind(pca.obj, col.ind = pheno$Group,
+             geom = "point", repel = T) +
+  theme(legend.position = " ") +
+  labs(title = "PCA plot demonstrating the DEX treatment separation based on the significant DMPs")
+```
+```{r pca-plot-sex}
+fviz_pca_ind(pca.obj, col.ind = pheno$Sex,
+             axes = c(2, 8),
+             geom = "point", repel = T) +
+  theme(legend.position = " ") +
+  labs(title = "PCA plot demonstrating the SEX separation based on the significant DMPs")
+```
+
+# Functional Annotation
+
+Filter data
+```{r filter data}
+delta.beta <- 0.1
+p.thr      <- 0.01
+
+dmps.sign.anno.df  <- dmps.anno.df[Name %in% dmps.sign.df$PROBE_ID, ]
+
+# dmps.sign.df  <- dmps.sign.df[order(dmps.sign.df$Pval_adj),] %>% setDT()
+
+dmps.sign.anno.df [dmps.sign.df$FC < delta.beta, MethylStatus := "hypomethylated"]
+dmps.sign.anno.df [dmps.sign.df$FC > delta.beta, MethylStatus := "hypermethylated"]
+
+interest.cols <- c("Name", "chr", "pos", "UCSC_RefGene_Group", "UCSC_RefGene_Name", "Regulatory_Feature_Group", "Relation_to_Island",
+                   "MethylStatus")
+dmps.sign.sub.df <- dmps.sign.anno.df %>% dplyr::select(interest.cols) %>% setDT()
+head(dmps.sign.sub.df)
+
+dmps.merged.df <- dmps.anno.df  %>% dplyr::select(interest.cols[-8]) %>% setDT()
+dmps.merged.df$Model <- "Assessed"
+dmps.sign.sub.df$Model <- "DMA"
+dmps.merged.df <- rbind(dmps.merged.df, dmps.sign.sub.df %>% dplyr::select(-MethylStatus))
+```
+
+```{r - chromosme}
+chr.order <- paste("chr", c(1:22, "X", "Y"), sep = "")
+meth <- dmps.sign.sub.df
+meth$chr <- factor(meth$chr,levels = chr.order)
+
+ggplot(meth, aes(x = chr)) + 
+  geom_bar(aes(y = (..count..)/sum(..count..), fill = factor(..x..))) + 
+  geom_text(aes( label = scales::percent((..count..)/sum(..count..), accuracy = 0.1),
+                   y = (..count..)/sum(..count..) ), stat = "count", vjust = -.5, size = 3) +
+  scale_y_continuous(labels=scales::percent) +
+  labs(x = "Chromosome",
+       y = "Relative frequency") +
+  theme(legend.position = "")
+```
+
+# EWAS accounting for a smoking covariate
+
+```{r lmem-with-smoking-covariate}
+lmem.rslt.fn      <- paste0(src.data.pre, "01_lme_models/lme_dex_svs_smoking.txt")
+lmem.smoking.rslt <- fread(lmem.rslt.fn, sep = "\t") %>% setDT()
+```
+
+# Calculate FDR Bonferroni and 
+```{r calc-fdr}
+lmem.smoking.rslt[["FDR_FDR"]]  <- p.adjust(lmem.smoking.rslt[["PVAL"]], method = "fdr")
+lmem.smoking.rslt[["FDR_BON"]] <- p.adjust(lmem.smoking.rslt[["PVAL"]], method = "bonferroni")
+```
+
+```{r}
+beta.list <- myround(c(0.00, 0.05, 0.10, 0.12), digits = 2)
+p.thr     <- 0.01
+
+res <- c()
+
+for (delta.beta in beta.list){
+  dmps.sign.df   <- lmem.smoking.rslt[abs(FC) > delta.beta & FDR_BON < p.thr,]
+  nr.hypermethyl <- nrow(dmps.sign.df[FC > delta.beta & FDR_BON < p.thr,])
+  nr.hypomethyl  <- nrow(dmps.sign.df[FC < delta.beta & FDR_BON < p.thr,])
+  
+  per.hypermethyl <-  myround(nr.hypermethyl / nrow(dmps.sign.df), 4)
+  per.hypomethyl <-  myround(nr.hypomethyl / nrow(dmps.sign.df), 4)
+  
+  res <- rbind(res, c(delta.beta, nrow(dmps.sign.df), nr.hypermethyl, per.hypermethyl, nr.hypomethyl, per.hypomethyl))
+}
+
+res <- data.frame(res, stringsAsFactors = F)
+colnames(res) <- c("beta", "NrDMPs", "HyperDMPs", "HyperDMPs (%)", "HypoDMPs", "HypoDMPs (%)") 
+
+res$`HyperDMPs (%)` <- percent(res$`HyperDMPs (%)`)
+res$`HypoDMPs (%)` <- percent(res$`HypoDMPs (%)`)
+res$NrDMPs <- accounting(res$NrDMPs, big.mark = " ", digits = 0)
+res$HyperDMPs <- accounting(res$HyperDMPs, big.mark = " ", digits = 0)
+res$HypoDMPs <- accounting(res$HypoDMPs, big.mark = " ", digits = 0)
+
+formattable(res, list(
+  area(col = c(`HyperDMPs (%)`)) ~ color_tile("transparent", "lightgray"),
+  area(col = c(`HypoDMPs (%)`)) ~ color_tile("transparent", "lightgray") # normalize_bar("lightgray", 0.05) 
+))
+```
+
+```{r dmps-sign-with-smoking}
+delta.beta <- 0.1
+p.thr      <- 0.01
+dmps.sign.with.smoking.association <- as.vector(lmem.smoking.rslt[abs(FC) > delta.beta & FDR_BON < p.thr,]$PROBE_ID)
+```
+
+```{r}
+as.data.frame(cbind(dmps_no_smoking = summary(lmem.rslt), dmps_with_smoking = summary(lmem.smoking.rslt)))
+```
+Overlap between published EWAS of ssmoking and  EWAS of DEX-induced without inclusion of a smoking covariate
+
+```{r overlap-sign-dmps-elliot-cpgs}
+smoking.cpg.list <- c("cg09469355", "cg08884752", "cg12547807", "cg04885881", "cg21393163", "cg21913886", "cg19713429", "cg27537125", "cg15542713", "cg24049493", "cg23090529", "cg21140898", "cg19406367", "cg25189904", "cg09662411", "cg18146737", "cg12876356", "cg18316974", "cg09935388", "cg11231349", "cg08709672", "cg20295214", "cg03547355", "cg17819085", "cg23079012", "cg06635952", "cg26271591", "cg23667432", "cg03188382", "cg19713851", "cg27241845", "cg03329539", "cg06644428", "cg05951221", "cg21566642", "cg01940273", "cg13193840", "cg17024919", "cg15693572", "cg23480021", "cg03274391", "cg00501876", "cg18642234", "cg15417641", "cg00336149", "cg21188533", "cg19859270", "cg02657160", "cg25197194", "cg08202836", "cg21121843", "cg19719391", "cg24556382", "cg11554391", "cg17924476", "cg08606254", "cg12806681", "cg03991871", "cg23916896", "cg11902777", "cg01899089", "cg05575921", "cg26703534", "cg01097768", "cg14817490", "cg25648203", "cg21161138", "cg03604011", "cg24090911", "cg13039251", "cg05673882", "cg26908328", "cg16786458", "cg14580211", "cg12513616", "cg01882991", "cg06126421", "cg14753356", "cg24859433", "cg15342087", "cg17619755", "cg10807309", "cg15474579", "cg00931843", "cg00921574", "cg19717773", "cg02451831", "cg08972170", "cg19089201", "cg22132788", "cg04180046", "cg12803068", "cg07826859", "cg03440944", "cg21322436", "cg25949550", "cg11207515", "cg17372101", "cg12276019", "cg24540678", "cg13518625", "cg19589396", "cg25305703", "cg12075928", "cg26361535", "cg13787850", "cg01692968", "cg13910681", "cg22539182", "cg25953130", "cg27312979", "cg25421530", "cg01744331", "cg07123182", "cg16556677", "cg26963277", "cg04039799", "cg09197783", "cg16611234", "cg19254163", "cg21611682", "cg14624207", "cg01901332", "cg11660018", "cg23771366", "cg03234777", "cg26282236", "cg02583484", "cg04158018", "cg23681440", "cg23126342", "cg25491122", "cg06885459", "cg17487894", "cg01731783", "cg22851561", "cg24996979", "cg10919522", "cg13976502", "cg13038618", "cg05875421", "cg05284742", "cg06819357", "cg26242531", "cg11730703", "cg01208318", "cg15022400", "cg03489965", "cg18335991", "cg00310412", "cg11152412", "cg23161492", "cg05194346", "cg01207684", "cg09099830", "cg03155159", "cg00911794", "cg23621097", "cg09858022", "cg19572487", "cg04956244", "cg16255816", "cg03373393", "cg25809905", "cg21280392", "cg07465627", "cg02186444", "cg07251887", "cg06459104", "cg00073090", "cg15187398", "cg07381806", "cg00835193", "cg03636183", "cg15159987", "cg23973524", "cg11902728", "cg22649124", "cg11701312", "cg16201146", "cg07339236", "cg00871610", "cg06595162", "cg23110422", "cg22635096", "cg02532700", "cg01127300") 
+
+dmps.sign.no.smoking.association   <- as.vector(dmps.sign.anno.df$Name)
+
+fit <- euler(list(elliot = smoking.cpg.list, dex.no.smoking = dmps.sign.no.smoking.association, dex.with.smoking = dmps.sign.with.smoking.association))
+
+plot(fit,
+     quantities = list(type = c("counts", "percent")),
+     labels = c("Elliot Smoking CpGs", "", 
+                "DEX significant DMPs &
+                DEX smoking significant DMPs"),
+     fill = c("red", "transparent", "transparent"),
+     # main = "Overlap between published EWAS of ssmoking and  EWAS of DEX-induced without inclusion of a smoking covariate"
+     )
+```
+
+```{r include=F}
+library(qqman)
+
+manhattan.df <- left_join(dmps.sign.anno.df[1:10,], lmem.rslt, by = c("Name" = "PROBE_ID"))
+manhattan.df$chr <- as.numeric(substr(manhattan.df$chr, 4, 6) )
+manhattan(manhattan.df, chr = "chr", bp = "pos", p = "PVAL",  
+          suggestiveline = -log10(1.1e-07), genomewideline = -log10(1))
+
+```
+
+```{r relation-to-island}
+ggplot(dmps.sign.sub.df, aes(x = Relation_to_Island, )) + 
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  geom_text(aes( label = scales::percent((..count..)/sum(..count..), accuracy = 0.1),
+                   y = (..count..)/sum(..count..) ), stat = "count", vjust = -.5) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Relation to Island",
+       y = "Frequency", 
+       title = "CpG Island Relation")
+```
+
+```{r relation-to-island}
+ggplot(dmps.sign.sub.df, aes(x = Relation_to_Island, group = MethylStatus )) + 
+  geom_bar(aes(y = ..prop.., fill = MethylStatus), stat = "count", position = position_dodge()) +
+  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
+                   y= ..prop.. ), stat = "count", position = position_dodge(1)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Relation to Island",
+       y = "Frequency", 
+       title = "CpG Island Relation") +
+  theme(legend.title = element_blank(), 
+        legend.position = c(.9,.75),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank()) +
+  scale_fill_brewer(palette = "Dark1")
+  # scale_fill_manual(values = c("grey", "darkgrey"))
+```
+
+```{r}
+ggplot(dmps.merged.df, aes(x = Relation_to_Island, group = Model )) + 
+  geom_bar(aes(y = ..prop.., fill = Model), stat = "count", position = position_dodge()) +
+  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
+                   y= ..prop.. ), stat = "count", position = position_dodge(1.1)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Relation to Island",
+       y = "Frequency", 
+       title = "Assessed vs DMA") +
+  theme(legend.title = element_blank(), 
+        legend.position = c(.9,.75),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank()) +
+  scale_fill_brewer(palette = "Set3") 
+  # scale_fill_manual(values = c("grey", "darkgrey"))
+```
+
+# ```{r island-association}
+# dmps.sign.sub.df[Regulatory_Feature_Group == "", Regulatory_Feature_Group := NA]
+# 
+# ggplot(dmps.sign.sub.df, aes(Relation_to_Island)) +
+#   geom_bar(aes(fill = Regulatory_Feature_Group)) +
+#   labs(title = "Island and Association") +
+#   scale_fill_brewer(palette = "Paired", na.value = "grey") + 
+#   theme_classic()
+# ```
+
+# ```{r snp-density}
+# meth <- dmps.sign.sub.df
+# goodChrOrder <- paste("chr",c(1:22,"X","Y"),sep="")
+# meth$chr <- factor(meth$chr,levels=goodChrOrder)
+# 
+# # Plot the densities of snps in the bed file for each chr seperately
+# ggplot(meth) + 
+#   geom_histogram(aes(x = pos),binwidth=1e6) + # pick a binwidth that is not too small 
+#   facet_wrap(~ chr,ncol=2) + # seperate plots for each chr, x-scales can differ from chr to chr
+#   ggtitle("Density of methylated CpG across hg19 - autosomes") +
+#   xlab("Position in the genome") + 
+#   ylab("SNP density") + 
+#   theme_bw() # I prefer the black and whit
+# ```
+
+```{r cpg-location}
+
+one_anno_df <- dmps.sign.sub.df
+one_anno_df$UCSC_RefGene_Group <- gsub(";.*", "", one_anno_df$UCSC_RefGene_Group)
+colourCount <- length(unique(one_anno_df$Regulatory_Feature_Group))
+getPalette  <- colorRampPalette(brewer.pal(5, "Set2"))
+one_anno_df[UCSC_RefGene_Group == "", UCSC_RefGene_Group := NA]
+
+ggplot(one_anno_df, aes(x = UCSC_RefGene_Group, group = MethylStatus )) + 
+  geom_bar(aes(y = ..prop.., fill = MethylStatus), stat = "count", position = position_dodge()) +
+  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
+                   y= ..prop.. ), stat = "count", position = position_dodge(1)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "CpG Location",
+       y = "Frequency") +
+  theme(legend.title = element_blank(), 
+        legend.position = c(.9,.85),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank()) +
+  scale_fill_brewer(palette = "Dark1")
+  # scale_fill_manual(values = c("grey", "darkgrey"))
+```
+
+```{r}
+one_anno_df <- dmps.merged.df
+one_anno_df$UCSC_RefGene_Group <- gsub(";.*", "", one_anno_df$UCSC_RefGene_Group)
+colourCount <- length(unique(one_anno_df$Regulatory_Feature_Group))
+getPalette  <- colorRampPalette(brewer.pal(5, "Set2"))
+one_anno_df[UCSC_RefGene_Group == "", UCSC_RefGene_Group := NA]
+
+ggplot(one_anno_df, aes(x = UCSC_RefGene_Group, group = Model )) + 
+  geom_bar(aes(y = ..prop.., fill = Model), stat = "count", position = position_dodge()) +
+  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
+                   y= ..prop.. ), stat = "count", position = position_dodge(1)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Relation to Island",
+       y = "Frequency") +
+  theme(legend.title = element_blank(), 
+        legend.position = c(.9,.85),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank()) +
+  scale_fill_brewer(palette = "Set3") 
+  # scale_fill_manual(values = c("grey", "darkgrey"))
+```
+
+# Top 100 Dex-associated differentially methylated positions
+
+```{r dex-associated-dmps-tbl}
+dex.dmps.dt <- left_join(one_anno_df[Model == "DMA", ], lmem.rslt, by = c("Name" = "PROBE_ID")) %>%
+  dplyr::select(Probe_ID = Name, Chr = chr, Pos = pos, Gene = UCSC_RefGene_Name, Gene_Group = UCSC_RefGene_Group, Island = Relation_to_Island, FC, MAD, FDR_BON ) 
+
+dex.dmps.dt <- dex.dmps.dt[order(FDR_BON)]
+dex.dmps.dt[1:100,]
+```
+
+```{r reg-feature-group-plot}
+ggplot(dmps.sign.sub.df, aes(Regulatory_Feature_Group)) +
+  geom_bar(aes(y = (..count..)/sum(..count..))) +
+  geom_text(aes( label = scales::percent((..count..)/sum(..count..), accuracy = 0.1),
+                   y = (..count..)/sum(..count..) ), stat = "count", vjust = 0) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(y="Count", title="Regulatory Feature Group") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 90))
+```
+# GSEA with missMethyl package 
+
+```{r gsea-missmethyl-all}
+library(missMethyl)
+
+anno.epic     <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+anno.epic.sub <- as.data.frame(anno.epic[anno.epic$Name %in% dmps.anno.df$Name, ])
+
+gst <- gometh(sig.cpg = dmps.sign.anno.df$Name, all.cpg = dmps.anno.df$Name, array.type = "EPIC", anno = anno.epic.sub, sig.genes = T)
+
+write.csv2(gst, "~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_go_all_missmethyl.csv", quote = F, row.names = F)
+```
+
+```{r}
+gst <- read.csv2("~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_go_all_missmethyl.csv") %>% setDT()
+
+go.sign.cat <- gst[FDR < 0.05][order(FDR)]
+topGSA(go.sign.cat)
+```
+
+
+```{r gsea-missmethyl-promoter}
+gst.promoter <- gometh(sig.cpg = dmps.sign.anno.df$Name, all.cpg = dmps.anno.df$Name, array.type = "EPIC", anno = anno.epic.sub, genomic.features=c("TSS200","TSS1500","1stExon"), sig.genes = T)
+
+write.csv2(gst.promoter, "~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_go_promoter_missmethyl.csv", quote = F, row.names = F)
+```
+
+```{r}
+gst.promoter <- read.csv2("~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_go_promoter_missmethyl.csv") %>% setDT()
+
+go.sign.cat.promoter <- gst.prmoter[FDR < 0.05, ]
+topGSA(go.sign.cat.promoter)
+```
+
+# GO enrichment for DMPs using rGREAT
+
+
+GREAT calculates statistics by associating genomic regions with nearby genes and applying the gene annotations to the regions. Association is a two step process. First, every gene is assigned a regulatory domain. Then, each genomic region is associated with all genes whose regulatory domain it overlaps.
+
+Gene regulatory domain definition: Each gene is assigned a basal regulatory domain of a minimum distance upstream and downstream of the TSS (regardless of other nearby genes). The gene regulatory domain is extended in both directions to the nearest gene's basal domain but no more than the maximum extension in one direction.
+
+Target genomic regions: significant CpGs
+Background: all CpGs
+Proximal: 2 kb upstream, 2 kb downstream, plus Distal: up to 10 kb
+
+Statistical Significance: FDR <= 0.05
+
+The test set contains 7,469 (1%) of all 740,357 regions.
+
+The foreground set picked 1,613 genes, the background set picked 17,441 genes.
+
+Ensembl Genes has 18,549 terms covering 18,549 (100%) of all 18,549 genes, and 18,549 term - gene associations.
+
+18,549 ontology terms (100%) were tested using an annotation count range of [1, 1000].
+
+
+```{r include=F}
+library("rGREAT")
+```
+
+```{r}
+# Export bed files for GREAT tool:
+bed.target <- dmps.sign.anno.df %>% select(chrom = chr, chromStart = pos, chromEnd = pos, name = Name)
+rownames(bed.target) <- bed.target$name
+write.table(bed.target, "~/bio/datasets/methylation/20_DMA/02_dmp/dmps_sign_svs_for_great.bed", sep = " ", quote = F, row.names = F, col.names = F)
+
+bed.bg <- dmps.anno.df %>% select(chrom = chr, chromStart = pos, chromEnd = pos, name = Name)
+rownames(bed.bg) <- bed.bg$name
+write.table(bed.bg, "~/bio/datasets/methylation/20_DMA/02_dmp/dmps_svs_for_great.bed", sep = " ", quote = F, row.names = F, col.names = F)
+```
+
+```{r submit-GREAT-job}
+job <- submitGreatJob(bed.target, bg = bed.bg,
+                     species = "hg19", rule = "basalPlusExt", adv_upstream = 2.0, adv_downstream = 2.0, adv_span = 10)
+
+# availableOntologies(job)
+great.enrichment.tbl <- getEnrichmentTables(job, download_by = "tsv",  ontology = c("GO Molecular Function", "GO Biological Process",
+                                                                                    "Human Phenotype", "Ensembl Genes"))
+great.cpg.gene.ass <- plotRegionGeneAssociationGraphs(job, plot = F)
+
+saveRDS(object = job, file = "/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/02_dmp/GREAT_output/rgreat_job_svs_output.rds")
+saveRDS(object = great.enrichment.tbl, file = "/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/02_dmp/GREAT_output/rgreat_enrichmentTbl_svs_output.rds")
+saveRDS(object = great.cpg.gene.ass, file = "/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/02_dmp/GREAT_output/rgreat_cgGeneAssociationGRange_svs_output.rds")
+```
+
+```{r}
+job <- readRDS("/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/02_dmp/GREAT_output/rgreat_job_svs_output.rds")
+great.enrichment.tbl <- readRDS("/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/02_dmp/GREAT_output/rgreat_enrichmentTbl_svs_output.rds")
+great.cpg.gene.ass   <- readRDS("/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/02_dmp/GREAT_output/rgreat_cgGeneAssociationGRange_svs_output.rds")
+```
+
+```{r}
+job
+```
+
+```{r}
+plotRegionGeneAssociationGraphs(job, type = 1)
+```
+```{r}
+plotRegionGeneAssociationGraphs(job, type = 2)
+```
+```{r}
+plotRegionGeneAssociationGraphs(job, type = 3)
+```
+# Explore CpG - Gene associations
+
+```{r}
+cpg.gene.df <- data.frame(great.cpg.gene.ass) %>% select(chr = seqnames, start, end, gene, distTSS) %>% setDT() 
+# unique(cpg.gene.df$gene) %>% length()
+
+bed.target <- read.table("~/bio/datasets/methylation/20_DMA/02_dmp/dmps_sign_svs_for_great.bed", sep = " ")
+colnames(bed.target) <- c("chr", "start", "end", "name")
+
+cpg.gene.df <- left_join(cpg.gene.df, bed.target)
+# cpg.gene.df[!is.na(gene)][order(abs(distTSS))]
+
+cpg.gene.df <- left_join(cpg.gene.df, lmem.rslt[, c("PROBE_ID", "FC", "MAD", "FDR_FDR", "FDR_BON")], by = c("name" = "PROBE_ID"))
+datatable(cpg.gene.df[!is.na(gene)][order(abs(FDR_FDR))] %>% 
+            mutate(absDistTSS = abs(distTSS)) %>%
+            select(gene, cg = name, chr, start, distTSS, absDistTSS, FC, MAD, FDR_FDR, FDR_BON))
+
+```
+
+
+# Explore enrichment statistics
+
+```{r}
+# names(great.enrichment.tbl)
+# great.enrichment.tbl[["Ensembl Genes"]]
+# plotRegionGeneAssociationGraphs(job, ontology = "Ensembl Genes", termID = "19177")
+```
+
+```{r}
+availableOntologies(job)
+```
+
+# Explore GO Molecular Functions
+
+```{r}
+great.go.mol.fun <- great.enrichment.tbl[["GO Molecular Function"]] %>% setDT()
+
+great.go.mol.fun[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit)
+```
+
+```{r}
+plot.df <- great.go.mol.fun[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
+
+minus_log10_trans <- function(){
+  trans_new(name = "minus_log10", transform = function(x) -log10(x), inverse = function(x) 10 ^ x)
+}
+
+plot.mf <- plot.df[1:20,]
+plot.mf[["GO"]] <- "MF"  
+
+ggplot(data = plot.df, aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
+  geom_bar(stat = "identity") +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("GO Molecular Function, FDR < ", p.thr),
+       y = " ") # + geom_text(label = plot.df$HyperFdrQ)
+
+```
+
+# Explore GO Molecular Functions
+
+```{r}
+great.go.bio.proc <- great.enrichment.tbl[["GO Biological Process"]] %>% setDT()
+
+(great.go.bio.proc[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit))
+```
+                                                                  
+
+```{r}
+plot.df <- great.go.bio.proc[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
+
+plot.bp <- plot.df[1:20,]
+plot.bp[["GO"]] <- "BP" 
+  
+ggplot(data = plot.df[1:20,], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
+  geom_bar(stat = "identity") +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("Top 20 GO Biological Process with FDR < ", p.thr),
+       y = " ") + # + geom_text(label = plot.df$HyperFdrQ) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "none")
+```
+
+```{r}
+plot.df <- rbind(plot.bp, plot.mf)
+plot.df$GO <- as.factor(plot.df$GO)
+plot.df <- na.omit(plot.df)
+
+ggplot(data = plot.df, aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ), fill = GO)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("Top 40 GO with FDR < ", p.thr),
+       y = " ") + # + geom_text(label = plot.df$HyperFdrQ) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = c(.2, .2),
+         legend.title = element_blank()) +
+  cale_fill_brewer(palette = "Accent")
+```
+
+# Explore GO Cellular Component
+
+```{r include=F}
+great.go.cc <- great.enrichment.tbl[["GO Cellular Component"]] %>% setDT()
+
+(great.go.cc[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit))
+```
+
+```{r include=F}
+plot.df <- great.go.cc[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
+
+plot.bp <- plot.df[1:20,]
+plot.bp[["GO"]] <- "BP" 
+  
+ggplot(data = plot.df[1:20,], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
+  geom_bar(stat = "identity") +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("Top 20 GO Biological Process with FDR < ", p.thr),
+       y = " ") + # + geom_text(label = plot.df$HyperFdrQ) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "none")
+```
+
+# Explore ENSG
+
+```{r}
+p.thr <- 0.05
+
+ensg.tbl <- great.enrichment.tbl[["Ensembl Genes"]] %>% setDT()
+colnames(ensg.tbl)
+ensg.tbl[HyperFdrQ <= p.thr][order(HyperFdrQ)]
+
+cpg.gene.df.2 <- left_join(cpg.gene.df, ensg.tbl[, c("Desc", "HyperBonfP", "HyperFdrQ")], by = c("gene" = "Desc"))
+datatable(cpg.gene.df.2[HyperFdrQ <= p.thr][order(HyperFdrQ)][,FDR_FDR := round(FDR_FDR, 30)])
+```
+
+# KEGG pathway enrichemnt analysis of DMPs
+
+
+```{r gsea-missmethyl-kegg-all}
+library(missMethyl)
+
+gst.kegg <- gometh(sig.cpg = dmps.sign.anno.df$Name, all.cpg = dmps.anno.df$Name, array.type = "EPIC", anno = anno.epic.sub, collection = "KEGG", sig.genes = T)
+
+write.csv2(gst.kegg, "~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_all_missmethyl.csv", quote = F, row.names = F)
+```
+
+```{r}
+library(missMethyl)
+gst.kegg <- read.csv2("~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_all_missmethyl.csv") %>% setDT()
+
+kegg.sign.cat <- gst.kegg[FDR < 0.05][order(FDR)]
+topGSA(kegg.sign.cat)
+```
+
+```{r gsea-missmethyl-kegg-promoter}
+library(missMethyl)
+
+gst.kegg.promoter <- gometh(sig.cpg = dmps.sign.anno.df$Name, all.cpg = dmps.anno.df$Name, array.type = "EPIC", anno = anno.epic.sub, 
+                            collection = "KEGG", genomic.features = c("TSS200","TSS1500","1stExon"), sig.genes = T)
+
+write.csv2(gst.kegg, "~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_promoter_missmethyl.csv", quote = F, row.names = F)
+```
+
+```{r}
+gst.kegg <- read.csv2("~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_promoter_missmethyl.csv") %>% setDT()
+
+kegg.sign.promoter.cat <- gst.kegg.promoter[FDR < 0.05][order(FDR)]
+topGSA(kegg.sign.promoter.cat)
+```
+
+# DMRs obtained by comb-p
+
+Dex-associated differentially methylated regions identified using CombP. Listed are all multiple testing significant (Sidak corrected P < 0.05) differentially methylated regions. 
+
+
+```{r}
+dmr.sign.combp.fn <- "~/bio/datasets/methylation/20_DMA/03_dmr/comb-p/dex.anno.hg19.regions.filtered.bed"
+dmr.sign.combp.df <- fread(dmr.sign.combp.fn)
+
+nr.probes <- 4
+
+dmr.combp.sub.df <- dmr.sign.combp.df[n_probes >= nr.probes][z_sidak_p <= 0.05][order(z_sidak_p)] %>%
+  dplyr::select(chr = `#chrom`, start, end, DMP_PVAL = min_p, Nr_Probes = n_probes, DMR_PVAL = z_sidak_p, Gene = refGene_name, Distance = refGene_distance, Feature = refGene_feature, CpG_Island_Name = cpgIslandExt_name, CpG_Island_Dist = cpgIslandExt_distance, CpG_Island_Feature = cpgIslandExt_feature)
+
+summary(dmr.combp.sub.df)
+fwrite(dmr.combp.sub.df[abs(end-start) <= 1000][order(DMP_PVAL)],
+           file = "~/bio/datasets/methylation/20_DMA/03_dmr/comb-p/dex_top_dist_1kbp.txt",
+           row.names = F, quote = F, dec = ".", col.names = T)
+datatable(dmr.combp.sub.df[abs(end-start) <= 1000][order(DMP_PVAL)])
+
+```
+
+# GO enrichment analysis of DMRs
+
+```{r}
+dmr.all.combp.fn <- "~/bio/datasets/methylation/20_DMA/03_dmr/comb-p/dex.regions-t.bed"
+dmr.all.combp.df <- fread(dmr.all.combp.fn)
+dmr.all.combp.df[["name"]] <- paste(dmr.all.combp.df$`#chrom`, dmr.all.combp.df$start, dmr.all.combp.df$end, sep = ";")
+```
+
+```{r}
+# Export bed files for GREAT tool:
+dmr.sign.combp.df <- dmr.all.combp.df[n_probes > nr.probes][z_sidak_p <= 0.05][order(z_sidak_p)][abs(end-start) <= 3000]
+dmr.sign.combp.df[["name"]] <- paste(dmr.sign.combp.df$`#chrom`, dmr.sign.combp.df$start, dmr.sign.combp.df$end, sep = ";")
+bed.target <- dmr.sign.combp.df %>% select(chrom = `#chrom`, chromStart = start, chromEnd = end, name = name)
+rownames(bed.target) <- bed.target$name
+write.table(bed.target, "~/bio/datasets/methylation/20_DMA/03_dmr/dmrs_sign_for_great.bed", sep = " ", quote = F, row.names = F, col.names = F)
+
+bed.bg <- dmr.all.combp.df %>% select(chrom = `#chrom`, chromStart = start, chromEnd = end, name = name)
+rownames(bed.bg) <- bed.bg$name
+write.table(bed.bg, "~/bio/datasets/methylation/20_DMA/03_dmr/dmrs_for_great.bed", sep = " ", quote = F, row.names = F, col.names = F)
+```
+
+```{r submit-GREAT-job}
+job <- submitGreatJob(bed.target, bg = bed.bg,
+                     species = "hg19", rule = "basalPlusExt", adv_upstream = 2.0, adv_downstream = 2.0, adv_span = 10)
+
+# availableOntologies(job)
+great.enrichment.tbl <- getEnrichmentTables(job, download_by = "tsv",  ontology = c("GO Molecular Function", "GO Biological Process",
+                                                                                    "Human Phenotype", "Ensembl Genes"))
+great.dmr.gene.ass <- plotRegionGeneAssociationGraphs(job, plot = F)
+```
+
+```{r save-great-dmr-ourput}
+saveRDS(object = job, file = "/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/03_dmr/GREAT_output/rgreat_job_svs_output.rds")
+saveRDS(object = great.enrichment.tbl, file = "/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/03_dmr/GREAT_output/rgreat_enrichmentTbl_svs_output.rds")
+saveRDS(object = great.dmr.gene.ass, file = "/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/03_dmr/GREAT_output/rgreat_cgGeneAssociationGRange_svs_output.rds")
+```
+
+```{r load-great-dmr-results}
+job <- readRDS("/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/03_dmr/GREAT_output/rgreat_job_svs_output.rds")
+great.enrichment.tbl <- readRDS("/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/03_dmr/GREAT_output/rgreat_enrichmentTbl_svs_output.rds")
+great.cpg.gene.ass   <- readRDS("/Users/anastasiia_hry/bio/datasets/methylation/20_DMA/03_dmr/GREAT_output/rgreat_cgGeneAssociationGRange_svs_output.rds")
+```
+
+```{r}
+job
+```
+
+```{r}
+job
+```
+
+```{r}
+plotRegionGeneAssociationGraphs(job, type = 1)
+```
+
+```{r}
+plotRegionGeneAssociationGraphs(job, type = 2)
+```
+
+```{r}
+plotRegionGeneAssociationGraphs(job, type = 3)
+```
+
+# Explore GO Molecular Functions
+
+```{r}
+great.go.mol.fun <- great.enrichment.tbl[["GO Molecular Function"]] %>% setDT()
+
+p.thr <- 0.05
+great.go.mol.fun[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit)
+```
+
+```{r}
+plot.df <- great.go.mol.fun[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
+
+plot.mf <- plot.df[1:20,]
+plot.mf[["GO"]] <- "MF" 
+
+minus_log10_trans <- function(){
+  trans_new(name = "minus_log10", transform = function(x) -log10(x), inverse = function(x) 10 ^ x)
+}
+  
+ggplot(data = plot.df[1:20], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
+  geom_bar(stat = "identity") +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("Top 20 GO Molecular Function, FDR < ", p.thr),
+       y = " ") # + geom_text(label = plot.df$HyperFdrQ)
+```
+
+# Explore GO Molecular Functions
+
+```{r}
+great.go.bio.proc <- great.enrichment.tbl[["GO Biological Process"]] %>% setDT()
+
+(great.go.bio.proc[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit))
+```
+                                                            
+
+```{r}
+plot.df <- great.go.bio.proc[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
+
+plot.bp <- plot.df[1:20,]
+plot.bp[["GO"]] <- "BP" 
+  
+ggplot(data = plot.df[1:20,], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
+  geom_bar(stat = "identity") +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("Top 20 GO Biological Process with FDR < ", p.thr),
+       y = " ") # + geom_text(label = plot.df$HyperFdrQ)
+```
+
+
+# Explore Human Phenotype
+
+```{r}
+great.go.human.pheno <- great.enrichment.tbl[["Human Phenotype"]] %>% setDT()
+
+(great.go.human.pheno[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit))
+```
+                                                          
+
+```{r}
+plot.df <- great.go.human.pheno[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
+
+plot.hf <- plot.df[1:20,]
+plot.hf[["GO"]] <- "HF" 
+
+plot.df <- na.omit(plot.df)  
+ggplot(data = plot.df[1:20,], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
+  geom_bar(stat = "identity", fill = "lightblue") +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("Top GO Human Phenitypes with FDR < ", p.thr),
+       y = " ") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 12),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = c(.2, .2),
+         legend.title = element_blank()) +
+  scale_fill_brewer(palette = "Accent")
+```
+
+```{r}
+plot.df <- rbind(plot.bp, plot.mf)
+plot.df$GO <- as.factor(plot.df$GO)
+plot.df <- na.omit(plot.df)
+
+ggplot(data = plot.df, aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ), fill = GO)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) + # scales::number_format(accuracy = 0.000000000001)) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("Top 40 GO with FDR < ", p.thr),
+       y = " ") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 12),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = c(.2, .2),
+         legend.title = element_blank()) +
+  scale_fill_brewer(palette = "Accent")
+```      
+
+# Explore ENSG
+
+```{r}
+p.thr <- 1
+
+ensg.tbl <- great.enrichment.tbl[["Ensembl Genes"]] %>% setDT()
+colnames(ensg.tbl)
+ensg.tbl[HyperFdrQ < p.thr][order(HyperFdrQ)]
+
+cpg.gene.df.2 <- left_join(dmr.gene.df, ensg.tbl[, c("Desc", "HyperBonfP", "HyperFdrQ")], by = c("gene" = "Desc"))
+datatable(cpg.gene.df.2[HyperFdrQ <= p.thr][order(HyperFdrQ)][,FDR_FDR := round(FDR_FDR, 30)])
+```
+
+# KEGG pathways enrichment analysis od DMRs
+
+
+```{r}
+library(missMethyl)
+
+anno.epic     <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+anno.epic.sub <- as.data.frame(anno.epic[anno.epic$Name %in% dmps.anno.df$Name, ])
+
+gst <- gometh(sig.cpg = dmps.sign.anno.df$Name, all.cpg = dmps.anno.df$Name, array.type = "EPIC", anno = anno.epic.sub, sig.genes = T)
+
+write.csv2(gst, "~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_go_all_missmethyl.csv", quote = F, row.names = F)
+
+df <- dmr.sign.combp.df %>% select(chr = `#chrom`, start = start, end = end)
+x <- makeGRangesFromDataFrame(df)
+
+go.reg <- goregion(x, array.type = "EPIC", collection = "KEGG", sig.genes = T)
+topGSA(go.reg)
+```

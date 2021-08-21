@@ -1,0 +1,138 @@
+---
+title: "EPIC DMA analysis"
+author: "Anastasiia"
+output:
+  html_document:
+  toc: TRUE
+df_print: paged
+---
+  
+```{r setup, include=FALSE}
+library(knitr)
+options(digits = 4, width = 100, stringsAsFactors = T)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 100),
+                      tidy=TRUE,
+                      fig.pos = "H",
+                      dpi = 600,
+                      warning = FALSE, 
+                      message = FALSE, 
+                      cache = F, 
+                      cache.lazy = FALSE)
+```
+
+<!-- pkg.list <- c("BiocManager", "tidyverse", "dplyr", "ggplot2", "Gviz", "RColorBrewer", "glue") -->
+<!-- biocmanager.pkg.list <- c("ggman", "GenomicRanges") -->
+
+<!-- LoadPackages(pkg.list) -->
+<!-- LoadPackagesBio(biocmanager.pkg.list) -->
+
+```{r, include = F}
+libraries <- c("data.table", "tibble", "tidyr", "dplyr", "ggplot2","scales", "RColorBrewer", "ggthemes", "DT", "GenomicRanges", "Repitools", "rGREAT", "limma", "factoextra", "broman", "formattable", "hrbrthemes", "corrplot", "eulerr")
+lapply(libraries, require, character.only = TRUE)
+```
+
+A linear regression model was used to test for differentially methylated sites associated with stress. DNA methylation values for each probe were regressed against dex-veh treatment with covariates for age, gender, BMI, MDD status and cell composition (represented as SVs). Cell count data were estimated from the DNA methylation data. Additional regression models including smoking score and principal components, also derived from DNA methylation, were also performed.
+
+# Load data
+
+```{r load-pheno-data}
+source("funcitons.R")
+pheno.fn  <- "~/bio/datasets/pheno/pheno_full_for_kimono.csv"
+pheno     <- read.csv2(pheno.fn, na.strings = "NA") 
+pheno     <- pheno[!is.na(pheno$DNAm_ID), ] %>% setDT()
+
+pheno$DNAm_ID <- as.character(pheno$DNAm_ID)
+pheno$Status  <- as.factor(pheno$Status)
+pheno$Sex     <- as.factor(pheno$Sex)
+
+levels(pheno$Sex) <- c("Male", "Female")
+levels(pheno$Status) <- c("Control", "MDD")
+
+pheno$DNAm_SV1 <- as.numeric(pheno$DNAm_SV1)
+pheno$DNAm_SV2 <- as.numeric(pheno$DNAm_SV2)
+pheno$DNAm_SV3 <- as.numeric(pheno$DNAm_SV3)
+
+dex.samples <- pheno[pheno$Dex == 1, ][["DNAm_ID"]]
+veh.samples <- pheno[pheno$Dex == 0, ][["DNAm_ID"]]
+```
+
+# Set up parameters
+
+```{r setup-param}
+# src.data.pre <- "/binder/mgp/datasets/2020_DexStim_Array_Human/methylation/" 
+# src.data.pre <- "~/bio/datasets/methylation/20_DMA/" 
+
+lmem.bcc.rslt.fn <- "~/bio/datasets/methylation/20_DMA/01_lme_models/lme_dex_bcc.txt" #
+lmem.sva.rslt.fn <- "~/bio/datasets/methylation/20_DMA/01_lme_models/lme_dex_svs.txt"
+
+lmem.bcc.rslt    <- fread(lmem.bcc.rslt.fn, sep = "\t") %>% setDT()
+lmem.sva.rslt    <- fread(lmem.sva.rslt.fn, sep = "\t") %>% setDT()
+
+# dmps.anno.fn <- paste0(src.data.pre, "02_dmp/dmps_annotated.csv") #"02_dmp/dmp_bcc_pcs_anno.csv")
+```
+
+```{r}
+pval.list <- c(9e-08, 0.0001, 0.001, 0.01, 0.02, 0.03, 0.04, 0.05)
+fc.list   <- c(0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.2)
+
+svs.tuned <- TuneFcandPPlot(lmem.sva.rslt, pval.list, fc.list,plot.title = "Model with SVs")
+svs.tuned$plot
+```
+```{r}
+pval.list <- c(0.0001, 0.001, 0.01, 0.02, 0.03, 0.04, 0.05)
+fc.list   <- c(0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.2)
+
+bcc.tuned <- TuneFcandPPlot(lmem.bcc.rslt, pval.list, fc.list, plot.title = "Model with BCCs")
+bcc.tuned$plot
+```
+
+```{r}
+bcc.df <- bcc.tuned$data
+bcc.df[["Model"]] <- "BCC"
+
+svs.df <- svs.tuned$data
+svs.df[["Model"]] <- "SV"
+
+all.tuned.df <- rbind(bcc.df, svs.df) %>% setDT()
+
+fc.thrsh <- 0.01
+
+all.tuned.df[FC == fc.thrsh][`p-value` != 0.0001] %>% 
+   ggplot(aes(`p-value`, Nr_DMPs, color = Model, group = Model)) + 
+      geom_point() + 
+      geom_line() +
+      geom_label(aes(label = Nr_DMPs), vjust = 0, nudge_y = 0) +
+      theme( panel.background = element_blank(),
+           plot.title = element_text(size = 10),
+           axis.title = element_text(size = 10),
+           axis.text.x = element_text(angle = 0, hjust = 1), 
+           legend.title = element_blank() ,
+           legend.position = "bottom") +
+      labs(title = paste0("Comparison BCC vs SV models for FC thrsh = ", fc.thrsh), y = "Number of DMPs", x = "FDR BH")
+
+```
+
+```{r volcano_plt}
+fdr <- 0.05
+fc  <- 0.01
+
+VolcanoPlot(lmem.sva.rslt, fdr, fc, "SV")
+```
+```{r volcano_plt}
+fdr <- 0.05
+fc  <- 0.01
+
+VolcanoPlot(lmem.bcc.rslt, fdr, fc, "BCC")
+```
+
+```{r}
+all(lmem.sva.rslt$PROBE_ID == lmem.bcc.rslt$PROBE_ID)
+
+lmem.all.rslt <- inner_join(lmem.sva.rslt[, c("PROBE_ID", "FC", "FDR")], lmem.bcc.rslt[, c("PROBE_ID", "FC", "FDR")], by = "PROBE_ID")
+colnames(lmem.all.rslt) <- c("PROBE_ID", "FC_SVA", "FDR_SVA", "FC_BCC", "FDR_BCC")
+
+lmem.cor <- cor(lmem.all.rslt[, -1])
+lmem.cor
+corrplot(lmem.cor)
+```

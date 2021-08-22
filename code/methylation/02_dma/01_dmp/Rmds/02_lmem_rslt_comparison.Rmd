@@ -1,0 +1,210 @@
+---
+title: "DNAm Analysis"
+author: "Anastasiia Hryhorzhevska"
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    df_print: paged
+    css: style.css
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=FALSE}
+options(digits = 4, width = 100, stringsAsFactors = T)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 100),
+                      tidy=TRUE,
+                      fig.pos = "H",
+                      dpi = 600,
+                      warning = FALSE, 
+                      message = FALSE, 
+                      cache = TRUE, 
+                      cache.lazy = FALSE)
+
+# define DT as the standard printing method for data.frame
+library(knitr)
+knit_print.data.frame <- function(x, ...) {
+  knit_print(DT::datatable(x,
+                           filter="top",
+                           rownames = FALSE,
+                           extensions = "FixedColumns",
+                           options = list(
+                             scrollX = TRUE,
+                             pageLength = 5
+                             
+                           )), ...)
+}
+
+registerS3method("knit_print", "data.frame", knit_print.data.frame)
+
+library(ggplot2)
+library(tidyverse)
+library(plyr)
+library(data.table)
+library(viridis)
+library(ggrepel)
+```
+# Introduction
+***
+
+```{r, include = F, eval = T}
+source("~/bio/code/mpip/dex-stim-human-array/code/methylation/02_dma/01_dmp/funcitons.R")
+```
+
+# LMEMs Analysis
+
+```{r, include = F, eval = T}
+lmem.svs.pcs.rslt.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_svs_pcs_rslt.txt'
+lmem.bcc.pcs.rslt.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_bcc_pcs_rslt.txt'
+lmem.bcc.rslt.fn     <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_bcc_rslt.txt'
+lmem.no.bcc.rslt.fn  <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_no_bcc_rslt.txt'
+lmem.bcc.cellcode.pcs.rslt.fn <- 
+  '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_bcc_cellcode_pcs_rslt.txt'
+
+lmem.svs.pcs.rslt          <- fread(lmem.svs.pcs.rslt.fn)
+lmem.bcc.pcs.rslt          <- fread(lmem.bcc.pcs.rslt.fn)
+lmem.bcc.rslt              <- fread(lmem.bcc.rslt.fn)
+lmem.no.bcc.rslt           <- fread(lmem.no.bcc.rslt.fn)
+lmem.bcc.cellcode.pcs.rslt <- fread(lmem.bcc.cellcode.pcs.rslt.fn)
+
+# dmps.anno.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dmps_annotated.csv'
+# dmps.anno.df <- fread(dmps.anno.fn)
+```
+
+## __FDR and FC Tuning. Volcano plot__ {.tabset .tabset-fade .tabset-pills}
+
+```{r, include = F, eval = T}
+pval.list <- c(0.0001, 0.001, 0.01, 0.02, 0.03, 0.04, 0.05)
+fc.list   <- c(0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.1, 0.2)
+```
+
+### DNAm SVs + SNP PCs
+```{r  out.width = "85%", fig.cap = "Model with DNAm SVs and Genotype PCs", include = T, eval = T}
+svs.pcs.tuned <- TuneFcandPPlot(lmem.svs.pcs.rslt, pval.list, fc.list, plot.title = "")
+svs.pcs.tuned$plot
+```
+
+```{r out.width = "80%", fig.cap = "Model with DNAm SVs + Genotype PCs", include = T, eval = T}
+fdr <- 0.05
+fc  <- 0.01
+
+VolcanoPlot(lmem.svs.pcs.rslt, fdr, fc, "DNAm SVs and SNP PCs")
+```
+
+### DNAm BCCs + SNP PCs
+```{r  out.width = "85%", fig.cap = "Model with DNAm BCCs and Genotype PCs", include = T, eval = T}
+bcc.pcs.tuned <- TuneFcandPPlot(lmem.bcc.pcs.rslt, pval.list, fc.list, plot.title = "")
+bcc.pcs.tuned$plot
+```
+
+```{r out.width = "85%", fig.cap = "Model with DNAm BCCs and Genotype PCs", include = T, eval = T}
+fdr <- 0.05
+fc  <- 0.01
+
+VolcanoPlot(lmem.bcc.rslt, fdr, fc, "DNAm BCC and SNP PCs")
+```
+
+### DNAm BCCs
+```{r  out.width = "85%", fig.cap = "Model with DNAm BCCs only", include = T, eval = T}
+bcc.tuned <- TuneFcandPPlot(lmem.bcc.rslt, pval.list, fc.list, plot.title = "")
+bcc.tuned$plot
+```
+
+```{r out.width = "85%", fig.cap = "Model with DNAm BCCs only", include = T, eval = T}
+fdr <- 0.05
+fc  <- 0.01
+
+VolcanoPlot(lmem.bcc.rslt, fdr, fc, "DNAm BCC only")
+```
+
+### CellCODE BCCs + SNP PCs
+```{r  out.width = "85%", fig.cap = "Model with CellCODE BCCs and Genotype PCs", include = T, eval = T}
+bcc.cellcode.pcs.tuned <- TuneFcandPPlot(lmem.bcc.cellcode.pcs.rslt, pval.list, fc.list, plot.title = "")
+bcc.cellcode.pcs.tuned$plot
+```
+
+```{r out.width = "85%", fig.cap = "Model with CellCODE BCCs and Genotype PCs", include = T, eval = T}
+fdr <- 0.05
+fc  <- 0.01
+
+VolcanoPlot(lmem.bcc.cellcode.pcs.rslt, fdr, fc, "DNAm BCC only")
+```
+
+### Basic
+```{r  out.width = "85%", fig.cap = "Model with {Sex, MDD Status, Age, BMI}", include = T, eval = T}
+basic.tuned <- TuneFcandPPlot(lmem.no.bcc.rslt, pval.list, fc.list, plot.title = "")
+basic.tuned$plot
+```
+
+```{r out.width = "85%", fig.cap = "Model with {Sex, MDD Status, Age, BMI}", include = T, eval = T}
+fdr <- 0.05
+fc  <- 0.01
+
+VolcanoPlot(lmem.no.bcc.rslt, fdr, fc, "{Sex, MDD Status, Age, BMI}")
+```
+
+## __LMEMs comparison__{.tabset .tabset-fade .tabset-pills}
+
+### DMPs
+```{r out.width = "85%", include = T, eval = T}
+bcc.df <- bcc.tuned$data
+bcc.df[["Model"]] <- "BCCs only"
+
+svs.pcs.df <- svs.pcs.tuned$data
+svs.pcs.df[["Model"]] <- "DNAm SVs + SNP PCs"
+
+bcc.pcs.df <- bcc.pcs.tuned$data
+bcc.pcs.df[["Model"]] <- "DNAm BCCs + SNP PCs"
+
+bcc.cellcode.pcs.df <- bcc.cellcode.pcs.tuned$data
+bcc.cellcode.pcs.df[["Model"]] <- "CellCODE BCCs + SNP PCs"
+
+
+basic.df <- basic.tuned$data
+basic.df[["Model"]] <- "Basic"
+
+all.tuned.df <- rbind(bcc.df, svs.pcs.df, bcc.pcs.df, bcc.cellcode.pcs.df, basic.df) %>% setDT()
+
+fc.thrsh <- 0.01
+
+all.tuned.df[FC == fc.thrsh][`p-value` != 0.0001] %>% 
+   ggplot(aes(`p-value`, Nr_DMPs, color = Model, group = Model)) + 
+      geom_point() + 
+      geom_line() +
+      geom_label(aes(label = Nr_DMPs), vjust = 0, nudge_y = 0) +
+      theme( panel.background = element_blank(),
+           plot.title = element_text(size = 10),
+           axis.title = element_text(size = 10),
+           axis.text.x = element_text(angle = 0, hjust = 1), 
+           legend.title = element_blank(),
+           legend.position = "bottom") +
+      labs(title = paste0("LMEMs' Comparison for FC thrsh = ", fc.thrsh), y = "Number of DMPs", x = "FDR BH")
+
+```
+
+### P-values distribution
+```{r out.width = "85%", fig.cap = "Distribution of p-values for each model", include = T, eval = T}
+lmem.all.rslt <- rbind(data.frame(lmem.no.bcc.rslt, Model = "Basic"),
+                       data.frame(lmem.bcc.cellcode.pcs.rslt, Model = "CellCODE BCCs + SNP PCs"),
+                       data.frame(lmem.bcc.rslt, Model = "DNAm BCCs only"),
+                       data.frame(lmem.bcc.pcs.rslt, Model = "DNAm BCCs + SNP PCs"),
+                       data.frame(lmem.svs.pcs.rslt, Model = "DNAm SVs + SNP PCs"))
+
+ggplot(lmem.all.rslt, aes(x = Model, y = FDR, color = Model)) +
+  geom_boxplot() +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 10, hjust = 0.5), 
+         legend.title = element_blank(),
+         legend.position = "none")
+
+```
+<!-- # Combine -->
+
+<!-- ```{r child = c('02_lmem_svs_pcs_rslt_analysis.Rmd')} -->
+<!-- ``` -->

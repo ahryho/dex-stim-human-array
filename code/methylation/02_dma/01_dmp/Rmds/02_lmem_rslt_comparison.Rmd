@@ -48,8 +48,6 @@ library(data.table)
 library(viridis)
 library(ggrepel)
 ```
-# Introduction
-***
 
 ```{r, include = F, eval = T}
 source("~/bio/code/mpip/dex-stim-human-array/code/methylation/02_dma/01_dmp/funcitons.R")
@@ -64,12 +62,15 @@ lmem.bcc.rslt.fn     <- '~/bio/code/mpip/dex-stim-human-array/output/data/methyl
 lmem.no.bcc.rslt.fn  <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_no_bcc_rslt.txt'
 lmem.bcc.cellcode.pcs.rslt.fn <- 
   '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_bcc_cellcode_pcs_rslt.txt'
+lmem.svs.pcs.smoke.rslt.fn <- 
+  '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_svs_pcs_smoke_rslt.txt'
 
 lmem.svs.pcs.rslt          <- fread(lmem.svs.pcs.rslt.fn)
 lmem.bcc.pcs.rslt          <- fread(lmem.bcc.pcs.rslt.fn)
 lmem.bcc.rslt              <- fread(lmem.bcc.rslt.fn)
 lmem.no.bcc.rslt           <- fread(lmem.no.bcc.rslt.fn)
 lmem.bcc.cellcode.pcs.rslt <- fread(lmem.bcc.cellcode.pcs.rslt.fn)
+lmem.svs.pcs.smoke.rslt    <- fread(lmem.svs.pcs.smoke.rslt.fn)
 
 # dmps.anno.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dmps_annotated.csv'
 # dmps.anno.df <- fread(dmps.anno.fn)
@@ -147,6 +148,19 @@ fc  <- 0.01
 VolcanoPlot(lmem.no.bcc.rslt, fdr, fc, "{Sex, MDD Status, Age, BMI}")
 ```
 
+### DNAm SVs + SNP PCs + SS
+```{r  out.width = "85%", fig.cap = "Model with DNAm SVs and Genotype PCs amd DNAm Smoking Score", include = T, eval = T}
+svs.pcs.smoke.tuned <- TuneFcandPPlot(lmem.svs.pcs.smoke.rslt, pval.list, fc.list, plot.title = "")
+svs.pcs.smoke.tuned$plot
+```
+
+```{r out.width = "80%", fig.cap = "Model with DNAm SVs + Genotype PCs", include = T, eval = T}
+fdr <- 0.05
+fc  <- 0.01
+
+VolcanoPlot(lmem.svs.pcs.rslt, fdr, fc, "DNAm SVs and SNP PCs")
+```
+
 ## __LMEMs comparison__{.tabset .tabset-fade .tabset-pills}
 
 ### DMPs
@@ -157,17 +171,19 @@ bcc.df[["Model"]] <- "BCCs only"
 svs.pcs.df <- svs.pcs.tuned$data
 svs.pcs.df[["Model"]] <- "DNAm SVs + SNP PCs"
 
+svs.pcs.smoke.df <- svs.pcs.smoke.tuned$data
+svs.pcs.smoke.df[["Model"]] <- "DNAm SVs + SNP PCs + SS"
+
 bcc.pcs.df <- bcc.pcs.tuned$data
 bcc.pcs.df[["Model"]] <- "DNAm BCCs + SNP PCs"
 
 bcc.cellcode.pcs.df <- bcc.cellcode.pcs.tuned$data
 bcc.cellcode.pcs.df[["Model"]] <- "CellCODE BCCs + SNP PCs"
 
-
 basic.df <- basic.tuned$data
 basic.df[["Model"]] <- "Basic"
 
-all.tuned.df <- rbind(bcc.df, svs.pcs.df, bcc.pcs.df, bcc.cellcode.pcs.df, basic.df) %>% setDT()
+all.tuned.df <- rbind(bcc.df, svs.pcs.df, svs.pcs.smoke.df, bcc.pcs.df, bcc.cellcode.pcs.df, basic.df) %>% setDT()
 
 fc.thrsh <- 0.01
 
@@ -192,7 +208,8 @@ lmem.all.rslt <- rbind(data.frame(lmem.no.bcc.rslt, Model = "Basic"),
                        data.frame(lmem.bcc.cellcode.pcs.rslt, Model = "CellCODE BCCs + SNP PCs"),
                        data.frame(lmem.bcc.rslt, Model = "DNAm BCCs only"),
                        data.frame(lmem.bcc.pcs.rslt, Model = "DNAm BCCs + SNP PCs"),
-                       data.frame(lmem.svs.pcs.rslt, Model = "DNAm SVs + SNP PCs"))
+                       data.frame(lmem.svs.pcs.rslt, Model = "DNAm SVs + SNP PCs"),
+                       data.frame(lmem.svs.pcs.smoke.rslt, Model = "DNAm SVs + SNP PCs + SS"))
 
 ggplot(lmem.all.rslt, aes(x = Model, y = FDR, color = Model)) +
   geom_boxplot() +

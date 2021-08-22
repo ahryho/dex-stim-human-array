@@ -22,7 +22,7 @@ lmer.res.out.fn <- as.character(args[3])
 # pheno.fn <- "/binder/mgp/datasets/2020_DexStim_Array_Human/pheno/pheno_full_for_kimono.csv"
 
 # beta.mtrx.fn <- "~/bio/datasets/methylation/10_final_qc_data/dex_methyl_beta_combat_mtrx.rds"
-pheno.fn <- "~/bio/code/mpip/dex-stim-human-array/data//pheno/pheno_full_for_kimono.csv"
+# pheno.fn <- "~/bio/code/mpip/dex-stim-human-array/data//pheno/pheno_full_for_kimono.csv"
 
 # fwrite(pheno, 
 #        pheno.fn,

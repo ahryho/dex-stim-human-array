@@ -45,6 +45,7 @@ library(data.table)
 library(dplyr)
 library(ggplot2)
 library(corrplot)
+library(factoextra)
 ```
 
 # Introduction
@@ -76,11 +77,16 @@ colnames(pheno.full)
 
 # Methylation  {.tabset .tabset-fade .tabset-pills}
 
+1. The roadmap for qc methylation:
+
+<center>
+![FigName](~/bio/code/mpip/dex-stim-human-array/data/methylation/img/dnam_qc_roadmap.png){width='80%'}
+
 1. Methylation data:
-  + BCC: CD8T, CD4T, NK, Bcell, Mono, Gran
+  + BCC: CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm
   + 62 sugnificant Surrogate Variables (SV)
-  + DNAm Age
-  + Smoking Score 
+  + DNAm Age- age estimated from DNAm data using Hovarth algorithm
+  + Smoking Score - smoking score estimated from DNAm data using 
 
 ## Corplot
 
@@ -88,17 +94,54 @@ colnames(pheno.full)
 pheno      <- pheno.full[Include == 1]
 ```
 
-```{r, , include = F, eval = T}
+<!--## PCA -->
+
+```{r compute-dnam-pcs, include = F, eval = F}
+library(lumi)
+
+beta.mtrx.fn <- "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_beta_combat_mtrx.rds"
+beta.mtrx    <- readRDS(beta.mtrx.fn)
+
+beta.mtrx   <- beta.mtrx[, match(pheno$DNAm_ID, colnames(beta.mtrx))]
+mval.mtrx   <- beta2m(beta.mtrx)
+t.mval.mtrx <- t(mval.mtrx)
+
+pal <- brewer.pal(8, "Set2")
+
+# pca.obj <- prcomp(t(mval.mtrx[dmps.sign.df$PROBE_ID,]), retx = T, center = T, scale. = T)  
+pca.obj <- prcomp(mval.mtrx, retx = F, center = T, scale. = F, rank. = 10)  
+pca.obj.retx <- prcomp(mval.mtrx, retx = T, center = T, scale. = F, rank. = 10)  
+nr.pcs <- ncol(pca.obj$x) # rotation)
+
+propvar <- round(summary(pca.obj)$importance["Proportion of Variance", 1:nr.pcs] * 100, 2 )
+cummvar <- round(summary(pca.obj)$importance["Cumulative Proportion", 1:nr.pcs] * 100, 2) 
+
+dnam.pcs <- data.frame(pca.obj$rotation)
+dnam.pcs <- dnam.pcs[match(pheno$DNAm_ID, rownames(dnam.pcs)), ]
+dnam.pcs[["DNAm_ID"]] <- rownames(dnam.pcs)
+
+write.csv2(dnam.pcs, 
+           "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_top10pcs.csv", 
+           row.names = F, quote = F)
+```
+
+```{r load-dnam-pcs, include = F, eval = T}
+dnam.pcs.fn <- "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_top10pcs.csv"
+dnam.pcs    <- read.csv2(dnam.pcs.fn)
+dnam.pcs    <- dnam.pcs[match(pheno$DNAm_ID, dnam.pcs$DNAm_ID), paste0("PC", 1:10)] 
+colnames(dnam.pcs) <- paste0("DNAm_PC", 1:10)
+```
+
+```{r, include = F, eval = T}
 bcc.gex  <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
 bcc.gex <- bcc.gex %>% 
   mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
 bcc.meth <- pheno[, c("CD8T", "CD4T", "NK", "Bcell", "Mono", "Gran")]
 sv.gex   <- pheno[, paste0("V", 1:10)] # c("V1", "V2", "V3", "V4", "V5")]
 sv.meth  <- pheno[, paste0("DNAm_SV", 1:10)]# c("DNAm_SV1", "DNAm_SV2", "DNAm_SV3")]
+snp.pcs  <- pheno[, paste0("PC", 1:5)]
 
-# bcc.df <- (data.frame(gex = bcc.gex, meth = bcc.meth, gex = sv.gex, sv.meth, Dex = pheno$Dex))
-
-tmp.df <- data.frame(gex = bcc.gex, meth = bcc.meth, gex = sv.gex, sv.meth, 
+tmp.df <- data.frame(sv.meth, meth = bcc.meth, gex = bcc.gex, gex = sv.gex, snp.pcs, dnam.pcs,
                      Dex = as.numeric(pheno$Dex), Status = as.numeric(pheno$Status), Sex = as.numeric(pheno$Sex), BMI = pheno$BMI_D1, 
                      Age = pheno$Age, DNAm_Age = pheno$mAge_Hovath, DNAm_Smoke = pheno$DNAm_SmokingScore) %>% 
   na.omit() %>% 
@@ -108,7 +151,7 @@ tmp.df <- data.frame(gex = bcc.gex, meth = bcc.meth, gex = sv.gex, sv.meth,
 ```{r out.width = "98%", fig.cap = "Relationship of the top 10 SVs derived from DNAm data with available and derived covariates", include = T, eval = T}
 cor.mtrx <- cor(tmp.df)
 # cor.mtrx.plt <- cor.mtrx[-which(rownames(cor.mtrx) %in% paste0("DNAm_SV", 1:10)), paste0("DNAm_SV", 1:10)]
-cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), -which(colnames(cor.mtrx) %in% paste0("DNAm_SV", 1:10))]
+cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), -which(colnames(cor.mtrx) %in% c(paste0("DNAm_SV", 1:10), paste0("DNAm_PC", 1:10)))]
 par(cex = 1)
 corrplot(cor.mtrx.plt, 
          method = "color", cl.pos = "b", cl.cex = 0.6,
@@ -120,62 +163,42 @@ corrplot(cor.mtrx.plt,
 
 ## PCA
 
-Relationship of the top 10 principal components (PCs) derived from DNA methylation data with available and derived covariates. 
-
-```{r include = F, eval = F}
-library(lumi)
-
-beta.mtrx.fn <- "~bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_beta_combat_mtrx.rds"
-beta.mtrx    <- readRDS(beta.mtrx.fn)
-
-beta.mtrx <- beta.mtrx[, match(pheno$DNAm_ID, colnames(beta.mtrx))]
-mval.mtrx <- beta2m(beta.mtrx)
-
-pal <- brewer.pal(8, "Set2")
-
-pca.obj <- prcomp(t(mval.mtrx[dmps.sign.df$PROBE_ID,]), retx = T, center = T, scale. = T)  
-nr.pcs <- 10
-
-propvar <- round(summary(pca.obj)$importance["Proportion of Variance", 1:nr.pcs] * 100, 2 )
-cummvar <- round(summary(pca.obj)$importance["Cumulative Proportion", 1:nr.pcs] * 100, 2) 
-
-pcs <- pca.obj$x[, 1:nr.pcs]
-```
-
 # Relationship of the top 10 principal components derived from DNA methylation data with available and derived covariates. 
 
-Because it is likely that other unmeasured environmental exposures also confound the analysis of methylomic variation associated with dex treatment, we investigated the impact of additional surrogate variables capturing variation in DNA methylation on the association statistics for dex-associated DMPs. We first compared each of the first 10 principal components (PCs) derived from the DNA methylation data to the available phenotype data to identify potential sources of additional variation between samples. For example, we observed strong correlations (r > 0.5) between the first three PCs and estimated blood cell composition measures, reflecting the likely effect of epigenetic differences between cell types. 
+<!-- Because it is likely that other unmeasured environmental exposures also confound the analysis of methylomic variation associated with dex treatment, we investigated the impact of additional surrogate variables capturing variation in DNA methylation on the association statistics for dex-associated DMPs. We first compared each of the first 10 principal components (PCs) derived from the DNA methylation data to the available phenotype data to identify potential sources of additional variation between samples. For example, we observed strong correlations (r > 0.5) between the first three PCs and estimated blood cell composition measures, reflecting the likely effect of epigenetic differences between cell types.  -->
 
-Heat-map of correlations between each PC (1-10) and the available phenotype information (SCZ – schizophrenia
-status; sex) and variables derived from the DNA methylation data (DNAmAge – age estimated from DNA methylation data; DNAm Smoking - smoking score estimated from DNA methylation data; CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm
+<!-- Heat-map of correlations between each PC (1-10) and the available phenotype information (SCZ – schizophrenia -->
+<!-- status; sex) and variables derived from the DNA methylation data (DNAmAge – age estimated from DNA methylation data; DNAm Smoking - smoking score estimated from DNA methylation data; CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm -->
 
-```{r, include = F, eval = F}
-bcc.gex  <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
-bcc.gex <- bcc.gex %>% 
-  mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
-bcc.meth <- pheno[, c("CD8T", "CD4T", "NK", "Bcell", "Mono", "Gran")]
-sv.gex   <- pheno[, c("V1", "V2", "V3", "V4", "V5")]
-sv.meth  <- pheno[, c("DNAm_SV1", "DNAm_SV2", "DNAm_SV3")]
-
-tmp.df <- data.frame(gex = bcc.gex, meth = bcc.meth, gex = sv.gex, sv.meth, 
-                     Dex = as.numeric(pheno$Dex), Status = as.numeric(pheno$Status), Sex = as.numeric(pheno$Sex), BMI = pheno$BMI_D1, 
-                     Age = pheno$Age, DNAm_Age = pheno$DNAm_Age, DNAm_SmokingScore = pheno$DNAm_SmokingScore, pcs) %>% 
-  na.omit() %>% 
-  scale()
-
+```{r out.width = "98%", fig.cap = "Relationship of the top 10 PCs derived from DNAm data with available and derived covariates", include = T, eval = T}
 cor.mtrx <- cor(tmp.df)
-cor.mtrx.plt <- cor.mtrx[28:nrow(cor.mtrx), c(7:12, 18:27)]
-corrplot(cor.mtrx.plt, method = "color",
-         addCoef.col = "black", # Add coefficient of correlation
-         tl.col="black", tl.srt=45, #Text label color and rotation
+# cor.mtrx.plt <- cor.mtrx[-which(rownames(cor.mtrx) %in% paste0("DNAm_SV", 1:10)), paste0("DNAm_SV", 1:10)]
+cor.mtrx.plt <- cor.mtrx[paste0("DNAm_PC", 1:10), -which(colnames(cor.mtrx) %in% paste0("DNAm_PC", 1:10))]
+par(cex = 1)
+corrplot(cor.mtrx.plt, 
+         method = "color", cl.pos = "b", cl.cex = 0.6,
+         addgrid.col = "gray90",
+         addCoef.col = "black", number.cex = 0.6, number.digits = 1, # Add coefficient of correlation
+         tl.col = "black",  tl.cex = 0.6, tl.srt = 45, tl.offset = 0.5, tl.pos = "dt", #Text label color and rotation
          sig.level = 0.01) 
 ```
-```{r}
-corrplot(cor.mtrx[1:27, 1:27], method = "color", type = "upper")
-```
 
-```{r, include = F, eval = F}
-fviz_pca_ind(pca.obj, col.ind = pheno$Group,
+```{r out.width = "98%", fig.cap = "PCA plot demonstrating the DEX treatment separation", include = T, eval = T}
+ggplot(data = pca, aes(C1, C2, col = Group)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_label_repel(data = pca[pca$FID %in% outliers, ],
+                   aes(label = outliers, size = NULL)) + 
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "bottom")
+
+fviz_pca_ind(pca.obj.retx, col.ind = pheno$Group,
              geom = "point", repel = T) +
   theme(legend.position = " ") +
   labs(title = "PCA plot demonstrating the DEX treatment separation based on the significant DMPs")
@@ -197,142 +220,3 @@ fviz_pca_ind(pca.obj, col.ind = pheno$Sex,
 
 # Integrative Basic Analysis
 
-
-<!-- ### DNAm SVs + SNP PCs -->
-<!-- ```{r  out.width = "85%", fig.cap = "Model with DNAm SVs and Genotype PCs", include = T, eval = T} -->
-<!-- svs.pcs.tuned <- TuneFcandPPlot(lmem.svs.pcs.rslt, pval.list, fc.list, plot.title = "") -->
-<!-- svs.pcs.tuned$plot -->
-<!-- ``` -->
-
-<!-- ```{r out.width = "80%", fig.cap = "Model with DNAm SVs + Genotype PCs", include = T, eval = T} -->
-<!-- fdr <- 0.05 -->
-<!-- fc  <- 0.01 -->
-
-<!-- VolcanoPlot(lmem.svs.pcs.rslt, fdr, fc, "DNAm SVs and SNP PCs") -->
-<!-- ``` -->
-
-<!-- ### DNAm BCCs + SNP PCs -->
-<!-- ```{r  out.width = "85%", fig.cap = "Model with DNAm BCCs and Genotype PCs", include = T, eval = T} -->
-<!-- bcc.pcs.tuned <- TuneFcandPPlot(lmem.bcc.pcs.rslt, pval.list, fc.list, plot.title = "") -->
-<!-- bcc.pcs.tuned$plot -->
-<!-- ``` -->
-
-<!-- ```{r out.width = "85%", fig.cap = "Model with DNAm BCCs and Genotype PCs", include = T, eval = T} -->
-<!-- fdr <- 0.05 -->
-<!-- fc  <- 0.01 -->
-
-<!-- VolcanoPlot(lmem.bcc.rslt, fdr, fc, "DNAm BCC and SNP PCs") -->
-<!-- ``` -->
-
-<!-- ### DNAm BCCs -->
-<!-- ```{r  out.width = "85%", fig.cap = "Model with DNAm BCCs only", include = T, eval = T} -->
-<!-- bcc.tuned <- TuneFcandPPlot(lmem.bcc.rslt, pval.list, fc.list, plot.title = "") -->
-<!-- bcc.tuned$plot -->
-<!-- ``` -->
-
-<!-- ```{r out.width = "85%", fig.cap = "Model with DNAm BCCs only", include = T, eval = T} -->
-<!-- fdr <- 0.05 -->
-<!-- fc  <- 0.01 -->
-
-<!-- VolcanoPlot(lmem.bcc.rslt, fdr, fc, "DNAm BCC only") -->
-<!-- ``` -->
-
-<!-- ### CellCODE BCCs + SNP PCs -->
-<!-- ```{r  out.width = "85%", fig.cap = "Model with CellCODE BCCs and Genotype PCs", include = T, eval = T} -->
-<!-- bcc.cellcode.pcs.tuned <- TuneFcandPPlot(lmem.bcc.cellcode.pcs.rslt, pval.list, fc.list, plot.title = "") -->
-<!-- bcc.cellcode.pcs.tuned$plot -->
-<!-- ``` -->
-
-<!-- ```{r out.width = "85%", fig.cap = "Model with CellCODE BCCs and Genotype PCs", include = T, eval = T} -->
-<!-- fdr <- 0.05 -->
-<!-- fc  <- 0.01 -->
-
-<!-- VolcanoPlot(lmem.bcc.cellcode.pcs.rslt, fdr, fc, "DNAm BCC only") -->
-<!-- ``` -->
-
-<!-- ### Basic -->
-<!-- ```{r  out.width = "85%", fig.cap = "Model with {Sex, MDD Status, Age, BMI}", include = T, eval = T} -->
-<!-- basic.tuned <- TuneFcandPPlot(lmem.no.bcc.rslt, pval.list, fc.list, plot.title = "") -->
-<!-- basic.tuned$plot -->
-<!-- ``` -->
-
-<!-- ```{r out.width = "85%", fig.cap = "Model with {Sex, MDD Status, Age, BMI}", include = T, eval = T} -->
-<!-- fdr <- 0.05 -->
-<!-- fc  <- 0.01 -->
-
-<!-- VolcanoPlot(lmem.no.bcc.rslt, fdr, fc, "{Sex, MDD Status, Age, BMI}") -->
-<!-- ``` -->
-
-<!-- ### DNAm SVs + SNP PCs + SS -->
-<!-- ```{r  out.width = "85%", fig.cap = "Model with DNAm SVs and Genotype PCs amd DNAm Smoking Score", include = T, eval = T} -->
-<!-- svs.pcs.smoke.tuned <- TuneFcandPPlot(lmem.svs.pcs.smoke.rslt, pval.list, fc.list, plot.title = "") -->
-<!-- svs.pcs.smoke.tuned$plot -->
-<!-- ``` -->
-
-<!-- ```{r out.width = "80%", fig.cap = "Model with DNAm SVs + Genotype PCs", include = T, eval = T} -->
-<!-- fdr <- 0.05 -->
-<!-- fc  <- 0.01 -->
-
-<!-- VolcanoPlot(lmem.svs.pcs.rslt, fdr, fc, "DNAm SVs and SNP PCs") -->
-<!-- ``` -->
-
-<!-- ## __LMEMs comparison__{.tabset .tabset-fade .tabset-pills} -->
-
-<!-- ### DMPs -->
-<!-- ```{r out.width = "85%", include = T, eval = T} -->
-<!-- bcc.df <- bcc.tuned$data -->
-<!-- bcc.df[["Model"]] <- "BCCs only" -->
-
-<!-- svs.pcs.df <- svs.pcs.tuned$data -->
-<!-- svs.pcs.df[["Model"]] <- "DNAm SVs + SNP PCs" -->
-
-<!-- svs.pcs.smoke.df <- svs.pcs.smoke.tuned$data -->
-<!-- svs.pcs.smoke.df[["Model"]] <- "DNAm SVs + SNP PCs + SS" -->
-
-<!-- bcc.pcs.df <- bcc.pcs.tuned$data -->
-<!-- bcc.pcs.df[["Model"]] <- "DNAm BCCs + SNP PCs" -->
-
-<!-- bcc.cellcode.pcs.df <- bcc.cellcode.pcs.tuned$data -->
-<!-- bcc.cellcode.pcs.df[["Model"]] <- "CellCODE BCCs + SNP PCs" -->
-
-<!-- basic.df <- basic.tuned$data -->
-<!-- basic.df[["Model"]] <- "Basic" -->
-
-<!-- all.tuned.df <- rbind(bcc.df, svs.pcs.df, svs.pcs.smoke.df, bcc.pcs.df, bcc.cellcode.pcs.df, basic.df) %>% setDT() -->
-
-<!-- fc.thrsh <- 0.01 -->
-
-<!-- all.tuned.df[FC == fc.thrsh][`p-value` != 0.0001] %>%  -->
-<!--    ggplot(aes(`p-value`, Nr_DMPs, color = Model, group = Model)) +  -->
-<!--       geom_point() +  -->
-<!--       geom_line() + -->
-<!--       geom_label(aes(label = Nr_DMPs), vjust = 0, nudge_y = 0) + -->
-<!--       theme( panel.background = element_blank(), -->
-<!--            plot.title = element_text(size = 10), -->
-<!--            axis.title = element_text(size = 10), -->
-<!--            axis.text.x = element_text(angle = 0, hjust = 1),  -->
-<!--            legend.title = element_blank(), -->
-<!--            legend.position = "bottom") + -->
-<!--       labs(title = paste0("LMEMs' Comparison for FC thrsh = ", fc.thrsh), y = "Number of DMPs", x = "FDR BH") -->
-
-<!-- ``` -->
-
-<!-- ### P-values distribution -->
-<!-- ```{r out.width = "85%", fig.cap = "Distribution of p-values for each model", include = T, eval = T} -->
-<!-- lmem.all.rslt <- rbind(data.frame(lmem.no.bcc.rslt, Model = "Basic"), -->
-<!--                        data.frame(lmem.bcc.cellcode.pcs.rslt, Model = "CellCODE BCCs + SNP PCs"), -->
-<!--                        data.frame(lmem.bcc.rslt, Model = "DNAm BCCs only"), -->
-<!--                        data.frame(lmem.bcc.pcs.rslt, Model = "DNAm BCCs + SNP PCs"), -->
-<!--                        data.frame(lmem.svs.pcs.rslt, Model = "DNAm SVs + SNP PCs"), -->
-<!--                        data.frame(lmem.svs.pcs.smoke.rslt, Model = "DNAm SVs + SNP PCs + SS")) -->
-
-<!-- ggplot(lmem.all.rslt, aes(x = Model, y = FDR, color = Model)) + -->
-<!--   geom_boxplot() + -->
-<!--   theme( panel.background = element_blank(), -->
-<!--          plot.title = element_text(size = 10), -->
-<!--          axis.title = element_text(size = 10), -->
-<!--          axis.text.x = element_text(angle = 10, hjust = 0.5),  -->
-<!--          legend.title = element_blank(), -->
-<!--          legend.position = "none") -->
-
-<!-- ``` -->

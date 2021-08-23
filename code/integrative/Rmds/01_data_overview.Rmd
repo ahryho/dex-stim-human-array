@@ -75,26 +75,32 @@ dim(pheno.full)
 colnames(pheno.full)
 ```
 
-# Methylation  {.tabset .tabset-fade .tabset-pills}
+# Methylation 
 
-1. The roadmap for qc methylation:
+The roadmap for qc methylation:
 
-<center>
-![FigName](~/bio/code/mpip/dex-stim-human-array/data/methylation/img/dnam_qc_roadmap.png){width='80%'}
+```{r dnam_qc_roadmap,  out.width = '100%'}
+knitr::include_graphics("img/dnam_qc_roadmap.png")
+```
+
+<!-- <center> -->
+<!-- ![](~/bio/code/mpip/dex-stim-human-array/data/methylation/img/dnam_qc_roadmap.png){width='80%'} -->
 
 1. Methylation data:
   + BCC: CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm
   + 62 sugnificant Surrogate Variables (SV)
   + DNAm Age- age estimated from DNAm data using Hovarth algorithm
-  + Smoking Score - smoking score estimated from DNAm data using 
+  + Smoking Score - smoking score estimated from DNAm data using Elliot's CpGs
 
-## Corplot
+## SVA
+
+### Correlation {.tabset .tabset-fade .tabset-pills}
 
 ```{r, include = F, eval = T}
 pheno      <- pheno.full[Include == 1]
 ```
 
-<!--## PCA -->
+<!-- Calculate first 10 DNAm PCs -->
 
 ```{r compute-dnam-pcs, include = F, eval = F}
 library(lumi)
@@ -108,31 +114,38 @@ t.mval.mtrx <- t(mval.mtrx)
 
 pal <- brewer.pal(8, "Set2")
 
-# pca.obj <- prcomp(t(mval.mtrx[dmps.sign.df$PROBE_ID,]), retx = T, center = T, scale. = T)  
 pca.obj <- prcomp(mval.mtrx, retx = F, center = T, scale. = F, rank. = 10)  
-pca.obj.retx <- prcomp(mval.mtrx, retx = T, center = T, scale. = F, rank. = 10)  
-nr.pcs <- ncol(pca.obj$x) # rotation)
+# pca.obj.retx <- prcomp(mval.mtrx, retx = T, center = T, scale. = F, rank. = 10)  
 
-propvar <- round(summary(pca.obj)$importance["Proportion of Variance", 1:nr.pcs] * 100, 2 )
-cummvar <- round(summary(pca.obj)$importance["Cumulative Proportion", 1:nr.pcs] * 100, 2) 
+# temp <- pca.obj
+saveRDS(pca.obj,
+        "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_pca.rds")
 
-dnam.pcs <- data.frame(pca.obj$rotation)
-dnam.pcs <- dnam.pcs[match(pheno$DNAm_ID, rownames(dnam.pcs)), ]
-dnam.pcs[["DNAm_ID"]] <- rownames(dnam.pcs)
-
-write.csv2(dnam.pcs, 
-           "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_top10pcs.csv", 
-           row.names = F, quote = F)
+# write.csv2(dnam.pcs, 
+#            "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_top10pcs.csv", 
+#            row.names = F, quote = F)
 ```
 
 ```{r load-dnam-pcs, include = F, eval = T}
-dnam.pcs.fn <- "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_top10pcs.csv"
-dnam.pcs    <- read.csv2(dnam.pcs.fn)
-dnam.pcs    <- dnam.pcs[match(pheno$DNAm_ID, dnam.pcs$DNAm_ID), paste0("PC", 1:10)] 
+# dnam.pcs.fn <- "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_top10pcs.csv"
+# dnam.pcs    <- read.csv2(dnam.pcs.fn)
+
+pca.obj.fn <- "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_pca.rds"
+pca.obj    <- readRDS(pca.obj.fn)
+
+nr.pcs   <- ncol(pca.obj$rotation)
+
+propvar  <- round(summary(pca.obj)$importance["Proportion of Variance", 1:nr.pcs] * 100, 2 )
+cummvar  <- round(summary(pca.obj)$importance["Cumulative Proportion", 1:nr.pcs] * 100, 2) 
+
+dnam.pcs <- data.frame(pca.obj$rotation)
+dnam.pcs <- dnam.pcs[match(pheno$DNAm_ID, rownames(dnam.pcs)), ]
+
+dnam.pcs    <- dnam.pcs[match(pheno$DNAm_ID, rownames(dnam.pcs)), paste0("PC", 1:10)] 
 colnames(dnam.pcs) <- paste0("DNAm_PC", 1:10)
 ```
 
-```{r, include = F, eval = T}
+```{r combine-all-data, include = F, eval = T}
 bcc.gex  <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
 bcc.gex <- bcc.gex %>% 
   mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
@@ -146,12 +159,45 @@ tmp.df <- data.frame(sv.meth, meth = bcc.meth, gex = bcc.gex, gex = sv.gex, snp.
                      Age = pheno$Age, DNAm_Age = pheno$mAge_Hovath, DNAm_Smoke = pheno$DNAm_SmokingScore) %>% 
   na.omit() %>% 
   scale()
+
+cor.mtrx <- cor(tmp.df)
 ```
 
+#### DNAm SVs vs BCCs
+
 ```{r out.width = "98%", fig.cap = "Relationship of the top 10 SVs derived from DNAm data with available and derived covariates", include = T, eval = T}
-cor.mtrx <- cor(tmp.df)
+# cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), -which(colnames(cor.mtrx) %in% c(paste0("DNAm_SV", 1:10), paste0("DNAm_PC", 1:10)))]
+cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), which(colnames(cor.mtrx) %in% c(paste("meth", colnames(bcc.meth), sep = "." ), 
+                                                                                  paste("gex", colnames(bcc.gex), sep = "." )))]
+par(cex = 1)
+corrplot(cor.mtrx.plt, 
+         method = "color", cl.pos = "b", cl.cex = 0.6,
+         addgrid.col = "gray90",
+         addCoef.col = "black", number.cex = 0.6, number.digits = 1, # Add coefficient of correlation
+         tl.col = "black",  tl.cex = 0.6, tl.srt = 45, tl.offset = 0.5, tl.pos = "dt", #Text label color and rotation
+         sig.level = 0.01) 
+```
+
+#### DNAm SVs vs GEX SVs and SNP PCs
+
+```{r out.width = "98%", fig.cap = "Relationship of the top 10 SVs derived from DNAm data with available and derived covariates", include = T, eval = T}
 # cor.mtrx.plt <- cor.mtrx[-which(rownames(cor.mtrx) %in% paste0("DNAm_SV", 1:10)), paste0("DNAm_SV", 1:10)]
-cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), -which(colnames(cor.mtrx) %in% c(paste0("DNAm_SV", 1:10), paste0("DNAm_PC", 1:10)))]
+cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), which(colnames(cor.mtrx) %in% c(paste("gex", colnames(sv.gex), sep = "." ),
+                                                                                  paste0("PC", 1:5 )))]
+par(cex = 1)
+corrplot(cor.mtrx.plt, 
+         method = "color", cl.pos = "b", cl.cex = 0.6,
+         addgrid.col = "gray90",
+         addCoef.col = "black", number.cex = 0.6, number.digits = 1, # Add coefficient of correlation
+         tl.col = "black",  tl.cex = 0.6, tl.srt = 45, tl.offset = 0.5, tl.pos = "dt", #Text label color and rotation
+         sig.level = 0.01) 
+```
+
+#### DNAm SVs vs Bio
+
+```{r out.width = "98%", fig.cap = "Relationship of the top 10 SVs derived from DNAm data with available and derived covariates", include = T, eval = T}
+# cor.mtrx.plt <- cor.mtrx[-which(rownames(cor.mtrx) %in% paste0("DNAm_SV", 1:10)), paste0("DNAm_SV", 1:10)]
+cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), c("Dex", "Status", "Sex", "BMI", "Age", "DNAm_Age", "DNAm_Smoke")]
 par(cex = 1)
 corrplot(cor.mtrx.plt, 
          method = "color", cl.pos = "b", cl.cex = 0.6,
@@ -163,17 +209,12 @@ corrplot(cor.mtrx.plt,
 
 ## PCA
 
-# Relationship of the top 10 principal components derived from DNA methylation data with available and derived covariates. 
+### Correlation {.tabset .tabset-pills}
 
-<!-- Because it is likely that other unmeasured environmental exposures also confound the analysis of methylomic variation associated with dex treatment, we investigated the impact of additional surrogate variables capturing variation in DNA methylation on the association statistics for dex-associated DMPs. We first compared each of the first 10 principal components (PCs) derived from the DNA methylation data to the available phenotype data to identify potential sources of additional variation between samples. For example, we observed strong correlations (r > 0.5) between the first three PCs and estimated blood cell composition measures, reflecting the likely effect of epigenetic differences between cell types.  -->
+#### DNAm PCs vs DNAm SVs
 
-<!-- Heat-map of correlations between each PC (1-10) and the available phenotype information (SCZ – schizophrenia -->
-<!-- status; sex) and variables derived from the DNA methylation data (DNAmAge – age estimated from DNA methylation data; DNAm Smoking - smoking score estimated from DNA methylation data; CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm -->
-
-```{r out.width = "98%", fig.cap = "Relationship of the top 10 PCs derived from DNAm data with available and derived covariates", include = T, eval = T}
-cor.mtrx <- cor(tmp.df)
-# cor.mtrx.plt <- cor.mtrx[-which(rownames(cor.mtrx) %in% paste0("DNAm_SV", 1:10)), paste0("DNAm_SV", 1:10)]
-cor.mtrx.plt <- cor.mtrx[paste0("DNAm_PC", 1:10), -which(colnames(cor.mtrx) %in% paste0("DNAm_PC", 1:10))]
+```{r out.width = "98%", fig.cap = "Relationship of the top 10 PCs derived from DNAm data with top 10 SVs", include = T, eval = T}
+cor.mtrx.plt <- cor.mtrx[paste0("DNAm_PC", 1:10), paste0("DNAm_SV", 1:10)]
 par(cex = 1)
 corrplot(cor.mtrx.plt, 
          method = "color", cl.pos = "b", cl.cex = 0.6,
@@ -183,34 +224,102 @@ corrplot(cor.mtrx.plt,
          sig.level = 0.01) 
 ```
 
-```{r out.width = "98%", fig.cap = "PCA plot demonstrating the DEX treatment separation", include = T, eval = T}
-ggplot(data = pca, aes(C1, C2, col = Group)) +
-  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
-  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
-  geom_label_repel(data = pca[pca$FID %in% outliers, ],
-                   aes(label = outliers, size = NULL)) + 
-  geom_point(size = 2, alpha = 1) +
-  xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
-  ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
+#### DNAm PCs vs BCCs
+
+```{r out.width = "98%", fig.cap = "Relationship of the top 10 PCs derived from DNAm data with available and derived covariates", include = T, eval = T}
+cor.mtrx.plt <- cor.mtrx[paste0("DNAm_PC", 1:10), c(paste("meth", colnames(bcc.meth), sep = "." ), 
+                                                    paste("gex", colnames(bcc.gex), sep = "." ))]
+par(cex = 1)
+corrplot(cor.mtrx.plt, 
+         method = "color", cl.pos = "b", cl.cex = 0.6,
+         addgrid.col = "gray90",
+         addCoef.col = "black", number.cex = 0.6, number.digits = 1, # Add coefficient of correlation
+         tl.col = "black",  tl.cex = 0.6, tl.srt = 45, tl.offset = 0.5, tl.pos = "dt", #Text label color and rotation
+         sig.level = 0.01) 
+```
+
+#### DNAm PCs vs GEX SVs and SNP PCs
+
+```{r out.width = "98%", fig.cap = "Relationship of the top 10 SVs derived from DNAm data with available and derived covariates", include = T, eval = T}
+cor.mtrx.plt <- cor.mtrx[paste0("DNAm_PC", 1:10), c(paste("gex", colnames(sv.gex), sep = "." ),
+                                                    paste0("PC", 1:5 ))]
+par(cex = 1)
+corrplot(cor.mtrx.plt, 
+         method = "color", cl.pos = "b", cl.cex = 0.6,
+         addgrid.col = "gray90",
+         addCoef.col = "black", number.cex = 0.6, number.digits = 1, # Add coefficient of correlation
+         tl.col = "black",  tl.cex = 0.6, tl.srt = 45, tl.offset = 0.5, tl.pos = "dt", #Text label color and rotation
+         sig.level = 0.01) 
+```
+
+#### DNAm PCs vs Bio
+
+```{r out.width = "98%", fig.cap = "Relationship of the top 10 SVs derived from DNAm data with available and derived covariates", include = T, eval = T}
+cor.mtrx.plt <- cor.mtrx[paste0("DNAm_PC", 1:10), c("Dex", "Status", "Sex", "BMI", "Age", "DNAm_Age", "DNAm_Smoke")]
+par(cex = 1)
+corrplot(cor.mtrx.plt, 
+         method = "color", cl.pos = "b", cl.cex = 0.6,
+         addgrid.col = "gray90",
+         addCoef.col = "black", number.cex = 0.6, number.digits = 1, # Add coefficient of correlation
+         tl.col = "black",  tl.cex = 0.6, tl.srt = 45, tl.offset = 0.5, tl.pos = "dt", #Text label color and rotation
+         sig.level = 0.01) 
+```
+
+### {-}
+
+### Analysis{.tabset .tabset-pills}
+
+#### Scree plot
+
+```{r out.width = "90%", fig.cap = "Percentage of variance explained by first 10 eigenvalues"}
+propvar.df <- data.frame(PC = 1:10, propvar)
+ggplot(propvar.df, aes(PC, propvar)) +
+  geom_bar(stat = "identity", width = 0.7, fill = "#00688B") +
+  geom_line(colour = "red", linetype = "dashed") +
+  geom_point(colour = "red") +
+  ylab("Percentage variance explained") +
   theme( panel.background = element_blank(),
          plot.title = element_text(size = 10),
          axis.title = element_text(size = 10),
          axis.text.x = element_text(angle = 0, hjust = 1),
-         legend.position = "bottom")
-
-fviz_pca_ind(pca.obj.retx, col.ind = pheno$Group,
-             geom = "point", repel = T) +
-  theme(legend.position = " ") +
-  labs(title = "PCA plot demonstrating the DEX treatment separation based on the significant DMPs")
-```
-```{r pca-plot-sex}
-fviz_pca_ind(pca.obj, col.ind = pheno$Sex,
-             axes = c(2, 8),
-             geom = "point", repel = T) +
-  theme(legend.position = " ") +
-  labs(title = "PCA plot demonstrating the SEX separation based on the significant DMPs")
+         legend.position = "none")
 ```
 
+#### Dex
+
+```{r out.width = "90%", fig.cap = "PCA plot demonstrating the DEX treatment separation", include = T, eval = T}
+plt.df <- data.frame(scale(dnam.pcs), Group = as.factor(pheno$Dex), Sex = as.factor(pheno$Sex))
+
+ggplot(data = plt.df, aes(DNAm_PC1, DNAm_PC2, col = Group)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC1 (", signif(propvar[1], 2), "%)")) +
+  ylab(paste0("PC2 (", signif(propvar[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "none")
+```
+
+#### Sex
+
+```{r out.width = "90%", fig.cap = "PCA plot demonstrating the SEX treatment separation", include = T, eval = T}
+plt.df <- data.frame(scale(dnam.pcs), Group = as.factor(pheno$Dex), Sex = as.factor(pheno$Sex))
+
+ggplot(data = plt.df[plt.df$Group == 1,], aes(DNAm_PC6, DNAm_PC7, col = Sex)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("PC6 (", signif(propvar[6], 2), "%)")) +
+  ylab(paste0("PC7 (", signif(propvar[7], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "none")
+```
 
 # Gene-expression
 

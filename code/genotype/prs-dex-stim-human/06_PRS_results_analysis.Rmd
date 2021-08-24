@@ -146,8 +146,8 @@ prs.selected.df$Status <- as.numeric(as.character(factor(prs.selected.df$Status)
 ```{r}
 prs.mdd.df <- prs.selected.df[Trait == "MDD"]
 glmm <- glm(Status ~ PRS, family = "binomial", data = prs.mdd.df)
-# summary(glmm)
-anova(lmm)
+summary(glmm)
+# anova(glmm)
 ```
 
 ```{r}

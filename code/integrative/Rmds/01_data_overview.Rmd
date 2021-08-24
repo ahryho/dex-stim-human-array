@@ -27,6 +27,7 @@ knitr::opts_chunk$set(echo = TRUE,
 
 # define DT as the standard printing method for data.frame
 library(knitr)
+library(DT)
 knit_print.data.frame <- function(x, ...) {
   knit_print(DT::datatable(x,
                            filter="top",
@@ -49,7 +50,7 @@ library(factoextra)
 ```
 
 # Introduction
-
+***
 ```{r, include = F, eval = T}
 # source("~/bio/code/mpip/dex-stim-human-array/code/methylation/02_dma/01_dmp/funcitons.R")
 ```
@@ -62,22 +63,104 @@ library(factoextra)
 
 For each omic layer, there is different number of observation. The first four section provides an overview and basic statistics for each layer. The last section - basic integrative analysis
 
-# Phenotype
-
+# Phenotype {.tabset .tabset-fade .tabset-pills}
+***
 ```{r, include = F, eval = T}
 pheno.full.fn <- paste0("~/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv") 
 pheno.full    <- read.csv2(pheno.full.fn) %>% setDT()
 ```
 
-Dex-Stim Porject includes
-```{r, include = F, eval = F}
-dim(pheno.full) 
-colnames(pheno.full)
+```{r, include = F, eval = T}
+id.names <- c("Sample_ID", "DNA_ID", "RNA_ID", "DNAm_ID", "Pat_ID")
+covar.names <- c("Dex", "Sex", "Status", "Age", "BMI_D1", "SNP_Chip", "Batch")
+```
+
+1. ID names:
+  + __Sample_ID__: an alphanumeric patient identifier (__289__ is a total number, __197__ is used for analysis)
+  + __Pat_ID__: a numeric patient identifier
+  + __DNA_ID__: a genotype sample identifier
+  + __RNA_ID__: a gene-expression sample identifier
+  + __DNAm_ID__: a methylation sample identifier
+  
+2. Covariates:
+  + __Dex__:a dexamethasone treatment group (__1__ is Dex, __0__ is Baseline)
+  + __Sex__: a sex group (__1__ is Male, __2__ is Female)
+    * 131 (66.5%) Male out of 197
+    * 66 (33.5%) Female out of 197
+  + __Status__: a MDD status group (__1__ is Case, __0__ is Control)
+    * 112 (56.9%) Controls out of 197
+    * 85 (43.1%) Cases out of 197
+  + __Age__
+  + __BMI__ 
+  + __Batch__: four bacthes (1, 2, 3, Mars) 
+  + __SNP_Chip__: a genotype chip (610K and OmniExpress)
+
+```{r, include = T, eval = T}
+id.names <- c("Sample_ID", "DNA_ID", "RNA_ID", "DNAm_ID", "Pat_ID")
+covar.names <- c("Dex", "Sex", "Status", "Age", "BMI_D1", "SNP_Chip", "Batch")
+pheno.full %>% select(id.names, covar.names)
+```
+
+3. Summary 
+
+```{r, include = F, eval = T}
+id.names <- c("DNA_ID", "RNA_ID")
+covar.names <- c("Dex", "Sex", "Status", "Age", "BMI_D1", "SNP_Chip", "Batch")
+summary(pheno.full %>% select(id.names, covar.names))
+```
+
+```{r, include = T, eval = T}
+plt.df <- pheno.full %>% select(id.names, covar.names)
+
+plt.df$Status  <- as.factor(plt.df$Status)
+plt.df$Sex     <- as.factor(plt.df$Sex)
+
+levels(plt.df$Sex) <- c("Male", "Female")
+levels(plt.df$Status) <- c("Control", "MDD")
+```
+
+## Age 
+
+```{r out.width = "95%", include = T, eval = T}
+ggplot(plt.df, aes(x = Age, fill = Status)) + 
+  geom_density(alpha = 0.2, aes(color = Status)) +
+  theme(legend.position = c(.9,.9), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8)) +
+  labs(title = "Density plot of Chronological Age split by MDD status", x = "Chronological Age", y = "") +
+  facet_wrap(~ Sex, ncol = 2)
+```
+
+## BMI
+
+```{r out.width = "95%", include = T, eval = T}
+ggplot(plt.df, aes(x = BMI_D1, fill = Status)) + 
+  geom_density(alpha = 0.2, aes(color = Status)) +
+  theme(legend.position = c(.9,.9), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8)) +
+  labs(title = "Density plot of BMI split by MDD status", x = "BMI", y = "") +
+  facet_wrap(~ Sex, ncol = 2)
 ```
 
 # Methylation 
+***
 
-The roadmap for qc methylation:
+## Overview 
+***
+1. Methylation data:
+  + __BCC__: CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm
+  + __SV__: 62 sugnificant Surrogate Variables (SV)
+  + __DNAm Age__: an age estimated from DNAm data using Hovarth algorithm
+  + __Smoking Score__: smoking score estimated from DNAm data using Elliot's CpGs
+
+2. The roadmap for methylation QC analysis:
 
 ```{r dnam_qc_roadmap,  out.width = '100%'}
 knitr::include_graphics("img/dnam_qc_roadmap.png")
@@ -86,14 +169,9 @@ knitr::include_graphics("img/dnam_qc_roadmap.png")
 <!-- <center> -->
 <!-- ![](~/bio/code/mpip/dex-stim-human-array/data/methylation/img/dnam_qc_roadmap.png){width='80%'} -->
 
-1. Methylation data:
-  + BCC: CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm
-  + 62 sugnificant Surrogate Variables (SV)
-  + DNAm Age- age estimated from DNAm data using Hovarth algorithm
-  + Smoking Score - smoking score estimated from DNAm data using Elliot's CpGs
 
 ## SVA
-
+***
 ### Correlation {.tabset .tabset-fade .tabset-pills}
 
 ```{r, include = F, eval = T}
@@ -208,7 +286,7 @@ corrplot(cor.mtrx.plt,
 ```
 
 ## PCA
-
+***
 ### Correlation {.tabset .tabset-pills}
 
 #### DNAm PCs vs DNAm SVs
@@ -322,10 +400,10 @@ ggplot(data = plt.df[plt.df$Group == 1,], aes(DNAm_PC6, DNAm_PC7, col = Sex)) +
 ```
 
 # Gene-expression
-
+***
 
 # Genotype
-
+***
 
 # Integrative Basic Analysis
-
+***

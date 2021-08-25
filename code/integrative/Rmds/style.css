@@ -3,16 +3,19 @@
       display: none !important;
 }
  
-.mytitle{
-  text-transform: uppercase;
+.title{
   font-family: 'Arial';
-  font-weight: 20;
-  letter-spacing: 4px;
+  font-weight: 48;
+  letter-spacing: 2px;
+  color: #00688B;
 }
 
-.mysubtitle{
+.subtitle{
   color:grey;
   font-family: 'Arial';
+  font-weight: 24;
+  letter-spacing: 2px;
+  text-align: center;
 }
 
 h1, .h1, h2, .h2, h3, .h3 {
@@ -32,6 +35,11 @@ h2 {
   font-size: 170%;
 }
 
+h3 {
+  font-family: 'Arial';
+  font-size: 150%;
+}
+
 h1.title {
   text-align: center;
   font-family: 'Arial';
@@ -40,7 +48,7 @@ h1.title {
 pre {
     border: 0px solid #cccccc;
     border-radius: 0px;
-    max-height: 300px;
+    max-height: 200px;
     overflow-y: auto;
 }
 

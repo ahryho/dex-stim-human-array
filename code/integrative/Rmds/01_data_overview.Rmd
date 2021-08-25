@@ -197,7 +197,7 @@ knitr::include_graphics("img/dnam_qc_roadmap.png")
 ***
 ### Correlation {.tabset .tabset-fade .tabset-pills}
 
-```{r, include = F, eval = T}
+```{r load-pheno, include = F, eval = T}
 pheno      <- pheno.full[Include == 1]
 ```
 
@@ -450,7 +450,7 @@ err <- MedianAbsDev(pheno.veh$mAge_Hovath, pheno.veh$Age)
 
 ### Comparison
 
-```{r out.width = "95%", fig.cap = "DNAm Hovath Age vs Chronological age", incldue = T, eval = T}
+```{r dnam-age-comparison, out.width = "95%", fig.cap = "DNAm Hovath Age vs Chronological age", incldue = T, eval = T}
 ggplot(pheno.veh, aes(x = mAge_Hovath, y = Age, color = Sex)) + 
   geom_point() +
   geom_smooth() +

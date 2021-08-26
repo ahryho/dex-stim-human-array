@@ -438,14 +438,10 @@ levels(plt.df$Dex)   <- c("Baseline", "Dex")
 ## DNAm Age {.tabset .tabset-pills}
 
 ```{r dnam-age, include = F, eval = T}
-library(Metrics)
-MedianAbsDevHelp <- function(x, y) abs(mean(y - x))
-MedianAbsDev     <- function(dnam.age.method, real.age) signif(MedianAbsDevHelp(dnam.age.method, real.age), 2)
-
 pheno.dex <- plt.df[Dex == "Dex"]
 pheno.veh <- plt.df[Dex == "Baseline"]
 
-err <- MedianAbsDev(pheno.veh$mAge_Hovath, pheno.veh$Age)
+err <- signif(mad(pheno.veh$mAge_Hovath - pheno.veh$Age), 3)
 ```
 
 ### Comparison

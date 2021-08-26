@@ -1,6 +1,12 @@
 ---
-title: "DNAm Analysis"
-author: "Anastasiia Hryhorzhevska"
+title: "DNAm Analysis"\n"Part 1"
+subtitle: "Dexamethasone-Stimulated Human Array Project"
+author: 
+  - name: Anastasiia Hryhorzhevska
+    email: anastasiia_hry@psych.mpg.de
+    url: https://github.com/ahryho
+    affiliation: Max Planck Institute of Psychiatry
+    affiliation_url: https://www.psych.mpg.de/2664393/medizinische-genomforschung
 date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
 output:
   html_document:
@@ -12,7 +18,6 @@ output:
 editor_options: 
   chunk_output_type: console
 ---
-
 ```{r, include=FALSE}
 options(digits = 4, width = 100, stringsAsFactors = T)
 knitr::opts_chunk$set(echo = TRUE,
@@ -54,6 +59,7 @@ source("~/bio/code/mpip/dex-stim-human-array/code/methylation/02_dma/01_dmp/func
 ```
 
 # LMEMs Analysis
+***
 
 ```{r, include = F, eval = T}
 lmem.svs.pcs.rslt.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_svs_pcs_rslt.txt'
@@ -76,7 +82,7 @@ lmem.svs.pcs.smoke.rslt    <- fread(lmem.svs.pcs.smoke.rslt.fn)
 # dmps.anno.df <- fread(dmps.anno.fn)
 ```
 
-## __FDR and FC Tuning. Volcano plot__ {.tabset .tabset-fade .tabset-pills}
+## FDR and FC Tuning. Volcano plots {.tabset .tabset-fade .tabset-pills}
 
 ```{r, include = F, eval = T}
 pval.list <- c(0.0001, 0.001, 0.01, 0.02, 0.03, 0.04, 0.05)
@@ -161,7 +167,7 @@ fc  <- 0.01
 VolcanoPlot(lmem.svs.pcs.rslt, fdr, fc, "DNAm SVs and SNP PCs")
 ```
 
-## __LMEMs comparison__{.tabset .tabset-fade .tabset-pills}
+## LMEMs comparison{.tabset .tabset-fade .tabset-pills}
 
 ### DMPs
 ```{r out.width = "85%", include = T, eval = T}

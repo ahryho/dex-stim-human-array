@@ -28,6 +28,6 @@ table(pheno.full$Include)
 
 
 # Save 
-write.csv2(pheno.full, 
+write.csv2(pheno.full.new, 
            file = "~/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv", 
            row.names = F, quote = F)

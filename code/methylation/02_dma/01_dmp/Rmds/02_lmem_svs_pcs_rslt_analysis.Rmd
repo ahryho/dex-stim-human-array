@@ -188,7 +188,7 @@ corrplot(cor.mtrx.plt,
          sig.level = 0.01) 
 ```
 
-#### Scree plot
+### Scree plot
 
 ```{r out.width = "90%", fig.cap = "Percentage of variance explained by first 10 eigenvalues"}
 propvar.df <- data.frame(PC = 1:10, propvar)
@@ -205,7 +205,7 @@ ggplot(propvar.df, aes(PC, propvar)) +
          legend.position = "none")
 ```
 
-#### Dex
+### Dex
 
 ```{r out.width = "90%", fig.cap = "PCA plot demonstrating the DEX treatment separation based on significant DMPs", include = T, eval = T}
 plt.df <- data.frame((dnam.pcs), Group = as.factor(pheno$Dex), Sex = as.factor(pheno$Sex))
@@ -223,7 +223,7 @@ ggplot(data = plt.df, aes(DNAm_PC1, DNAm_PC2, col = Group)) +
          legend.position = "none")
 ```
 
-#### Sex
+### Sex
 
 ```{r out.width = "90%", fig.cap = "PCA plot demonstrating the SEX separation based on significant DMPs", include = T, eval = T}
 plt.df <- data.frame((dnam.pcs), Group = as.factor(pheno$Dex), Sex = as.factor(pheno$Sex))
@@ -259,7 +259,7 @@ dmps.merged.df       <- rbind(dmps.merged.df, dmps.sign.sub.df %>% dplyr::select
 
 # Split the UCSC RefGene Group
 
-dmps.sign.sub.df$UCSC_RefGene_Group <- gsub(";.*", "", one_anno_df$UCSC_RefGene_Group)
+dmps.sign.sub.df$UCSC_RefGene_Group <- gsub(";.*", "", dmps.sign.sub.df$UCSC_RefGene_Group)
 dmps.sign.sub.df[UCSC_RefGene_Group == "", UCSC_RefGene_Group := NA]
 
 dmps.merged.df$UCSC_RefGene_Group <- gsub(";.*", "", dmps.merged.df$UCSC_RefGene_Group)
@@ -276,8 +276,8 @@ meth$chr  <- factor(meth$chr,levels = chr.order)
 
 ggplot(meth, aes(x = chr)) + 
   geom_bar(aes(y = (..count..)/sum(..count..), fill = factor(..x..))) + 
-  geom_text(aes( label = scales::percent((..count..)/sum(..count..), accuracy = 0.1),
-                   y = (..count..)/sum(..count..) ), stat = "count", vjust = -.5, size = 3) +
+  geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)), 
+            stat = "count", vjust = -.5, size = 3) +
   scale_y_continuous(labels=scales::percent) +
   labs(x = "Chromosome",
        y = "Relative frequency") +
@@ -290,31 +290,31 @@ ggplot(meth, aes(x = chr)) +
 
 ### Genomic regions
 
-```{r include = F, eval = T}
-p1 <- ggplot(dmps.sign.sub.df, aes(x = Relation_to_Island, group = MethylStatus )) + 
+```{r out.width = "90%", fig.cap = "The distribution of CpGs in different genomic regions", include = T, eval = T}
+ggplot(dmps.sign.sub.df, aes(x = Relation_to_Island, group = MethylStatus )) + 
   geom_bar(aes(y = ..prop.., fill = MethylStatus), stat = "count", position = position_dodge()) +
-  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
-                   y= ..prop.. ), stat = "count", position = position_dodge(1)) +
+  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), y = ..prop.. ), 
+            stat = "count", position = position_dodge(1), size = 3) +
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Relation to Island",
        y = "Frequency", 
-       title = "The ration of hypermethylated versus hypomethylated dDMPs in different genomic regions") +
+       title = "The ratio of hypermethylated versus hypomethylated dDMPs in different genomic regions") +
   theme(legend.title = element_blank(), 
-        legend.position = c(.9,.75),
+        legend.position = c(.9,.85),
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 10),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
         axis.text.x = element_text(angle = 45, hjust = 0.5)) +
   scale_fill_brewer(palette = "Dark1")
   # scale_fill_manual(values = c("grey", "darkgrey"))
 ```
 
-```{r incldue = F, eval = T}
-p2 <- ggplot(dmps.merged.df, aes(x = Relation_to_Island, group = Model )) + 
+```{r out.width = "90%", fig.cap = "The distribution of CpGs in different genomic regions", incldue = F, eval = T}
+ggplot(dmps.merged.df, aes(x = Relation_to_Island, group = Model )) + 
   geom_bar(aes(y = ..prop.., fill = Model), stat = "count", position = position_dodge()) +
-  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
-                   y= ..prop.. ), stat = "count", position = position_dodge(1.1)) +
+  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), y = ..prop.. ), 
+            stat = "count", position = position_dodge(1.1), size = 3) +
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Relation to Island",
        y = "Frequency", 
@@ -323,59 +323,53 @@ p2 <- ggplot(dmps.merged.df, aes(x = Relation_to_Island, group = Model )) +
         legend.position = c(.9,.75),
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 10),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
         axis.text.x = element_text(angle = 45, hjust = 0.5)) +
   scale_fill_brewer(palette = "Set3")
 ```
 
-```{r out.width = "90%", fig.cap = "The distribution of CpGs in different genomic regions", include = T, eval = T}
-# grid.arrange(p1, p2, ncol = 2)
-p1
-```
-
-```{r out.width = "90%", fig.cap = "The distribution of CpGs in different genomic regions", include = T, eval = T}
-# grid.arrange(p1, p2, ncol = 2)
-p2
+```{r out.width = "90%", fig.cap = "The distribution of CpGs in different genomic regions", include = T, eval = F}
+grid.arrange(p1, p2, ncol = 2)
 ```
 
 ### Gene regions
 
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in different gene regions", include = T, eval = T}
-ggplot(one_anno_df, aes(x = UCSC_RefGene_Group, group = MethylStatus )) + 
+ggplot(dmps.sign.sub.df, aes(x = UCSC_RefGene_Group, group = MethylStatus )) + 
   geom_bar(aes(y = ..prop.., fill = MethylStatus), stat = "count", position = position_dodge()) +
-  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
-                   y= ..prop.. ), stat = "count", position = position_dodge(1)) +
+  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), y = ..prop.. ), 
+            stat = "count", position = position_dodge(1), size = 3) +
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Relation to Island",
        y = "Frequency", 
-       title = "The ration of hypermethylated versus hypomethylated dDMPs in different genomic regions") +
+       title = "The ratio of hypermethylated versus hypomethylated dDMPs in different genomic regions") +
   theme(legend.title = element_blank(), 
-        legend.position = c(.9,.75),
+        legend.position = c(.9,.85),
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 10),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
         axis.text.x = element_text(angle = 45, hjust = 0.5)) +
   scale_fill_brewer(palette = "Dark1")
   # scale_fill_manual(values = c("grey", "darkgrey"))
 ```
 
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in different gene regions", include = T, eval = T}
-ggplot(one_anno_df, aes(x = UCSC_RefGene_Group, group = Model )) + 
+ggplot(dmps.merged.df, aes(x = UCSC_RefGene_Group, group = Model )) + 
   geom_bar(aes(y = ..prop.., fill = Model), stat = "count", position = position_dodge()) +
-  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
-                   y= ..prop.. ), stat = "count", position = position_dodge(1)) +
+  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), y = ..prop.. ), 
+            stat = "count", position = position_dodge(1), size = 3) +
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Relation to Island",
        y = "Frequency", 
-       title = "The ration of all assessed EPIC CpGs versus dDMPs in different gene regions") +
+       title = "The ratio of all assessed EPIC CpGs versus dDMPs in different gene regions") +
   theme(legend.title = element_blank(), 
         legend.position = c(.9,.75),
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 10),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
         axis.text.x = element_text(angle = 45, hjust = 0.5)) +
   scale_fill_brewer(palette = "Set3")
 ```

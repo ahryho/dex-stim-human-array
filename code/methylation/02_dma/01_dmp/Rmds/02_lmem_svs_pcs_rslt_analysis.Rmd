@@ -18,7 +18,7 @@ source("~/bio/code/mpip/dex-stim-human-array/code/methylation/02_dma/01_dmp/func
 
 ```{r load-lmem-anno, include = F, eval = T}
 lmem.rslt.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_svs_pcs_rslt.txt'
-anno.fn      <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dmps_annotated.csv'
+anno.fn      <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated.csv'
 
 lmem.rslt    <- fread(lmem.rslt.fn)
 anno.df      <- fread(anno.fn)
@@ -390,4 +390,278 @@ plot(fit,
      labels = c("450K", "EPIC"),
      fill = c("red", "pink", "transparent"),
      )
+```
+
+## GSEA
+
+The GSEA was done using the rGREAT R package.
+
+GREAT calculates statistics by associating genomic regions with nearby genes and applying the gene annotations to the regions. Association is a two step process. First, every gene is assigned a regulatory domain. Then, each genomic region is associated with all genes whose regulatory domain it overlaps.
+
+Gene regulatory domain definition: Each gene is assigned a basal regulatory domain of a minimum distance upstream and downstream of the TSS (regardless of other nearby genes). The gene regulatory domain is extended in both directions to the nearest gene's basal domain but no more than the maximum extension in one direction.
+
+### GO Enrichment for DMPs
+
+Target genomic regions: significant DMPs
+Background: all CpGs
+Proximal: 5 kb upstream, 5 kb downstream, plus Distal: up to 10 kb
+
+Statistical Significance: FDR <= 0.05
+
+The test set contains 7,469 (1%) of all 740,357 regions.
+
+The foreground set picked 1,613 genes, the background set picked 17,441 genes.
+
+Ensembl Genes has 18,549 terms covering 18,549 (100%) of all 18,549 genes, and 18,549 term - gene associations.
+
+18,549 ontology terms (100%) were tested using an annotation count range of [1, 1000].
+
+```{r prepare-data-for-rgreat, icnldue = F, eval = F}
+source("~/bio/code/mpip/dex-stim-human-array/code/methylation/02_dma/03_gsea/01_prepare_input_for_rgreat.R")
+
+target.bed.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/cpgs_target_for_great.bed"
+bg.bed.fn     <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/cpgs_bg_for_great.bed"
+
+# Export target data which are DMPs
+bed.target <- ToBed(dmps.sign.anno.df, target.bed.fn, is.save = T)
+
+# Export target data which are DMPs
+bed.bg <- ToBed(anno.df, bg.bed.fn, is.save = T)
+```
+
+```{r submit-GREAT-job, include = F, eval = F}
+library(rGREAT)
+
+job <- submitGreatJob(bed.target, bg = bed.bg,
+                      species = "hg19", rule = "basalPlusExt", adv_upstream = 5.0, adv_downstream = 5.0, adv_span = 10)
+
+# availableOntologies(job)
+great.enrichment.tbl <- getEnrichmentTables(job, download_by = "tsv",  ontology = c("GO Molecular Function", "GO Cellular Component", "GO Biological Process",
+                                                                                    "Human Phenotype", "Ensembl Genes"))
+great.cpg.gene.ass <- plotRegionGeneAssociationGraphs(job, plot = F)
+
+saveRDS(object = job, 
+        file = "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/rGREAT_rslt/rgreat_job_svs_fdr01_fc02_output.rds")
+saveRDS(object = great.enrichment.tbl, 
+        file = "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/rGREAT_rslt/rgreat_enrichmentTbl_svs_fdr01_fc02_output.rds")
+saveRDS(object = great.cpg.gene.ass, 
+        file = "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/rGREAT_rslt/rgreat_cgGeneAssociationGRange_svs_fdr01_fc02_output.rds")
+```
+
+```{r load-rgreat-rslt, include = F, eval = T}
+target.bed.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/cpgs_target_for_great.bed"
+bg.bed.fn     <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/cpgs_bg_for_great.bed"
+
+bed.target <- read.table(target.bed.fn, sep = " ")
+
+job <- readRDS("~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/rGREAT_rslt/rgreat_job_svs_fdr01_fc02_output.rds")
+great.enrichment.tbl <- readRDS("~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/rGREAT_rslt/rgreat_enrichmentTbl_svs_fdr01_fc02_output.rds")
+great.cpg.gene.ass   <- readRDS("~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/rGREAT_rslt/rgreat_cgGeneAssociationGRange_svs_fdr01_fc02_output.rds")
+```
+
+```{r}
+job
+```
+
+```{r}
+plotRegionGeneAssociationGraphs(job, type = 1)
+```
+```{r}
+plotRegionGeneAssociationGraphs(job, type = 2)
+```
+```{r}
+plotRegionGeneAssociationGraphs(job, type = 3)
+```
+# Explore CpG - Gene associations
+
+```{r}
+cpg.gene.df <- data.frame(great.cpg.gene.ass) %>% select(chr = seqnames, start, end, gene, distTSS) %>% setDT() 
+# unique(cpg.gene.df$gene) %>% length()
+
+colnames(bed.target) <- c("chr", "start", "end", "name")
+
+cpg.gene.df <- left_join(cpg.gene.df, bed.target)
+# cpg.gene.df[!is.na(gene)][order(abs(distTSS))]
+
+cpg.gene.df <- left_join(cpg.gene.df, dmps.sign.anno.df[, c("PROBE_ID", "FC", "MAD", "FDR")], by = c("name" = "PROBE_ID"))
+datatable(cpg.gene.df[!is.na(gene)][order(abs(FDR))] %>% 
+            mutate(absDistTSS = abs(distTSS)) %>%
+            select(gene, cg = name, chr, start, distTSS, absDistTSS, FC, MAD, FDR))
+
+```
+
+# Explore GO Molecular Functions
+
+```{r}
+great.go.mol.fun <- great.enrichment.tbl[["GO Molecular Function"]] %>% setDT()
+
+great.go.mol.fun[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit)
+```
+
+```{r}
+plot.df <- great.go.mol.fun[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
+
+minus_log10_trans <- function(){
+  trans_new(name = "minus_log10", transform = function(x) -log10(x), inverse = function(x) 10 ^ x)
+}
+
+plot.mf <- plot.df[1:20,]
+plot.mf[["GO"]] <- "MF"  
+
+ggplot(data = plot.df, aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
+  geom_bar(stat = "identity") +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("GO Molecular Function, FDR < ", p.thr),
+       y = " ") # + geom_text(label = plot.df$HyperFdrQ)
+
+```
+
+# Explore GO Molecular Functions
+
+```{r}
+great.go.bio.proc <- great.enrichment.tbl[["GO Biological Process"]] %>% setDT()
+
+(great.go.bio.proc[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit))
+```
+                                                                  
+
+```{r}
+plot.df <- great.go.bio.proc[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
+
+plot.bp <- plot.df[1:20,]
+plot.bp[["GO"]] <- "BP" 
+  
+ggplot(data = plot.df[1:20,], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
+  geom_bar(stat = "identity") +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("Top 20 GO Biological Process with FDR < ", p.thr),
+       y = " ") + # + geom_text(label = plot.df$HyperFdrQ) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "none")
+```
+
+```{r}
+plot.df <- rbind(plot.bp, plot.mf)
+plot.df$GO <- as.factor(plot.df$GO)
+plot.df <- na.omit(plot.df)
+
+ggplot(data = plot.df, aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ), fill = GO)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("Top 40 GO with FDR < ", p.thr),
+       y = " ") + # + geom_text(label = plot.df$HyperFdrQ) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = c(.2, .2),
+         legend.title = element_blank()) +
+  scale_fill_brewer(palette = "Accent")
+```
+
+# Explore GO Cellular Component
+
+```{r include=F}
+great.go.cc <- great.enrichment.tbl[["GO Cellular Component"]] %>% setDT()
+
+(great.go.cc[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit))
+```
+
+```{r include=T}
+plot.df <- great.go.cc[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
+
+plot.bp <- plot.df[1:20,]
+plot.bp[["GO"]] <- "BP" 
+  
+ggplot(data = plot.df[1:20,], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
+  geom_bar(stat = "identity") +
+  scale_x_continuous(trans = "log10",
+                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
+  scale_y_discrete(position = "right") +
+  labs(title = paste0("Top 20 GO Biological Process with FDR < ", p.thr),
+       y = " ") + # + geom_text(label = plot.df$HyperFdrQ) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1), 
+         legend.position = "none")
+```
+
+# Explore ENSG
+
+```{r}
+p.thr <- 0.05
+
+ensg.tbl <- great.enrichment.tbl[["Ensembl Genes"]] %>% setDT()
+colnames(ensg.tbl)
+ensg.tbl[HyperFdrQ <= p.thr][order(HyperFdrQ)]
+
+cpg.gene.df.2 <- left_join(cpg.gene.df, ensg.tbl[, c("Desc", "HyperBonfP", "HyperFdrQ")], by = c("gene" = "Desc"))
+datatable(cpg.gene.df.2[HyperFdrQ <= p.thr][order(HyperFdrQ)][,FDR := round(FDR, 30)])
+```
+
+# KEGG pathway enrichemnt analysis of DMPs
+
+
+```{r gsea-missmethyl-kegg-all}
+library(missMethyl)
+
+gst.kegg <- gometh(sig.cpg = dmps.sign.anno.df$Name, all.cpg = dmps.anno.df$Name, array.type = "EPIC", anno = anno.epic.sub, collection = "KEGG", sig.genes = T)
+
+write.csv2(gst.kegg, "~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_all_missmethyl.csv", quote = F, row.names = F)
+```
+
+```{r}
+library(missMethyl)
+gst.kegg <- read.csv2("~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_all_missmethyl.csv") %>% setDT()
+
+kegg.sign.cat <- gst.kegg[FDR < 0.05][order(FDR)]
+topGSA(kegg.sign.cat)
+```
+
+```{r gsea-missmethyl-kegg-promoter}
+library(missMethyl)
+
+gst.kegg.promoter <- gometh(sig.cpg = dmps.sign.anno.df$Name, all.cpg = dmps.anno.df$Name, array.type = "EPIC", anno = anno.epic.sub, 
+                            collection = "KEGG", genomic.features = c("TSS200","TSS1500","1stExon"), sig.genes = T)
+
+write.csv2(gst.kegg, "~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_promoter_missmethyl.csv", quote = F, row.names = F)
+```
+
+```{r}
+gst.kegg <- read.csv2("~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_promoter_missmethyl.csv") %>% setDT()
+
+kegg.sign.promoter.cat <- gst.kegg.promoter[FDR < 0.05][order(FDR)]
+topGSA(kegg.sign.promoter.cat)
+```
+
+# DMRs obtained by comb-p
+
+Dex-associated differentially methylated regions identified using CombP. Listed are all multiple testing significant (Sidak corrected P < 0.05) differentially methylated regions. 
+
+
+```{r}
+dmr.sign.combp.fn <- "~/bio/datasets/methylation/20_DMA/03_dmr/comb-p/dex.anno.hg19.regions.filtered.bed"
+dmr.sign.combp.df <- fread(dmr.sign.combp.fn)
+
+nr.probes <- 4
+
+dmr.combp.sub.df <- dmr.sign.combp.df[n_probes >= nr.probes][z_sidak_p <= 0.05][order(z_sidak_p)] %>%
+  dplyr::select(chr = `#chrom`, start, end, DMP_PVAL = min_p, Nr_Probes = n_probes, DMR_PVAL = z_sidak_p, Gene = refGene_name, Distance = refGene_distance, Feature = refGene_feature, CpG_Island_Name = cpgIslandExt_name, CpG_Island_Dist = cpgIslandExt_distance, CpG_Island_Feature = cpgIslandExt_feature)
+
+summary(dmr.combp.sub.df)
+fwrite(dmr.combp.sub.df[abs(end-start) <= 1000][order(DMP_PVAL)],
+           file = "~/bio/datasets/methylation/20_DMA/03_dmr/comb-p/dex_top_dist_1kbp.txt",
+           row.names = F, quote = F, dec = ".", col.names = T)
+datatable(dmr.combp.sub.df[abs(end-start) <= 1000][order(DMP_PVAL)])
+
 ```

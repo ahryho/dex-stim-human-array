@@ -22,6 +22,7 @@ anno.fn      <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02
 
 lmem.rslt    <- fread(lmem.rslt.fn)
 anno.df      <- fread(anno.fn)
+colnames(anno.df)[4] <- "PROBE_ID"
 ```
 
 
@@ -59,7 +60,7 @@ VolcanoPlot(lmem.rslt, fdr, fc, "DNAm SVs and SNP PCs")
 <!-- ```{r save-dmps, include = F, eval = F} -->
 <!-- dmps.sign.df <- lmem.rslt[abs(FC) > fc & FDR < fdr,] -->
 
-<!-- dmps.sign.anno.df <- anno.df[Name %in% dmps.sign.df$PROBE_ID ] -->
+<!-- dmps.sign.anno.df <- anno.df[PROBE_ID %in% dmps.sign.df$PROBE_ID ] -->
 <!-- dmps.sign.anno.df <- left_join(dmps.sign.df, dmps.sign.anno.df, by = c("PROBE_ID" = "Name")) -->
 
 <!-- fwrite(dmps.sign.anno.df,  -->
@@ -97,8 +98,288 @@ VolcanoPlot(lmem.rslt, fdr, fc, "DNAm SVs and SNP PCs")
 ```{r load-sign-dmps, include = F, eval = T}
 dmps.sign.anno.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dmps_fdr01_fc02_anno_full.csv"
 dmps.sign.anno.df <- fread(dmps.sign.anno.fn)
-dmps.sign.anno.df
+# dmps.sign.anno.df
 ```
+
+## PCA
+
+Relationship of the top 10 principal components derived from DNA methylation data with available and derived covariates. 
+
+Because it is likely that other unmeasured environmental exposures also confound the analysis of methylomic variation associated with dex treatment, we investigated the impact of additional surrogate variables capturing variation in DNA methylation on the association statistics for dex-associated DMPs. We first compared each of the first 10 principal components (PCs) derived from the DNA methylation data to the available phenotype data to identify potential sources of additional variation between samples. For example, we observed strong correlations (r > 0.5) between the first three PCs and estimated blood cell composition measures, reflecting the likely effect of epigenetic differences between cell types. 
+
+Heat-map of correlations between each PC (1-10) and the available phenotype information (SCZ – schizophrenia
+status; sex) and variables derived from the DNA methylation data (DNAmAge – age estimated from DNA methylation data; DNAm Smoking - smoking score estimated from DNA methylation data; CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm
+
+```{r load-beta-mtrx, include = F, eval = F}
+beta.mtrx.fn <- "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_beta_combat_mtrx.rds"
+beta.mtrx    <- readRDS(beta.mtrx.fn)
+```
+
+```{r load-nval-mtrx, include = F, eval = F}
+mval.mtrx.fn <- "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_mval_combat_mtrx.rds"
+mval.mtrx    <- readRDS(mval.mtrx.fn)
+
+# Compute mval mtrx and save
+# beta.mtrx   <- beta.mtrx[, match(pheno$DNAm_ID, colnames(beta.mtrx))]
+# mval.mtrx   <- beta2m(beta.mtrx)
+# saveRDS(mval.mtrx,
+#        "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_mval_combat_mtrx.rds")
+```
+
+```{r compute-dnam-pcs, include = F, eval = F}
+library(lumi)
+
+t.mval.mtrx <- t(mval.mtrx[dmps.sign.anno.df$PROBE_ID,])
+pca.obj <- prcomp(t.mval.mtrx, retx = T, center = T, scale. = F, rank. = 10)  
+# pca.obj.retx <- prcomp(mval.mtrx, retx = T, center = T, scale. = F, rank. = 10)  
+
+saveRDS(pca.obj,
+         "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_methyl_pca_sign_dmps.rds")
+```
+
+```{r load-dnam-pcs, include = F, eval = T}
+pca.obj.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_methyl_pca_sign_dmps.rds"
+pca.obj    <- readRDS(pca.obj.fn)
+
+nr.pcs   <- ncol(pca.obj$rotation)
+
+propvar  <- round(summary(pca.obj)$importance["Proportion of Variance", 1:nr.pcs] * 100, 2 )
+cummvar  <- round(summary(pca.obj)$importance["Cumulative Proportion", 1:nr.pcs] * 100, 2) 
+
+dnam.pcs <- data.frame(pca.obj$x)
+dnam.pcs <- dnam.pcs[match(pheno$DNAm_ID, as.factor(rownames(dnam.pcs))), ]
+
+dnam.pcs    <- dnam.pcs[match(pheno$DNAm_ID, rownames(dnam.pcs)), paste0("PC", 1:10)] 
+colnames(dnam.pcs) <- paste0("DNAm_PC", 1:10)
+```
+
+```{r combine-all-data, include = F, eval = T}
+bcc.gex  <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
+bcc.gex <- bcc.gex %>% 
+  mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
+bcc.meth <- pheno[, c("CD8T", "CD4T", "NK", "Bcell", "Mono", "Gran")]
+sv.gex   <- pheno[, paste0("V", 1:10)] # c("V1", "V2", "V3", "V4", "V5")]
+sv.meth  <- pheno[, paste0("DNAm_SV", 1:10)]# c("DNAm_SV1", "DNAm_SV2", "DNAm_SV3")]
+snp.pcs  <- pheno[, paste0("PC", 1:5)]
+
+tmp.df <- data.frame(sv.meth, meth = bcc.meth, gex = bcc.gex, gex = sv.gex, snp.pcs, dnam.pcs,
+                     Dex = as.numeric(pheno$Dex), Status = as.numeric(pheno$Status), Sex = as.numeric(pheno$Sex), BMI = pheno$BMI_D1, 
+                     Age = pheno$Age, DNAm_Age = pheno$mAge_Hovath, DNAm_Smoke = pheno$DNAm_SmokingScore) %>% 
+  na.omit() %>% 
+  scale()
+
+cor.mtrx <- cor(tmp.df)
+```
+
+## Analysis {.tabset .tabset-pills}
+
+### Corplot
+
+```{r out.width = "98%", fig.cap = "Relationship of the top 10 PCs derived from DNAm data with with available and derived covariates", include = T, eval = T}
+cor.mtrx.plt <- cor.mtrx[paste0("DNAm_PC", 1:10), c(paste0("DNAm_SV", 1:3),
+                                                    paste("meth", colnames(bcc.meth), sep = "." ),
+                                                    c("Dex", "Status", "Sex", "BMI", "Age", "DNAm_Age", "DNAm_Smoke"))]
+par(cex = 1)
+corrplot(cor.mtrx.plt, 
+         method = "color", cl.pos = "b", cl.cex = 0.6,
+         addgrid.col = "gray90",
+         addCoef.col = "black", number.cex = 0.6, number.digits = 1, # Add coefficient of correlation
+         tl.col = "black",  tl.cex = 0.6, tl.srt = 45, tl.offset = 0.5, tl.pos = "dt", #Text label color and rotation
+         sig.level = 0.01) 
+```
+
+#### Scree plot
+
+```{r out.width = "90%", fig.cap = "Percentage of variance explained by first 10 eigenvalues"}
+propvar.df <- data.frame(PC = 1:10, propvar)
+ggplot(propvar.df, aes(PC, propvar)) +
+  geom_bar(stat = "identity", width = 0.7, fill = "#00688B") +
+  geom_line(colour = "red", linetype = "dashed") +
+  geom_point(colour = "red") +
+  xlab("DNAm PCs") +
+  ylab("Percentage variance explained") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "none")
+```
+
+#### Dex
+
+```{r out.width = "90%", fig.cap = "PCA plot demonstrating the DEX treatment separation based on significant DMPs", include = T, eval = T}
+plt.df <- data.frame((dnam.pcs), Group = as.factor(pheno$Dex), Sex = as.factor(pheno$Sex))
+
+ggplot(data = plt.df, aes(DNAm_PC1, DNAm_PC2, col = Group)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("DNAm PC1 (", signif(propvar[1], 2), "%)")) +
+  ylab(paste0("DNAm PC2 (", signif(propvar[2], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "none")
+```
+
+#### Sex
+
+```{r out.width = "90%", fig.cap = "PCA plot demonstrating the SEX separation based on significant DMPs", include = T, eval = T}
+plt.df <- data.frame((dnam.pcs), Group = as.factor(pheno$Dex), Sex = as.factor(pheno$Sex))
+
+ggplot(data = plt.df[plt.df$Group == 1,], aes(DNAm_PC4, DNAm_PC7, col = Sex)) +
+  geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
+  geom_point(size = 2, alpha = 1) +
+  xlab(paste0("DNAm PC4 (", signif(propvar[6], 2), "%)")) +
+  ylab(paste0("DNAM PC7 (", signif(propvar[7], 2), "%)")) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 0, hjust = 1),
+         legend.position = "none")
+```
+
+## Functional Annotation {.tabset .tabset-fade .tabset-pills}
+
+```{r filter-data, include = F, eval = T}
+dmps.sign.anno.df [dmps.sign.anno.df$FC < fc, MethylStatus := "hypomethylated"]
+dmps.sign.anno.df [dmps.sign.anno.df$FC > fc, MethylStatus := "hypermethylated"]
+
+interest.cols <- c("PROBE_ID", "chr", "pos", "UCSC_RefGene_Group", "UCSC_RefGene_Name", "Regulatory_Feature_Group", "Relation_to_Island",
+                   "MethylStatus")
+
+dmps.sign.sub.df       <- dmps.sign.anno.df %>% dplyr::select(interest.cols) %>% setDT()
+dmps.sign.sub.df$Model <- "DMA"
+
+dmps.merged.df       <- anno.df  %>% dplyr::select(interest.cols[-8]) %>% setDT()
+dmps.merged.df$Model <- "Assessed"
+dmps.merged.df       <- rbind(dmps.merged.df, dmps.sign.sub.df %>% dplyr::select(-MethylStatus))
+
+# Split the UCSC RefGene Group
+
+dmps.sign.sub.df$UCSC_RefGene_Group <- gsub(";.*", "", one_anno_df$UCSC_RefGene_Group)
+dmps.sign.sub.df[UCSC_RefGene_Group == "", UCSC_RefGene_Group := NA]
+
+dmps.merged.df$UCSC_RefGene_Group <- gsub(";.*", "", dmps.merged.df$UCSC_RefGene_Group)
+dmps.merged.df[UCSC_RefGene_Group == "", UCSC_RefGene_Group := NA]
+
+```
+
+### Chromosomes
+
+```{r out.width = "90%", fig.cap = "DMPs distribution across chromosomes", include = T, eval = T}
+chr.order <- paste("chr", c(1:22, "X", "Y"), sep = "")
+meth      <- dmps.sign.sub.df
+meth$chr  <- factor(meth$chr,levels = chr.order)
+
+ggplot(meth, aes(x = chr)) + 
+  geom_bar(aes(y = (..count..)/sum(..count..), fill = factor(..x..))) + 
+  geom_text(aes( label = scales::percent((..count..)/sum(..count..), accuracy = 0.1),
+                   y = (..count..)/sum(..count..) ), stat = "count", vjust = -.5, size = 3) +
+  scale_y_continuous(labels=scales::percent) +
+  labs(x = "Chromosome",
+       y = "Relative frequency") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 10),
+         axis.title = element_text(size = 10),
+         axis.text.x = element_text(angle = 45, hjust = 0.5),
+         legend.position = "none")
+```
+
+### Genomic regions
+
+```{r include = F, eval = T}
+p1 <- ggplot(dmps.sign.sub.df, aes(x = Relation_to_Island, group = MethylStatus )) + 
+  geom_bar(aes(y = ..prop.., fill = MethylStatus), stat = "count", position = position_dodge()) +
+  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
+                   y= ..prop.. ), stat = "count", position = position_dodge(1)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Relation to Island",
+       y = "Frequency", 
+       title = "The ration of hypermethylated versus hypomethylated dDMPs in different genomic regions") +
+  theme(legend.title = element_blank(), 
+        legend.position = c(.9,.75),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10),
+        axis.text.x = element_text(angle = 45, hjust = 0.5)) +
+  scale_fill_brewer(palette = "Dark1")
+  # scale_fill_manual(values = c("grey", "darkgrey"))
+```
+
+```{r incldue = F, eval = T}
+p2 <- ggplot(dmps.merged.df, aes(x = Relation_to_Island, group = Model )) + 
+  geom_bar(aes(y = ..prop.., fill = Model), stat = "count", position = position_dodge()) +
+  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
+                   y= ..prop.. ), stat = "count", position = position_dodge(1.1)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Relation to Island",
+       y = "Frequency", 
+       title = "The ration of all assessed EPIC CpGs versus dDMPs in different genomic regions") +
+  theme(legend.title = element_blank(), 
+        legend.position = c(.9,.75),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10),
+        axis.text.x = element_text(angle = 45, hjust = 0.5)) +
+  scale_fill_brewer(palette = "Set3")
+```
+
+```{r out.width = "90%", fig.cap = "The distribution of CpGs in different genomic regions", include = T, eval = T}
+# grid.arrange(p1, p2, ncol = 2)
+p1
+```
+
+```{r out.width = "90%", fig.cap = "The distribution of CpGs in different genomic regions", include = T, eval = T}
+# grid.arrange(p1, p2, ncol = 2)
+p2
+```
+
+### Gene regions
+
+```{r out.width = "90%", fig.cap = "The distribution of CpGs in different gene regions", include = T, eval = T}
+ggplot(one_anno_df, aes(x = UCSC_RefGene_Group, group = MethylStatus )) + 
+  geom_bar(aes(y = ..prop.., fill = MethylStatus), stat = "count", position = position_dodge()) +
+  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
+                   y= ..prop.. ), stat = "count", position = position_dodge(1)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Relation to Island",
+       y = "Frequency", 
+       title = "The ration of hypermethylated versus hypomethylated dDMPs in different genomic regions") +
+  theme(legend.title = element_blank(), 
+        legend.position = c(.9,.75),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10),
+        axis.text.x = element_text(angle = 45, hjust = 0.5)) +
+  scale_fill_brewer(palette = "Dark1")
+  # scale_fill_manual(values = c("grey", "darkgrey"))
+```
+
+```{r out.width = "90%", fig.cap = "The distribution of CpGs in different gene regions", include = T, eval = T}
+ggplot(one_anno_df, aes(x = UCSC_RefGene_Group, group = Model )) + 
+  geom_bar(aes(y = ..prop.., fill = Model), stat = "count", position = position_dodge()) +
+  geom_text(aes( label = scales::percent(..prop.., accuracy = 0.1),
+                   y= ..prop.. ), stat = "count", position = position_dodge(1)) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Relation to Island",
+       y = "Frequency", 
+       title = "The ration of all assessed EPIC CpGs versus dDMPs in different gene regions") +
+  theme(legend.title = element_blank(), 
+        legend.position = c(.9,.75),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10),
+        axis.text.x = element_text(angle = 45, hjust = 0.5)) +
+  scale_fill_brewer(palette = "Set3")
+```
+
 
 ## Overlap 450K and EPIC
 

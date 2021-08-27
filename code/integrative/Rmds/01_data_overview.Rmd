@@ -231,7 +231,7 @@ saveRDS(pca.obj,
 # dnam.pcs.fn <- "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_top10pcs.csv"
 # dnam.pcs    <- read.csv2(dnam.pcs.fn)
 
-pca.obj.fn <- "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_pca.rds"
+pca.obj.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_methyl_pca.rds"
 pca.obj    <- readRDS(pca.obj.fn)
 
 nr.pcs   <- ncol(pca.obj$rotation)

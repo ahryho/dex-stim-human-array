@@ -23,9 +23,10 @@ editor_options:
 options(digits = 4, width = 100, stringsAsFactors = T)
 knitr::opts_chunk$set(echo = TRUE,
                       tidy.opts = list(width.cutoff = 100),
-                      tidy=TRUE,
+                      tidy = TRUE,
                       fig.pos = "H",
-                      dpi = 600,
+                      dev = "png",
+                      dpi = 72,
                       warning = FALSE, 
                       message = FALSE, 
                       cache = TRUE, 
@@ -54,6 +55,9 @@ library(data.table)
 library(viridis)
 library(ggrepel)
 library(data.table)
+library(RColorBrewer)
+library(corrplot)
+library(gridExtra)
 ```
 # Introduction
 ***

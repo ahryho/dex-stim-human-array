@@ -2,12 +2,31 @@
 # DMPs
 ***
 
+## Overview
+***
+
+The current analysis was performed for the linear mixed effects model (lmem) with
+
+  + __DNAm_SV__: first three methylation surrogate variables which represents methylation blood cell counts
+  + __SNP_PC__: first two genotype principal components
+  + __FDR__: False Discovery Rate was set to 0.01 based on the analysis of 450K 
+  + __FC__: Fold Change was set to 0.02 based on the analysis of 450K 
+
 ## Roadmap
+***
+
+The roadmap is being modified based on the consultations with different people :) 
+
+Final version will be placed later.
 
 ## Files location
+***
 
-## Signififcant DMPs
+The files' locations will be added pnce the analysis is finished. Currently, the source data and calculated data are stored in the project working directory:
 
+  + __/data__: the source data folder
+  + __/output/data__: the folder with analysis results
+  
 ```{sh, include = F, eval = F}
 scp -C -r -o ProxyCommand="ssh cluser@biocomp.psych.mpg.de nc slurmgate 22" ahryhorzhevska@slurmgate:/binder/mgp/datasets/2020_DexStim_Array_Human/methylation/20_DMA/01_lme_models/dnam_lmem_svs_pcs_rslt.txt output/data/methylation/01_lmem_dnam
 ```
@@ -15,6 +34,9 @@ scp -C -r -o ProxyCommand="ssh cluser@biocomp.psych.mpg.de nc slurmgate 22" ahry
 ```{r, include = F, eval = T}
 source("~/bio/code/mpip/dex-stim-human-array/code/methylation/02_dma/01_dmp/funcitons.R")
 ```
+
+## Analysis
+***
 
 ```{r load-lmem-anno, include = F, eval = T}
 lmem.rslt.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_svs_pcs_rslt.txt'
@@ -102,13 +124,10 @@ dmps.sign.anno.df <- fread(dmps.sign.anno.fn)
 ```
 
 ## PCA {.tabset .tabset-pills}
+***
 
-Relationship of the top 10 principal components derived from DNA methylation data with available and derived covariates. 
-
-Because it is likely that other unmeasured environmental exposures also confound the analysis of methylomic variation associated with dex treatment, we investigated the impact of additional surrogate variables capturing variation in DNA methylation on the association statistics for dex-associated DMPs. We first compared each of the first 10 principal components (PCs) derived from the DNA methylation data to the available phenotype data to identify potential sources of additional variation between samples. For example, we observed strong correlations (r > 0.5) between the first three PCs and estimated blood cell composition measures, reflecting the likely effect of epigenetic differences between cell types. 
-
-Heat-map of correlations between each PC (1-10) and the available phenotype information (SCZ – schizophrenia
-status; sex) and variables derived from the DNA methylation data (DNAmAge – age estimated from DNA methylation data; DNAm Smoking - smoking score estimated from DNA methylation data; CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm
+  + The PCA was performed to investigate the impact of additional surrogate variables capturing variation in DNA methylation on the association statistics for dex-associated DMPs. 
+  + The first ten PCs were derived from the DMPs and compared to the available phenotype data and derived covariates to identify potential sources of additional variation between samples.  
 
 ```{r load-beta-mtrx, include = F, eval = F}
 beta.mtrx.fn <- "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_beta_combat_mtrx.rds"
@@ -172,6 +191,20 @@ cor.mtrx <- cor(tmp.df)
 ```
 
 ### Corplot
+
+Heat-map of correlations between each PC (1-10) and the available phenotype information:
+
+  + __Dex__: a dexamethasone treatment group
+  + __Sex__: a sex group
+  + __Status__: a MDD status group 
+  + __Age__
+  + __BMI__ 
+
+and variables derived from the DNA methylation data:
+
+  + __DNAm BCC__: CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm
+  + __DNAm Age__: an age estimated from DNAm data using Horvath algorithm
+  + __Smoking Score__: smoking score estimated from DNAm data using Elliot's CpGs
 
 ```{r out.width = "98%", fig.cap = "Relationship of the top 10 PCs derived from DNAm data with with available and derived covariates", include = T, eval = T}
 cor.mtrx.plt <- cor.mtrx[paste0("DNAm_PC", 1:10), c(paste0("DNAm_SV", 1:3),
@@ -240,6 +273,7 @@ ggplot(data = plt.df[plt.df$Group == 1,], aes(DNAm_PC4, DNAm_PC7, col = Sex)) +
 ```
 
 ## Functional Annotation {.tabset .tabset-fade .tabset-pills}
+***
 
 ```{r filter-data, include = F, eval = T}
 dmps.sign.anno.df [dmps.sign.anno.df$FC < fc, MethylStatus := "hypomethylated"]
@@ -412,7 +446,7 @@ Gene regulatory domain definition: Each gene is assigned a basal regulatory doma
   + Target genomic regions: significant DMPs
   + Background: all CpGs
   + Proximal: 5 kb upstream, 5 kb downstream, 
-  + plus Distal: up to 50 kb
+  + plus Distal: up to 10 kb
   + Statistical Significance: FDR <= 0.05
 
 <!-- The test set contains 7,469 (1%) of all 740,357 regions. -->
@@ -423,7 +457,7 @@ Gene regulatory domain definition: Each gene is assigned a basal regulatory doma
 
 <!-- 18,549 ontology terms (100%) were tested using an annotation count range of [1, 1000]. -->
 
-```{r prepare-data-for-rgreat, icnldue = F, eval = F}
+```{r prepare-data-for-rgreat, include = F, eval = F}
 source("~/bio/code/mpip/dex-stim-human-array/code/methylation/02_dma/03_gsea/01_prepare_input_for_rgreat.R")
 
 target.bed.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/cpgs_target_for_great.bed"
@@ -528,7 +562,7 @@ minus_log10_trans <- function(){
 ##### MF
 
   + The test set contains 9,890 (1%) of all 740,357 regions.
-  + The foreground set picked 7,222 genes, the background set picked 17,622 genes.
+  + The foreground set picked 2,378 genes, the background set picked 17,444 genes.
   + _GO Molecular Function_ has 4,219 terms covering 16,545 (89%) of all 18,549 genes, and 229,089 term - gene associations.
   + 4,219 ontology terms (100%) were tested using an annotation count range of [1, 1000].
 
@@ -551,7 +585,7 @@ plot.mf[["GO"]] <- "MF"
 ##### BP
 
   + The test set contains 9,890 (1%) of all 740,357 regions.
-  + The foreground set picked 7,222 genes, the background set picked 17,622 genes.
+  + The foreground set picked 2,378 genes, the background set picked 17,444 genes.
   + _GO Biological Process_ has 13,145 terms covering 16,621 (90%) of all 18,549 genes, and 1,251,831 term - gene associations.
   + 13,145 ontology terms (100%) were tested using an annotation count range of [1, 1000].
 
@@ -622,7 +656,7 @@ ggplot(data = plot.df, aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ), fill = 
 #### Human Phenotype {.tabset .tabset-fade .tabset-pills}
 
   + The test set contains 9,890 (1%) of all 740,357 regions.
-  + The foreground set picked 7,222 genes, the background set picked 17,622 genes.
+  + The foreground set picked 2,378 genes, the background set picked 17,444 genes.
   + _Human Phenotype_ has 6,672 terms covering 3,411 (18%) of all 18,549 genes, and 256,883 term - gene associations.
   + 6,672 ontology terms (100%) were tested using an annotation count range of [1, 1000].
 
@@ -660,7 +694,7 @@ ggplot(data = great.hf[1:30,], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))
 #### Ensembl Genes
 
   + The test set contains 9,890 (1%) of all 740,357 regions.
-  + The foreground set picked 7,222 genes, the background set picked 17,622 genes.
+  + The foreground set picked 2,378 genes, the background set picked 17,444 genes.
   + _Ensembl Genes_ has 18,549 terms covering 18,549 (100%) of all 18,549 genes, and 18,549 term - gene associations.
   + 18,549 ontology terms (100%) were tested using an annotation count range of [1, 1000].
 

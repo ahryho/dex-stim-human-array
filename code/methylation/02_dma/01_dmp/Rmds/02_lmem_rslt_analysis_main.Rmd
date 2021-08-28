@@ -20,7 +20,7 @@ editor_options:
 ---
 
 ```{r setup, include=FALSE}
-options(digits = 4, width = 100, stringsAsFactors = T)
+options(digits = 2, width = 100, stringsAsFactors = T)
 knitr::opts_chunk$set(echo = TRUE,
                       tidy.opts = list(width.cutoff = 100),
                       tidy = TRUE,

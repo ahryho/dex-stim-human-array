@@ -101,7 +101,7 @@ dmps.sign.anno.df <- fread(dmps.sign.anno.fn)
 # dmps.sign.anno.df
 ```
 
-## PCA
+## PCA {.tabset .tabset-pills}
 
 Relationship of the top 10 principal components derived from DNA methylation data with available and derived covariates. 
 
@@ -170,8 +170,6 @@ tmp.df <- data.frame(sv.meth, meth = bcc.meth, gex = bcc.gex, gex = sv.gex, snp.
 
 cor.mtrx <- cor(tmp.df)
 ```
-
-## Analysis {.tabset .tabset-pills}
 
 ### Corplot
 
@@ -376,8 +374,9 @@ ggplot(dmps.merged.df, aes(x = UCSC_RefGene_Group, group = Model )) +
 
 
 ## Overlap 450K and EPIC
+***
 
-```{r overlap-450-epic, out.width = "85%", fig.cap = "Overlap between 450K and EPIC significant DMPs ", include = T, eval = T}
+```{r overlap-450-epic, out.width = "75%", fig.cap = "Overlap between 450K and EPIC significant DMPs ", include = T, eval = T}
 library(eulerr)
 
 dmps.450k.ids <- dmps.450k$Probe_Id
@@ -392,29 +391,37 @@ plot(fit,
      )
 ```
 
-## GSEA
+## GSEA for DMPs
+***
 
-The GSEA was done using the rGREAT R package.
+### GO Enrichment Analysis
+***
+
+```{r include = F, eval = T}
+library(rGREAT)
+```
+
+The GO enrichment analysis was done by using the rGREAT R package.
 
 GREAT calculates statistics by associating genomic regions with nearby genes and applying the gene annotations to the regions. Association is a two step process. First, every gene is assigned a regulatory domain. Then, each genomic region is associated with all genes whose regulatory domain it overlaps.
 
 Gene regulatory domain definition: Each gene is assigned a basal regulatory domain of a minimum distance upstream and downstream of the TSS (regardless of other nearby genes). The gene regulatory domain is extended in both directions to the nearest gene's basal domain but no more than the maximum extension in one direction.
 
-### GO Enrichment for DMPs
+#### Input
 
-Target genomic regions: significant DMPs
-Background: all CpGs
-Proximal: 5 kb upstream, 5 kb downstream, plus Distal: up to 10 kb
+  + Target genomic regions: significant DMPs
+  + Background: all CpGs
+  + Proximal: 5 kb upstream, 5 kb downstream, 
+  + plus Distal: up to 100 kb
+  + Statistical Significance: FDR <= 0.05
 
-Statistical Significance: FDR <= 0.05
+<!-- The test set contains 7,469 (1%) of all 740,357 regions. -->
 
-The test set contains 7,469 (1%) of all 740,357 regions.
+<!-- The foreground set picked 1,613 genes, the background set picked 17,441 genes. -->
 
-The foreground set picked 1,613 genes, the background set picked 17,441 genes.
+<!-- Ensembl Genes has 18,549 terms covering 18,549 (100%) of all 18,549 genes, and 18,549 term - gene associations. -->
 
-Ensembl Genes has 18,549 terms covering 18,549 (100%) of all 18,549 genes, and 18,549 term - gene associations.
-
-18,549 ontology terms (100%) were tested using an annotation count range of [1, 1000].
+<!-- 18,549 ontology terms (100%) were tested using an annotation count range of [1, 1000]. -->
 
 ```{r prepare-data-for-rgreat, icnldue = F, eval = F}
 source("~/bio/code/mpip/dex-stim-human-array/code/methylation/02_dma/03_gsea/01_prepare_input_for_rgreat.R")
@@ -430,14 +437,14 @@ bed.bg <- ToBed(anno.df, bg.bed.fn, is.save = T)
 ```
 
 ```{r submit-GREAT-job, include = F, eval = F}
-library(rGREAT)
+bed.target <- read.table(target.bed.fn, sep = " ")
+bed.bg <- read.table(bg.bed.fn, sep = " ")
 
 job <- submitGreatJob(bed.target, bg = bed.bg,
-                      species = "hg19", rule = "basalPlusExt", adv_upstream = 5.0, adv_downstream = 5.0, adv_span = 10)
+                      species = "hg19", rule = "basalPlusExt", adv_upstream = 5.0, adv_downstream = 5.0, adv_span = 100)
 
 # availableOntologies(job)
-great.enrichment.tbl <- getEnrichmentTables(job, download_by = "tsv",  ontology = c("GO Molecular Function", "GO Cellular Component", "GO Biological Process",
-                                                                                    "Human Phenotype", "Ensembl Genes"))
+great.enrichment.tbl <- getEnrichmentTables(job, download_by = "tsv",  ontology = c("GO Molecular Function", "GO Cellular Component", "GO Biological Process", "Human Phenotype", "Ensembl Genes"))
 great.cpg.gene.ass <- plotRegionGeneAssociationGraphs(job, plot = F)
 
 saveRDS(object = job, 
@@ -459,209 +466,280 @@ great.enrichment.tbl <- readRDS("~/bio/code/mpip/dex-stim-human-array/output/dat
 great.cpg.gene.ass   <- readRDS("~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/rGREAT_rslt/rgreat_cgGeneAssociationGRange_svs_fdr01_fc02_output.rds")
 ```
 
-```{r}
+```{r dmps-rgreat-job-overview, include = F, eval = F}
 job
 ```
 
-```{r}
+#### CpG Gene Association  {.tabset .tabset-fade .tabset-pills}
+
+##### Number
+
+```{r dmps-gene-association, out.width = "85%", include = T, eval = T}
 plotRegionGeneAssociationGraphs(job, type = 1)
 ```
-```{r}
+
+##### Distance to TSS
+
+```{r dmps-gene-association-tss, out.width = "85%", include = T, eval = T}
 plotRegionGeneAssociationGraphs(job, type = 2)
 ```
-```{r}
+```{r dmps-gene-association-tss-abs, out.width = "85%", include = F, eval = F}
 plotRegionGeneAssociationGraphs(job, type = 3)
 ```
-# Explore CpG - Gene associations
+
+##### Table
 
 ```{r}
 cpg.gene.df <- data.frame(great.cpg.gene.ass) %>% select(chr = seqnames, start, end, gene, distTSS) %>% setDT() 
-# unique(cpg.gene.df$gene) %>% length()
-
 colnames(bed.target) <- c("chr", "start", "end", "name")
 
 cpg.gene.df <- left_join(cpg.gene.df, bed.target)
 # cpg.gene.df[!is.na(gene)][order(abs(distTSS))]
 
-cpg.gene.df <- left_join(cpg.gene.df, dmps.sign.anno.df[, c("PROBE_ID", "FC", "MAD", "FDR")], by = c("name" = "PROBE_ID"))
-datatable(cpg.gene.df[!is.na(gene)][order(abs(FDR))] %>% 
-            mutate(absDistTSS = abs(distTSS)) %>%
-            select(gene, cg = name, chr, start, distTSS, absDistTSS, FC, MAD, FDR))
-
+cpg.gene.df <- left_join(cpg.gene.df, dmps.sign.anno.df[, c("PROBE_ID", "FDR", "FC", "MAD")], by = c("name" = "PROBE_ID"))
+cpg.gene.df$FDR <- signif(cpg.gene.df$FDR, 3)
+cpg.gene.df[!is.na(gene)][order(abs(FDR))] %>% 
+  dplyr::mutate(absDistTSS = abs(distTSS)) %>%
+  dplyr::select(gene, cg = name, chr, start, absDistTSS, FDR, FC, MAD)
 ```
 
-# Explore GO Molecular Functions
+#### Ontologies {.tabset .tabset-fade .tabset-pills}
 
-```{r}
-great.go.mol.fun <- great.enrichment.tbl[["GO Molecular Function"]] %>% setDT()
+Below the results are shown for GO Molecular Function (MF), Biological Process (BP), Cellular Components (CC).
 
-great.go.mol.fun[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit)
-```
+__Output:__
 
-```{r}
-plot.df <- great.go.mol.fun[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
+  + __ID__: Term identifier from the ontology
+  + __Desc__: Description if the GO
+  + __HyperFdrQ__:False discovery rate q-value
+  + __RegionFoldEnrich__: fold enrichment of number of genomic regions in the test set with the annotation
+  + __FgRegionsHit__: the number of genomic regions in the test set associated with one or more genes with the annotation
+  + __NumFgGenesHit__:
+  + __FgGeneHane__:
+  + __BgRegionsHit__:
+  + __NumBgGenesHit__:
 
+```{r, include = F, eval = T}
 minus_log10_trans <- function(){
   trans_new(name = "minus_log10", transform = function(x) -log10(x), inverse = function(x) 10 ^ x)
 }
+```
 
+##### MF
+
+  + The test set contains 9,890 (1%) of all 740,357 regions.
+  + The foreground set picked 7,222 genes, the background set picked 17,622 genes.
+  + _GO Molecular Function_ has 4,219 terms covering 16,545 (89%) of all 18,549 genes, and 229,089 term - gene associations.
+  + 4,219 ontology terms (100%) were tested using an annotation count range of [1, 1000].
+
+```{r, include = T, eval = T}
+great.go.mol.fun <- great.enrichment.tbl[["GO Molecular Function"]] %>% setDT()
+
+great.go.mol.fun$HyperFdrQ        <- signif(great.go.mol.fun$HyperFdrQ, 3)
+great.go.mol.fun$RegionFoldEnrich <- signif(great.go.mol.fun$RegionFoldEnrich, 3)
+
+great.go.mol.fun[HyperFdrQ < fdr][order(HyperFdrQ)] %>% 
+  dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit)
+```
+
+```{r, include = F, eval = T}
+plot.df <- great.go.mol.fun[HyperFdrQ < fdr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
 plot.mf <- plot.df[1:20,]
 plot.mf[["GO"]] <- "MF"  
-
-ggplot(data = plot.df, aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
-  geom_bar(stat = "identity") +
-  scale_x_continuous(trans = "log10",
-                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
-  scale_y_discrete(position = "right") +
-  labs(title = paste0("GO Molecular Function, FDR < ", p.thr),
-       y = " ") # + geom_text(label = plot.df$HyperFdrQ)
-
 ```
 
-# Explore GO Molecular Functions
+##### BP
 
-```{r}
+  + The test set contains 9,890 (1%) of all 740,357 regions.
+  + The foreground set picked 7,222 genes, the background set picked 17,622 genes.
+  + _GO Biological Process_ has 13,145 terms covering 16,621 (90%) of all 18,549 genes, and 1,251,831 term - gene associations.
+  + 13,145 ontology terms (100%) were tested using an annotation count range of [1, 1000].
+
+```{r, include = T, eval = T}
 great.go.bio.proc <- great.enrichment.tbl[["GO Biological Process"]] %>% setDT()
 
-(great.go.bio.proc[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit))
+great.go.bio.proc$HyperFdrQ        <- signif(great.go.bio.proc$HyperFdrQ, 3)
+great.go.bio.proc$RegionFoldEnrich <- signif(great.go.bio.proc$RegionFoldEnrich, 3)
+
+great.go.bio.proc[HyperFdrQ < fdr][order(HyperFdrQ)] %>%
+  dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit)
 ```
                                                                   
-
-```{r}
-plot.df <- great.go.bio.proc[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
-
+```{r, include = F, eval = T}
+plot.df <- great.go.bio.proc[HyperFdrQ < fdr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
 plot.bp <- plot.df[1:20,]
 plot.bp[["GO"]] <- "BP" 
-  
-ggplot(data = plot.df[1:20,], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
-  geom_bar(stat = "identity") +
-  scale_x_continuous(trans = "log10",
-                     labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
-  scale_y_discrete(position = "right") +
-  labs(title = paste0("Top 20 GO Biological Process with FDR < ", p.thr),
-       y = " ") + # + geom_text(label = plot.df$HyperFdrQ) +
-  theme( panel.background = element_blank(),
-         plot.title = element_text(size = 10),
-         axis.title = element_text(size = 10),
-         axis.text.x = element_text(angle = 0, hjust = 1), 
-         legend.position = "none")
 ```
 
-```{r}
-plot.df <- rbind(plot.bp, plot.mf)
-plot.df$GO <- as.factor(plot.df$GO)
-plot.df <- na.omit(plot.df)
+##### CC
 
+  + The test set contains 9,890 (1%) of all 740,357 regions.
+  + The foreground set picked 7,222 genes, the background set picked 17,622 genes.
+  + _GO Cellular Component_ has 1,726 terms covering 17,726 (96%) of all 18,549 genes, and 380,581 term - gene associations.
+  + 1,726 ontology terms (100%) were tested using an annotation count range of [1, 1000].
+
+```{r include = T, eval = T}
+great.go.cc <- great.enrichment.tbl[["GO Cellular Component"]] %>% setDT()
+
+great.go.cc$HyperFdrQ        <- signif(great.go.cc$HyperFdrQ, 3)
+great.go.cc$RegionFoldEnrich <- signif(great.go.cc$RegionFoldEnrich, 3)
+
+great.go.cc[HyperFdrQ < fdr][order(HyperFdrQ)] %>% 
+  dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit)
+```
+
+```{r include = F, eval = T}
+plot.df <- great.go.cc[HyperFdrQ < fdr]
+plot.cc <- plot.df[1:20,]
+plot.cc[["GO"]] <- "CC" 
+```
+
+##### Plot {.active}
+
+```{r, include = F, eval = T}
+plot.df    <- rbind(plot.bp, plot.mf, plot.cc)
+plot.df$GO <- as.factor(plot.df$GO)
+plot.df    <- na.omit(plot.df)
+```
+```{r plot-ont, out.width = "100%", include = T, eval = T}
 ggplot(data = plot.df, aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ), fill = GO)) + 
   geom_bar(stat = "identity", position = position_dodge()) +
   scale_x_continuous(trans = "log10",
                      labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
   scale_y_discrete(position = "right") +
-  labs(title = paste0("Top 40 GO with FDR < ", p.thr),
+  labs(title = paste0("Top GO with FDR < ", fdr),
        y = " ") + # + geom_text(label = plot.df$HyperFdrQ) +
   theme( panel.background = element_blank(),
-         plot.title = element_text(size = 10),
-         axis.title = element_text(size = 10),
-         axis.text.x = element_text(angle = 0, hjust = 1), 
+         plot.title = element_text(size = 8),
+         axis.title = element_text(size = 8),
+         axis.text.x = element_text(angle = 0, hjust = 0.5, size = 8, color = "black"), 
+         axis.text.y = element_text(angle = 0, hjust = 0.5, size = 8, color = "black"), 
          legend.position = c(.2, .2),
          legend.title = element_blank()) +
-  scale_fill_brewer(palette = "Accent")
+  scale_fill_brewer(palette = "Set1")
 ```
 
-# Explore GO Cellular Component
+#### Human Phenotype {.tabset .tabset-fade .tabset-pills}
 
-```{r include=F}
-great.go.cc <- great.enrichment.tbl[["GO Cellular Component"]] %>% setDT()
+  + The test set contains 9,890 (1%) of all 740,357 regions.
+  + The foreground set picked 7,222 genes, the background set picked 17,622 genes.
+  + _Human Phenotype_ has 6,672 terms covering 3,411 (18%) of all 18,549 genes, and 256,883 term - gene associations.
+  + 6,672 ontology terms (100%) were tested using an annotation count range of [1, 1000].
 
-(great.go.cc[HyperFdrQ < p.thr][order(HyperFdrQ)] %>% dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit))
+##### Table
+
+```{r include = T, eval = T}
+great.hf <- great.enrichment.tbl[["Human Phenotype"]] %>% setDT()
+
+great.hf$HyperFdrQ        <- signif(great.hf$HyperFdrQ, 3)
+great.hf$RegionFoldEnrich <- signif(great.hf$RegionFoldEnrich, 3)
+
+great.hf[HyperFdrQ < fdr][order(HyperFdrQ)] %>% 
+  dplyr::select(ID, Desc, HyperFdrQ, RegionFoldEnrich, FgRegionsHit, NumFgGenesHit, FgGeneNames, BgRegionsHit, NumBgGenesHit)
 ```
 
-```{r include=T}
-plot.df <- great.go.cc[HyperFdrQ < p.thr] #[order(HyperFdrQ)] %>% select(HyperFdrQ, Desc) %>% mutate(HyperFdrQ = -log10(HyperFdrQ))
+##### Plot
 
-plot.bp <- plot.df[1:20,]
-plot.bp[["GO"]] <- "BP" 
-  
-ggplot(data = plot.df[1:20,], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
-  geom_bar(stat = "identity") +
+```{r plot-ont, out.width = "100%", include = T, eval = T}
+ggplot(data = great.hf[1:30,], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
   scale_x_continuous(trans = "log10",
                      labels = waiver(), limits = NULL) +# scales::number_format(accuracy = 0.000000000001)) +
   scale_y_discrete(position = "right") +
-  labs(title = paste0("Top 20 GO Biological Process with FDR < ", p.thr),
+  labs(title = paste0("Top 30 Human Phenotypes with FDR < ", fdr),
        y = " ") + # + geom_text(label = plot.df$HyperFdrQ) +
   theme( panel.background = element_blank(),
-         plot.title = element_text(size = 10),
-         axis.title = element_text(size = 10),
-         axis.text.x = element_text(angle = 0, hjust = 1), 
-         legend.position = "none")
+         plot.title = element_text(size = 8),
+         axis.title = element_text(size = 8),
+         axis.text.x = element_text(angle = 0, hjust = 0.5, size = 8, color = "black"), 
+         axis.text.y = element_text(angle = 0, hjust = 0.5, size = 8, color = "black"), 
+         legend.position = c(.2, .2),
+         legend.title = element_blank())
 ```
 
-# Explore ENSG
+#### Ensembl Genes
 
-```{r}
-p.thr <- 0.05
+  + The test set contains 9,890 (1%) of all 740,357 regions.
+  + The foreground set picked 7,222 genes, the background set picked 17,622 genes.
+  + _Ensembl Genes_ has 18,549 terms covering 18,549 (100%) of all 18,549 genes, and 18,549 term - gene associations.
+  + 18,549 ontology terms (100%) were tested using an annotation count range of [1, 1000].
+
+```{r, include = T, eval = T}
+fdr <- 0.05
 
 ensg.tbl <- great.enrichment.tbl[["Ensembl Genes"]] %>% setDT()
-colnames(ensg.tbl)
-ensg.tbl[HyperFdrQ <= p.thr][order(HyperFdrQ)]
+ensg.tbl <- ensg.tbl[HyperFdrQ <= fdr][order(HyperFdrQ)]
 
-cpg.gene.df.2 <- left_join(cpg.gene.df, ensg.tbl[, c("Desc", "HyperBonfP", "HyperFdrQ")], by = c("gene" = "Desc"))
-datatable(cpg.gene.df.2[HyperFdrQ <= p.thr][order(HyperFdrQ)][,FDR := round(FDR, 30)])
+cpg.gene.df.2 <- left_join(cpg.gene.df, ensg.tbl[, c("Desc", "HyperFdrQ")], by = c("gene" = "Desc"))
+cpg.gene.df.2[HyperFdrQ <= fdr][order(HyperFdrQ)][,FDR := round(FDR, 30)]
 ```
 
-# KEGG pathway enrichemnt analysis of DMPs
+### KEGG pathway enrichemnt analysis {.tabset .tabset-fade .tabset-pills}
+***
 
+The KEGG pathway enrichment analysis was prepared using the __gometh__ function from the  __missMethyl__ R package. 
+The function takes a character vector of significant CpG sites, maps the CpG sites to Entrez Gene IDs, and tests for KEGG pathway enrichment using a Wallenius' non central hypergeometric test, taking into account the number of CpG sites per gene on the EPIC array and multi-gene annotated CpGs. Genes associated with each CpG site are obtained from the annotation package IlluminaHumanMethylationEPICanno.ilm10b4.hg19. 
 
-```{r gsea-missmethyl-kegg-all}
+__Output:__
+
+  + __Pathway__: the KEGG pathway being tested if testing KEGG terms
+  + __N__: the number of genes in the KEGG term
+  + __DE__: the number of genes that are differentially methylated
+  + __P.DE__: the p-value for over-representation of the GO or KEGG term term
+  + __FDR__: False discovery rate
+  + __SigGenesInSet__: Significant differentially methylated genes overlapping with the gene set of interest.
+
+```{r, include = F, eval = T}
+gst.kegg.all.fn      <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/kegg_rslt/gsea_kegg_all_missmethyl_svs_fdr01_fc02.csv"
+gst.kegg.promoter.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/kegg_rslt/gsea_kegg_promoter_missmethyl_svs_fdr01_fc02.csv"
+```
+
+```{r gsea-missmethyl-kegg, include = F, eval = F}
 library(missMethyl)
 
-gst.kegg <- gometh(sig.cpg = dmps.sign.anno.df$Name, all.cpg = dmps.anno.df$Name, array.type = "EPIC", anno = anno.epic.sub, collection = "KEGG", sig.genes = T)
+gst.kegg <- gometh(sig.cpg = dmps.sign.anno.df$PROBE_ID, all.cpg = anno.df$PROBE_ID, 
+                   array.type = "EPIC", 
+                   # anno = dmps.sign.anno.df[, colnames(anno.df)], 
+                   collection = "KEGG", sig.genes = T)
 
-write.csv2(gst.kegg, "~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_all_missmethyl.csv", quote = F, row.names = F)
+write.csv2(gst.kegg, 
+           gst.kegg.all.fn,
+           quote = F, row.names = F)
+
+gst.kegg.promoter <- gometh(sig.cpg = dmps.sign.anno.df$PROBE_ID, all.cpg = anno.df$PROBE_ID, array.type = "EPIC",
+                            collection = "KEGG", genomic.features = c("TSS200","TSS1500","1stExon"), sig.genes = T)
+
+write.csv2(gst.kegg.promoter, 
+           gst.kegg.promoter.fn,
+           quote = F, row.names = F)
 ```
+
+```{r load-kegg, include = F, eval = T}
+library(missMethyl)
+gst.kegg          <- read.csv2(gst.kegg.all.fn) %>% setDT()
+gst.kegg.promoter <- read.csv2(gst.kegg.promoter.fn) %>% setDT()
+
+gst.kegg$P.DE <- signif(gst.kegg$P.DE, 3)
+gst.kegg$FDR  <- signif(gst.kegg$FDR, 3)
+
+gst.kegg.promoter$P.DE <- signif(gst.kegg.promoter$P.DE, 3)
+gst.kegg.promoter$FDR  <- signif(gst.kegg.promoter$FDR, 3)
+
+```
+
+#### All
 
 ```{r}
-library(missMethyl)
-gst.kegg <- read.csv2("~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_all_missmethyl.csv") %>% setDT()
-
 kegg.sign.cat <- gst.kegg[FDR < 0.05][order(FDR)]
 topGSA(kegg.sign.cat)
 ```
 
-```{r gsea-missmethyl-kegg-promoter}
-library(missMethyl)
+#### Promoter
 
-gst.kegg.promoter <- gometh(sig.cpg = dmps.sign.anno.df$Name, all.cpg = dmps.anno.df$Name, array.type = "EPIC", anno = anno.epic.sub, 
-                            collection = "KEGG", genomic.features = c("TSS200","TSS1500","1stExon"), sig.genes = T)
-
-write.csv2(gst.kegg, "~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_promoter_missmethyl.csv", quote = F, row.names = F)
-```
+The gene set enrichment analysis was restricted to CpGs from the promotor regions, i.e. TSS200, TSS1500, 1stExon
 
 ```{r}
-gst.kegg <- read.csv2("~/bio/datasets/methylation/20_DMA/02_dmp/missMethyl_output/gsea_kegg_promoter_missmethyl.csv") %>% setDT()
-
 kegg.sign.promoter.cat <- gst.kegg.promoter[FDR < 0.05][order(FDR)]
 topGSA(kegg.sign.promoter.cat)
 ```
 
-# DMRs obtained by comb-p
-
-Dex-associated differentially methylated regions identified using CombP. Listed are all multiple testing significant (Sidak corrected P < 0.05) differentially methylated regions. 
-
-
-```{r}
-dmr.sign.combp.fn <- "~/bio/datasets/methylation/20_DMA/03_dmr/comb-p/dex.anno.hg19.regions.filtered.bed"
-dmr.sign.combp.df <- fread(dmr.sign.combp.fn)
-
-nr.probes <- 4
-
-dmr.combp.sub.df <- dmr.sign.combp.df[n_probes >= nr.probes][z_sidak_p <= 0.05][order(z_sidak_p)] %>%
-  dplyr::select(chr = `#chrom`, start, end, DMP_PVAL = min_p, Nr_Probes = n_probes, DMR_PVAL = z_sidak_p, Gene = refGene_name, Distance = refGene_distance, Feature = refGene_feature, CpG_Island_Name = cpgIslandExt_name, CpG_Island_Dist = cpgIslandExt_distance, CpG_Island_Feature = cpgIslandExt_feature)
-
-summary(dmr.combp.sub.df)
-fwrite(dmr.combp.sub.df[abs(end-start) <= 1000][order(DMP_PVAL)],
-           file = "~/bio/datasets/methylation/20_DMA/03_dmr/comb-p/dex_top_dist_1kbp.txt",
-           row.names = F, quote = F, dec = ".", col.names = T)
-datatable(dmr.combp.sub.df[abs(end-start) <= 1000][order(DMP_PVAL)])
-
-```

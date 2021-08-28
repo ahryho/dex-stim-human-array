@@ -412,7 +412,7 @@ Gene regulatory domain definition: Each gene is assigned a basal regulatory doma
   + Target genomic regions: significant DMPs
   + Background: all CpGs
   + Proximal: 5 kb upstream, 5 kb downstream, 
-  + plus Distal: up to 100 kb
+  + plus Distal: up to 50 kb
   + Statistical Significance: FDR <= 0.05
 
 <!-- The test set contains 7,469 (1%) of all 740,357 regions. -->
@@ -448,7 +448,7 @@ great.enrichment.tbl <- getEnrichmentTables(job, download_by = "tsv",  ontology 
 great.cpg.gene.ass <- plotRegionGeneAssociationGraphs(job, plot = F)
 
 saveRDS(object = job, 
-        file = "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/rGREAT_rslt/rgreat_job_svs_fdr01_fc02_output.rds")
+        file = "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/rGREAT_rslt/rgreat_job_svs_fdr01_fc02_output_2.rds")
 saveRDS(object = great.enrichment.tbl, 
         file = "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/04_gsea/rGREAT_rslt/rgreat_enrichmentTbl_svs_fdr01_fc02_output.rds")
 saveRDS(object = great.cpg.gene.ass, 
@@ -640,7 +640,7 @@ great.hf[HyperFdrQ < fdr][order(HyperFdrQ)] %>%
 
 ##### Plot
 
-```{r plot-ont, out.width = "100%", include = T, eval = T}
+```{r plot-ont-2, out.width = "100%", include = T, eval = T}
 ggplot(data = great.hf[1:30,], aes(x = HyperFdrQ, y = reorder(Desc, -HyperFdrQ))) + 
   geom_bar(stat = "identity", position = position_dodge()) +
   scale_x_continuous(trans = "log10",

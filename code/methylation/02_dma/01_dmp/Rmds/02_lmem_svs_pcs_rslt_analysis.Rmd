@@ -94,33 +94,33 @@ VolcanoPlot(lmem.rslt, fdr, fc, "DNAm SVs and SNP PCs")
 <!-- colnames(dmps.sign.anno.df) -->
 <!-- ``` -->
 
-<!-- ```{r split-dmps-genes, include = F, eval = F} -->
-<!-- library(splitstackshape) -->
-<!-- tmp.df <- dmps.sign.anno.df[, .(PROBE_ID, UCSC_RefGene_Name)] -->
-
-<!-- splitted.df <- cSplit(indt = tmp.df, splitCols = 'UCSC_RefGene_Name', sep = ';', type.convert = F, drop = F) %>% -->
-<!--   melt(id.vars = c("PROBE_ID", "UCSC_RefGene_Name"), value.name = "GeneSymbol") %>% -->
-<!--   dplyr::select(PROBE_ID, GeneSymbol) %>% -->
-<!--   unique() %>% -->
-<!--   na.omit() -->
-
-<!-- # Get coordintaes for genes -->
-
-<!-- library(biomaRt) -->
-<!-- ensembl      <- useEnsembl('ensembl', dataset = 'hsapiens_gene_ensembl')  -->
-<!-- gene.anno.tbl <- getBM(attributes = c('hgnc_symbol', 'chromosome_name', 'start_position', 'end_position'), -->
-<!--                      filters = 'hgnc_symbol',  -->
-<!--                      values = splitted.df$GeneSymbol,  -->
-<!--                      mart = ensembl) %>%  -->
-<!--   unique() -->
-
-<!-- splitted.df <- left_join(splitted.df, gene.anno.tbl, by = c("GeneSymbol" = "hgnc_symbol")) -->
-<!-- ``` -->
-
 ```{r load-sign-dmps, include = F, eval = T}
 dmps.sign.anno.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dmps_fdr01_fc02_anno_full.csv"
 dmps.sign.anno.df <- fread(dmps.sign.anno.fn)
 # dmps.sign.anno.df
+```
+
+```{r split-dmps-genes, include = F, eval = F}
+library(splitstackshape)
+tmp.df <- dmps.sign.anno.df[, .(PROBE_ID, UCSC_RefGene_Name)]
+
+splitted.df <- cSplit(indt = tmp.df, splitCols = 'UCSC_RefGene_Name', sep = ';', type.convert = F, drop = F) %>%
+  melt(id.vars = c("PROBE_ID", "UCSC_RefGene_Name"), value.name = "GeneSymbol") %>%
+  dplyr::select(PROBE_ID, GeneSymbol) %>%
+  unique() %>%
+  na.omit()
+
+# Get coordintaes for genes
+
+library(biomaRt)
+ensembl      <- useEnsembl('ensembl', dataset = 'hsapiens_gene_ensembl')
+gene.anno.tbl <- getBM(attributes = c('hgnc_symbol', 'chromosome_name', 'start_position', 'end_position'),
+                     filters = 'hgnc_symbol',
+                     values = splitted.df$GeneSymbol,
+                     mart = ensembl) %>%
+  unique()
+
+splitted.df <- left_join(splitted.df, gene.anno.tbl, by = c("GeneSymbol" = "hgnc_symbol"))
 ```
 
 ## PCA {.tabset .tabset-pills}
@@ -302,31 +302,63 @@ dmps.merged.df[UCSC_RefGene_Group == "", UCSC_RefGene_Group := NA]
 ### Chromosomes
 
 ```{r out.width = "90%", fig.cap = "DMPs distribution across chromosomes", include = T, eval = T}
+library(GenomicFeatures)
+chr.length.tbl <- getChromInfoFromUCSC("hg19")[, c(1, 2)] %>% setDT()
+colnames(chr.length.tbl) <- c("chr", "chr_size")
+chr.length.tbl$chr <- as.factor(chr.length.tbl$chr)
+
 chr.order <- paste("chr", c(1:22, "X", "Y"), sep = "")
 meth      <- dmps.sign.sub.df
 meth$chr  <- factor(meth$chr,levels = chr.order)
+meth      <- left_join(meth, chr.length.tbl)
 
-ggplot(meth, aes(x = chr)) + 
-  geom_bar(aes(y = (..count..)/sum(..count..), fill = factor(..x..))) + 
-  geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)), 
-            stat = "count", vjust = -.5, size = 3) +
-  scale_y_continuous(labels=scales::percent) +
-  labs(x = "Chromosome",
+library(janitor)
+chr.cpgs.cnt <- tabyl(meth$chr, sort = T)
+colnames(chr.cpgs.cnt) <- c("chr", "cnt_cpg", "freq_cpg")
+
+chr.cpgs.cnt <- left_join(chr.cpgs.cnt, chr.length.tbl, by = "chr")
+chr.cpgs.cnt$chr  <- factor(chr.cpgs.cnt$chr,levels = chr.order)
+chr.cpgs.cnt[["freq_chr"]] <- chr.cpgs.cnt$chr_size / sum(chr.cpgs.cnt$chr_size)
+chr.cpgs.cnt[["cpg_chr_cnt"]] <- chr.cpgs.cnt$cnt_cpg / chr.cpgs.cnt$freq_chr
+chr.cpgs.cnt[["cpg_chr_freq"]] <- chr.cpgs.cnt$cpg_chr_cnt / sum(chr.cpgs.cnt$cpg_chr_cnt)
+
+# Relative freq = (Number of CpGs on the chromosome (i) * (length of chromosomes{1:22} / length of the chromosome(i)) ) in %
+
+# ggplot(meth, aes(x = chr)) + 
+#   geom_bar(aes(y = (..count..)/sum(..count..), fill = factor(..x..))) + 
+#   geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)), 
+#            stat = "count", vjust = -.5, size = 3) +
+#   scale_y_continuous(labels = scales::percent) +
+#   labs(x = "Chromosome",
+#        y = "Relative frequency") +
+#   theme( panel.background = element_blank(),
+#          plot.title = element_text(size = 10),
+#          axis.title = element_text(size = 10),
+#          axis.text.x = element_text(angle = 45, hjust = 0.5),
+#          legend.position = "none")
+ggplot(chr.cpgs.cnt, aes(x = chr, y = cpg_chr_freq, fill = chr)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label = scales::percent(cpg_chr_freq, accuracy = 0.1), y = cpg_chr_freq), 
+            stat = "identity", vjust = -.5, size = 3) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "DMPs distribution across the chromosomes wieghted by the chromosomes' length",
+       x = "Chromosome",
        y = "Relative frequency") +
   theme( panel.background = element_blank(),
-         plot.title = element_text(size = 10),
-         axis.title = element_text(size = 10),
-         axis.text.x = element_text(angle = 45, hjust = 0.5),
+         plot.title = element_text(size = 8),
+         axis.title = element_text(size = 8),
+         axis.text.x = element_text(angle = 20, hjust = 0.5),
          legend.position = "none")
+  
 ```
 
 ### Genomic regions
 
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in different genomic regions", include = T, eval = T}
 ggplot(dmps.sign.sub.df, aes(x = Relation_to_Island, group = MethylStatus )) + 
-  geom_bar(aes(y = ..prop.., fill = MethylStatus), stat = "count", position = position_dodge()) +
-  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), y = ..prop.. ), 
-            stat = "count", position = position_dodge(1), size = 3) +
+  geom_bar(aes(y = (..count..)/sum(..count..), fill = MethylStatus), position = position_dodge()) + 
+  geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)), 
+            stat = "count", vjust = -.5,  position = position_dodge(1), size = 3) +
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Relation to Island",
        y = "Frequency", 
@@ -344,9 +376,12 @@ ggplot(dmps.sign.sub.df, aes(x = Relation_to_Island, group = MethylStatus )) +
 
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in different genomic regions", incldue = F, eval = T}
 ggplot(dmps.merged.df, aes(x = Relation_to_Island, group = Model )) + 
+  # geom_bar(aes(y = (..count..)/sum(..count..), fill = Model), position = position_dodge()) + 
+  # geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.01), y = (..count..)/sum(..count..)), 
+  #           stat = "count", vjust = -.5,  position = position_dodge(1), size = 3) +
   geom_bar(aes(y = ..prop.., fill = Model), stat = "count", position = position_dodge()) +
-  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), y = ..prop.. ), 
-            stat = "count", position = position_dodge(1.1), size = 3) +
+  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), y = ..prop.. ),
+            stat = "count", position = position_dodge(1), size = 3) +
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Relation to Island",
        y = "Frequency", 
@@ -369,9 +404,9 @@ grid.arrange(p1, p2, ncol = 2)
 
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in different gene regions", include = T, eval = T}
 ggplot(dmps.sign.sub.df, aes(x = UCSC_RefGene_Group, group = MethylStatus )) + 
-  geom_bar(aes(y = ..prop.., fill = MethylStatus), stat = "count", position = position_dodge()) +
-  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), y = ..prop.. ), 
-            stat = "count", position = position_dodge(1), size = 3) +
+  geom_bar(aes(y = (..count..)/sum(..count..), fill = MethylStatus), position = position_dodge()) + 
+  geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)), 
+            stat = "count", vjust = -.5,  position = position_dodge(1), size = 3) +
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Relation to Island",
        y = "Frequency", 
@@ -389,15 +424,18 @@ ggplot(dmps.sign.sub.df, aes(x = UCSC_RefGene_Group, group = MethylStatus )) +
 
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in different gene regions", include = T, eval = T}
 ggplot(dmps.merged.df, aes(x = UCSC_RefGene_Group, group = Model )) + 
+  # geom_bar(aes(y = (..count..)/sum(..count..), fill = Model), position = position_dodge()) + 
+  # geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.01), y = (..count..)/sum(..count..)), 
+  #           stat = "count", vjust = -.5,  position = position_dodge(1), size = 3) +
   geom_bar(aes(y = ..prop.., fill = Model), stat = "count", position = position_dodge()) +
-  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), y = ..prop.. ), 
+  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), y = ..prop.. ),
             stat = "count", position = position_dodge(1), size = 3) +
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Relation to Island",
        y = "Frequency", 
        title = "The ratio of all assessed EPIC CpGs versus dDMPs in different gene regions") +
   theme(legend.title = element_blank(), 
-        legend.position = c(.9,.75),
+        legend.position = c(.9,.95),
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 8),

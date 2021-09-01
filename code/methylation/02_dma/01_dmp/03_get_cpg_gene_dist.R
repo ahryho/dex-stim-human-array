@@ -69,4 +69,37 @@ library(biomaRt)
 ensembl           <- useEnsembl('ensembl', dataset = 'hsapiens_gene_ensembl')
 cpg.gene.coord.df <- GetDistances(dmps.sign.anno.df, ensembl)
 
-cpg.na.gene.df <- cpg.gene.coord.df[is.na(cpg.gene.coord.df$CG_GENE_DIST),] %>% unique()
+cpg.na.gene.df   <- cpg.gene.coord.df[is.na(CG_GENE_DIST), .(PROBE_ID, GeneSymbol, GeneGroup, CG_GENE_DIST)]
+cpg.gene.dist.df <- cpg.gene.coord.df[, .(PROBE_ID, GeneSymbol, CG_GENE_DIST)]
+plt.df           <- cpg.gene.dist.df[ , .SD[which.min(CG_GENE_DIST)], by = PROBE_ID, ]
+
+# Check
+plt.df[plt.df$PROBE_ID == "cg26489413", ]
+cpg.gene.coord.df[cpg.gene.coord.df$PROBE_ID == "cg26489413", ]
+
+plt.df[plt.df$PROBE_ID == "cg26056577", ]
+cpg.gene.coord.df[cpg.gene.coord.df$PROBE_ID == "cg26056577", ]
+
+# Join the GeneGroup
+plt.df2 <- left_join(plt.df, cpg.gene.coord.df[, .(PROBE_ID, GeneSymbol, GeneGroup)])
+plt.df2[plt.df2$PROBE_ID == "cg26056577", ]
+plt.df2[plt.df2$PROBE_ID == "cg26489413", ]
+
+plt.df2 <- rbind(plt.df2, cpg.na.gene.df)
+
+ggplot(plt.df2, aes(x = GeneGroup)) + 
+  geom_bar(aes(y = (..count..)/sum(..count..), fill = GeneGroup), position = position_dodge()) + 
+  geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)), 
+            stat = "count", vjust = -.5,  position = position_dodge(1), size = 3) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "Relation to Island",
+       y = "Frequency", 
+       title = "The ratio of hypermethylated versus hypomethylated dDMPs in different genomic regions") +
+  theme(legend.title = element_blank(), 
+        legend.position = c(.9,.85),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 45, hjust = 0.5)) 
+

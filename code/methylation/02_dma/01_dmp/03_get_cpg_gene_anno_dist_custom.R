@@ -17,20 +17,21 @@ GetDistances <- function(dmps.anno.df, ensembl){
     unique() # %>% na.omit()
   colnames(cpg.gene.df) <- c("PROBE_ID", "GeneSymbol", "GeneGroup")
 
-# 
-#   # Get Genes' coordinates and create IRanges
-#   gene.list <- unique(na.omit(cpg.gene.df$GeneSymbol))
-#   gene.coord.df <- getBM(attributes = c('hgnc_symbol', 'chromosome_name', 'start_position', 'end_position'),
-#                          filters = 'hgnc_symbol',
-#                          values = gene.list,
-#                          mart = ensembl) %>%
-#     unique()
-#   
-#   chr.list <- dmps.anno.df$chr %>% unique() %>% sub("chr", "", .)
-#   gene.coord.df <- gene.coord.df[gene.coord.df$chromosome_name %in% chr.list,]
-#   colnames(gene.coord.df) <- c("GeneSymbol", "GeneChr", "GeneStartPos", "GeneEndPos")
+
+  # Get Genes' coordinates and create IRanges
+  gene.list <- unique(na.omit(cpg.gene.df$GeneSymbol))
+  gene.coord.df <- getBM(attributes = c('hgnc_symbol', 'chromosome_name', 'start_position', 'end_position'),
+                         filters = 'hgnc_symbol',
+                         values = gene.list,
+                         mart = ensembl) %>%
+    unique()
+
+  chr.list <- dmps.anno.df$chr %>% unique() %>% sub("chr", "", .)
+  gene.coord.df <- gene.coord.df[gene.coord.df$chromosome_name %in% chr.list,]
+  colnames(gene.coord.df) <- c("GeneSymbol", "GeneChr", "GeneStartPos", "GeneEndPos")
   
   # CpG Gene Cord DF
+  cpg.coord.df <- dmps.anno.df[, .(PROBE_ID, chr, pos)] %>% dplyr:: mutate(chr = sub("chr", "", chr))
   
   cpg.gene.coord.df <- left_join(cpg.gene.df, cpg.coord.df, by = "PROBE_ID")
  
@@ -132,8 +133,8 @@ no.cores <- detectCores() - 1
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-distances <- foreach(chrom = chr.list[1], .combine = rbind, .packages = c('dplyr', 'reshape2', 'biomaRt')) %dopar% {
-# distances <- foreach(chrom = chr.list, .combine = rbind, .packages = c('dplyr', 'reshape2', 'biomaRt')) %dopar% {
+# distances <- foreach(chrom = chr.list[1], .combine = rbind, .packages = c('dplyr', 'reshape2', 'biomaRt')) %dopar% {
+distances <- foreach(chrom = chr.list, .combine = rbind, .packages = c('dplyr', 'reshape2', 'biomaRt')) %dopar% {
   df <- dmps.sign.anno.df[dmps.sign.anno.df$chr == chrom,]
   GetDistances(df, ensembl)
 }

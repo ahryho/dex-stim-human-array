@@ -108,7 +108,7 @@ cpg.gene.coord.df <- GetDistances(dmps.sign.anno.df, ensembl)
 
 
 cpg.gene.dist.df <- cpg.gene.coord.df[, .(PROBE_ID, GeneSymbol, CG_GENE_DIST)]
-plt.df <- cpg.gene.dist.df[ , .SD[which.min(CG_GENE_DIST)], by = PROBE_ID]
+plt.df <- cpg.gene.dist.df[ , .SD[which.min(CG_GENE_DIST)], by = PROBE_ID, ]
 
 # Check
 plt.df[plt.df$PROBE_ID == "cg26489413", ]

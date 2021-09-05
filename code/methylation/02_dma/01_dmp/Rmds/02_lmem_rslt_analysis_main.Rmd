@@ -48,6 +48,7 @@ knit_print.data.frame <- function(x, ...) {
 
 registerS3method("knit_print", "data.frame", knit_print.data.frame)
 
+
 library(ggplot2)
 library(tidyverse)
 library(plyr)
@@ -58,6 +59,7 @@ library(data.table)
 library(RColorBrewer)
 library(corrplot)
 library(gridExtra)
+library(plotly)
 ```
 # Introduction
 ***

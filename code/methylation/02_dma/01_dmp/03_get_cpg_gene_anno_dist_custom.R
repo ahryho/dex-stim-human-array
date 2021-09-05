@@ -112,7 +112,7 @@ ensembl  <- useEnsembl('ensembl', dataset = 'hsapiens_gene_ensembl')
 # registerDoSEQ()
 # cl <- makeCluster(no.cores - 10)
 # registerDoParallel(no.cores)
-registerDoParallel(50)
+registerDoParallel(cores = 50)
 
 dmps.sign.anno.df <- dmps.anno.df
 

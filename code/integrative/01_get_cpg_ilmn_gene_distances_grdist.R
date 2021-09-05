@@ -15,11 +15,13 @@ library(gUtils)
 
 # Load data
 
-dmps.anno.fn <- '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated.csv'
+dmps.anno.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated.csv'
+# dmps.anno.fn <- '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated.csv'
 dmps.anno.df <- fread(dmps.anno.fn, sep = "\t")
 colnames(dmps.anno.df)[4] <- "PROBE_ID"
 
-gene.expression.fn <- '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/gene_expression/mapping_ilmn_ensg_gene.csv'
+gene.expression.fn <- '~/bio/code/mpip/dex-stim-human-array/data/gene_expression/mapping_ilmn_ensg_gene.csv'
+# gene.expression.fn <- '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/gene_expression/mapping_ilmn_ensg_gene.csv'
 gex.df <- fread(gene.expression.fn)
 
 # Prepare methyl ranges
@@ -68,14 +70,22 @@ distances <- foreach(chr = chr.list, .combine = rbind, .packages = c('gUtils', '
     reshape2::melt() %>% 
     na.omit() %>% 
     unique()
-  colnames(dist.to.all.melt) <- c("PROBE_ID", "GeneSymbol", "CG_GENE_DIST")
+  colnames(dist.to.all.melt) <- c("PROBE_ID", "ILMN_ID", "CG_GENE_DIST")
   
   return(dist.to.all.melt)
 }
 
 stopImplicitCluster()
 
+colnames(cpg.gene.coord.df) <- c("PROBE_ID", "ILMN_ID", "CG_GENE_DIST")
+
 cpg.gene.coord.df <- distances %>% setDT()
+
+cpg.gene.coord.df <- left_join(cpg.gene.coord.df, cpg.coord.df, by = "PROBE_ID")
+cpg.gene.coord.df <- left_join(cpg.gene.coord.df, unique(gene.coord.df), by = c("ILMN_ID" = "GeneSymbol"))
+cpg.gene.coord.df <- cpg.gene.coord.df %>% dplyr::select(PROBE_ID, CG_CHR = chr, CG_POS = pos,
+                                                  ILMN_ID, GENE_CHR = GeneChr, GENE_START_POS = GeneStartPos, GENE_END_POS = GeneEndPos,
+                                                  CG_GENE_DIST)
 
 write.csv2(cpg.gene.coord.df,
            '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/dex_cpgs_ilmn_genes_distances.csv',

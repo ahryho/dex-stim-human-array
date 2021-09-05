@@ -61,6 +61,11 @@ levels(pheno$Sex) <- c("Male", "Female")
 levels(pheno$Status) <- c("Control", "MDD")
 ```
 
+```{r load-cpg-gene-distances, include = F, eval = T}
+cpg.closest.genes.dist.fn <-"~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated_closest_genes_distances.csv"
+cpg.closest.genes.dist.df <- fread(cpg.closest.genes.dist.fn)
+```
+
 ```{r load-dmps-450k, include = F, eval = T}
 dmps.450k.fn <- "~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_q_value01FC002_methylation_450K_CellCode.txt"
 dmps.450k    <- read.table(dmps.450k.fn, header = T)
@@ -297,6 +302,13 @@ dmps.sign.sub.df[UCSC_RefGene_Group == "", UCSC_RefGene_Group := NA]
 dmps.merged.df$UCSC_RefGene_Group <- gsub(";.*", "", dmps.merged.df$UCSC_RefGene_Group)
 dmps.merged.df[UCSC_RefGene_Group == "", UCSC_RefGene_Group := NA]
 
+dmps.sign.genes.dist.df <- cpg.closest.genes.dist.df[PROBE_ID %in% dmps.sign.anno.df$PROBE_ID]
+
+dmps.sign.genes.dist.df[PROBE_ID %in% dmps.sign.anno.df[MethylStatus == "hypomethylated", PROBE_ID], MethylStatus := "hypomethylated"]
+dmps.sign.genes.dist.df[PROBE_ID %in% dmps.sign.anno.df[MethylStatus == "hypermethylated", PROBE_ID], MethylStatus := "hypermethylated"]
+
+cpg.closest.genes.dist.df[, Model := "Assessed"]
+cpg.closest.genes.dist.df[PROBE_ID %in% dmps.sign.anno.df$PROBE_ID, Model := "DMA"]
 ```
 
 ### Chromosomes
@@ -370,7 +382,7 @@ ggplot(dmps.sign.sub.df, aes(x = Relation_to_Island, group = MethylStatus )) +
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(angle = 45, hjust = 0.5)) +
-  scale_fill_brewer(palette = "Dark1")
+  scale_fill_brewer(palette = "Paired")
   # scale_fill_manual(values = c("grey", "darkgrey"))
 ```
 
@@ -393,7 +405,7 @@ ggplot(dmps.merged.df, aes(x = Relation_to_Island, group = Model )) +
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(angle = 45, hjust = 0.5)) +
-  scale_fill_brewer(palette = "Set3")
+  scale_fill_brewer(palette = "Accent")
 ```
 
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in different genomic regions", include = T, eval = F}
@@ -403,14 +415,14 @@ grid.arrange(p1, p2, ncol = 2)
 ### Gene regions
 
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in different gene regions", include = T, eval = T}
-ggplot(dmps.sign.sub.df, aes(x = UCSC_RefGene_Group, group = MethylStatus )) + 
+ggplot(dmps.sign.genes.dist.df, aes(x = GeneGroup, group = MethylStatus )) + 
   geom_bar(aes(y = (..count..)/sum(..count..), fill = MethylStatus), position = position_dodge()) + 
   geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)), 
             stat = "count", vjust = -.5,  position = position_dodge(1), size = 3) +
   scale_y_continuous(labels = scales::percent) +
-  labs(x = "Relation to Island",
+  labs(x = "Relation to Gene region",
        y = "Frequency", 
-       title = "The ratio of hypermethylated versus hypomethylated dDMPs in different genomic regions") +
+       title = "The ratio of hypermethylated versus hypomethylated dDMPs in different genomic regions.A single CpG can be annotated to multiple gene regions.") +
   theme(legend.title = element_blank(), 
         legend.position = c(.9,.85),
         panel.grid.major = element_blank(),
@@ -418,12 +430,12 @@ ggplot(dmps.sign.sub.df, aes(x = UCSC_RefGene_Group, group = MethylStatus )) +
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(angle = 45, hjust = 0.5)) +
-  scale_fill_brewer(palette = "Dark1")
+  scale_fill_brewer(palette = "Paired")
   # scale_fill_manual(values = c("grey", "darkgrey"))
 ```
 
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in different gene regions", include = T, eval = T}
-ggplot(dmps.merged.df, aes(x = UCSC_RefGene_Group, group = Model )) + 
+ggplot(cpg.closest.genes.dist.df, aes(x = GeneGroup, group = Model )) + 
   # geom_bar(aes(y = (..count..)/sum(..count..), fill = Model), position = position_dodge()) + 
   # geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.01), y = (..count..)/sum(..count..)), 
   #           stat = "count", vjust = -.5,  position = position_dodge(1), size = 3) +
@@ -431,17 +443,17 @@ ggplot(dmps.merged.df, aes(x = UCSC_RefGene_Group, group = Model )) +
   geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), y = ..prop.. ),
             stat = "count", position = position_dodge(1), size = 3) +
   scale_y_continuous(labels = scales::percent) +
-  labs(x = "Relation to Island",
+  labs(x = "Relation to Gene Region",
        y = "Frequency", 
-       title = "The ratio of all assessed EPIC CpGs versus dDMPs in different gene regions") +
+       title = "The ratio of all assessed EPIC CpGs versus dDMPs in different gene regions. A single CpG can be annotated to multiple gene regions.") +
   theme(legend.title = element_blank(), 
-        legend.position = c(.9,.95),
+        legend.position = c(.9,.85),
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(angle = 45, hjust = 0.5)) +
-  scale_fill_brewer(palette = "Set3")
+  scale_fill_brewer(palette = "Accent")
 ```
 
 

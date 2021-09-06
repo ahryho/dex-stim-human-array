@@ -91,10 +91,14 @@ registerDoParallel(cores = 50)
 
 foreach(chr = chr.list, .combine = rbind, .packages = c('data.table')) %dopar% {
   fwrite(cpg.gene.coord.df[CG_CHR == chr],
-         paste0('/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/dex_cpgs_ilmn_genes_distances_chr_',
+         paste0('/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/dex_cpgs_ilmn_genes_distances/dex_cpgs_ilmn_genes_distances_chr_',
                 chr, '.csv'),
          sep = ";", quote = F, row.names = F)
   return(chr)
 }
 
 stopImplicitCluster()
+
+fwrite(cpg.gene.coord.df,
+       '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/dex_cpgs_ilmn_genes_distances_pe5.csv',
+       sep = ";", quote = F, row.names = F)

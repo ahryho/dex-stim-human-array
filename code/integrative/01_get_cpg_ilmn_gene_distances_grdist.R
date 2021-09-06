@@ -77,7 +77,7 @@ distances <- foreach(chr = chr.list, .combine = rbind, .packages = c('gUtils', '
 
 stopImplicitCluster()
 
-colnames(cpg.gene.coord.df) <- c("PROBE_ID", "ILMN_ID", "CG_GENE_DIST")
+colnames(distances) <- c("PROBE_ID", "ILMN_ID", "CG_GENE_DIST")
 
 cpg.gene.coord.df <- distances %>% setDT()
 
@@ -87,6 +87,14 @@ cpg.gene.coord.df <- cpg.gene.coord.df %>% dplyr::select(PROBE_ID, CG_CHR = chr,
                                                   ILMN_ID, GENE_CHR = GeneChr, GENE_START_POS = GeneStartPos, GENE_END_POS = GeneEndPos,
                                                   CG_GENE_DIST)
 
-write.csv2(cpg.gene.coord.df,
-           '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/dex_cpgs_ilmn_genes_distances.csv',
-           quote = F, row.names = F)
+registerDoParallel(cores = 50)
+
+foreach(chr = chr.list, .combine = rbind, .packages = c('data.table')) %dopar% {
+  fwrite(cpg.gene.coord.df[CG_CHR == chr],
+         paste0('/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/dex_cpgs_ilmn_genes_distances_chr_',
+                chr, '.csv'),
+         sep = ";", quote = F, row.names = F)
+  return(chr)
+}
+
+stopImplicitCluster()

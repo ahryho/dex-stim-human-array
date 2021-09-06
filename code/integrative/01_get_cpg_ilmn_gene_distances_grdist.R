@@ -102,3 +102,15 @@ stopImplicitCluster()
 fwrite(cpg.gene.coord.df,
        '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/dex_cpgs_ilmn_genes_distances_pe5.csv',
        sep = ";", quote = F, row.names = F)
+
+# Save distances which are less then 1mbp
+cpg.gene.coord.dist.1mbp.df <- cpg.gene.coord.df[CG_GENE_DIST <= 1000000]
+fwrite(cpg.gene.coord.dist.1mbp.df,
+       '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/dex_cpgs_ilmn_genes_distances_upto_1mbp.csv',
+       sep = ";", quote = F, row.names = F)
+
+# Save distances which are less then 10 mbp
+cpg.gene.coord.dist.10mbp.df <- cpg.gene.coord.df[CG_GENE_DIST <= 10000000]
+fwrite(cpg.gene.coord.dist.10mbp.df,
+       '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/dex_cpgs_ilmn_genes_distances_upto_10mbp.csv',
+       sep = ";", quote = F, row.names = F)

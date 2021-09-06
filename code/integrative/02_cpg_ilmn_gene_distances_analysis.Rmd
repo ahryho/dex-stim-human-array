@@ -1,0 +1,118 @@
+---
+title: "Integrative Analysis"
+subtitle: "Dexamethasone-Stimulated Human Array Project"
+author: 
+  - name: Anastasiia Hryhorzhevska
+    email: anastasiia_hry@psych.mpg.de
+    url: https://github.com/ahryho
+    affiliation: Max Planck Institute of Psychiatry
+    affiliation_url: https://www.psych.mpg.de/2664393/medizinische-genomforschung
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    df_print: paged
+    css: style.css
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=FALSE}
+options(digits = 4, width = 100, stringsAsFactors = T)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 100),
+                      tidy=TRUE,
+                      fig.pos = "H",
+                      dpi = 600,
+                      warning = FALSE, 
+                      message = FALSE, 
+                      cache = TRUE, 
+                      cache.lazy = FALSE)
+
+# define DT as the standard printing method for data.frame
+library(knitr)
+library(DT)
+knit_print.data.frame <- function(x, ...) {
+  knit_print(DT::datatable(x,
+                           filter="top",
+                           rownames = FALSE,
+                           extensions = "FixedColumns",
+                           options = list(
+                             scrollX = TRUE,
+                             pageLength = 5
+                             
+                           )), ...)
+}
+
+registerS3method("knit_print", "data.frame", knit_print.data.frame)
+
+library(data.table)
+library(mltools)
+library(ggplot2)
+library(ggrepel)
+
+library(parallel)
+library(foreach)
+library(doParallel)
+```
+
+
+# Introduction
+***
+```{r, include = F, eval = T}
+# source("~/bio/code/mpip/dex-stim-human-array/code/methylation/02_dma/01_dmp/funcitons.R")
+```
+
+The available multiomics data for the currect project:
+
+    - Methylation
+    - Gene-expression
+    - Genotype
+    - Bio layer, or phenotype here
+
+For each omic layer, there is different number of observation. The first four section provides an overview and basic statistics for each layer. The last section represent some additional analysis which includes data from different omic layers.
+
+# Analysis
+***
+```{r, include = F, eval = T}
+distances.10mbp.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/integrative/dex_cpgs_ilmn_genes_distances_upto_10mbp.csv'
+distances.df       <- fread(distances.10mbp.fn)
+```
+
+```{r, include = F, eval = T}
+distances.bins <- data.frame(DistanceInterval = bin_data(distances.df, binCol = "CG_GENE_DIST", 
+                                                         bins = c(0, 1, 1001, 2001, 3001, 4001, 5001, 10001,
+                                                                  50001, 100001, 150001, 200001, 250001, 300001,
+                                                                  400001, 500001, 600001, 700001, 800001, 900001, 1000001, 
+                                                                  5000001, 10000001), 
+                                                         returnDT = F))
+levels(distances.bins$DistanceInterval) <- c("0", "(0; 1]", "(1; 2]", "(2; 3]", "(3; 4]", "(4; 5]", "[5; 10)",
+                                             "(10; 50]", "(50; 100]", "(100; 150]", "(150; 200]", "(200; 250]", "[250; 300)",
+                                             "(300; 400]", "(400; 500]", "(500; 600]", "(600; 700]", "(700; 800]", "[800; 900)", "[900, 1K)",
+                                             "[1K, 5K)", "[5K, 10K)")
+```
+
+```{r, incldue = F, eval = T}
+distances.bins <- cbind(distances.bins, distances.df)
+distances.bins$CG_CHR <- as.factor(distances.bins$CG_CHR)
+```
+
+```{r out.width = "90%", fig.cap = "Number of associated CpG-ILMN", include = T, eval = T}
+ggplot(distances.bins[distances.bins$CG_CHR %in% 1:22,], aes(DistanceInterval, fill = CG_CHR)) + 
+  geom_bar(position = position_dodge()) +
+  geom_text(aes(label = ..count..), 
+            stat = "count", vjust = 0.5, hjust = 0, size = 4, angle = 90) +
+  facet_wrap(~ CG_CHR, ncol = 2) +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 12),
+         axis.title = element_text(size = 12),
+         axis.text.x = element_text(size = 12, angle = 90, hjust = 1), 
+         axis.text.y = element_text(size = 12),
+         legend.position = "none") +
+  labs(title = " ",
+       x = "Distance Intervals, kbp",
+       y = "No. CpG - Gene Associations", 
+       col = " ")
+```

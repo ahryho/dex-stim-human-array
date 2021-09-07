@@ -64,6 +64,22 @@ library(plotly)
 # Introduction
 ***
 
+The introduction will come soon.
+
+_The genotype roadmap:_
+
+1. Subset data:
+    + MAF >= 5%
+    + filter only SNPs
+    + exclude MHC region
+2. LD pruning based on pairwise correlation with the following options:
+    + a window of 50 SNPs: to calculate LD between each pair of SNPs
+    + remove one of a pair if the LD is greater than 0.2
+    + short the window 5 SNPs forward
+3. MDS / PCA in PLINK
+4. Analysis in R
+
+
 ```{r source-functionr, include=F, eval = T}
 source("~/bio/code/mpip/dex-stim-human-array/code/methylation/02_dma/01_dmp/funcitons.R")
 ```

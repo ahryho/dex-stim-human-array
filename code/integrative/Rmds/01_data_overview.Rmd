@@ -100,12 +100,12 @@ covar.names <- c("Dex", "Sex", "Status", "Age", "BMI_D1", "SNP_Chip", "Batch")
     * 85 (43.1%) Cases out of 197
   + __Age__
   + __BMI__ 
+  + __BCC__: Cort_D1, ACTH_D1, Leukos_D1, Gran_D1, Mono_D1, Lymph_D1, hamd_D1 - cellular proportion
   + __Batch__: four bacthes (1, 2, 3, Mars) 
   + __SNP_Chip__: a genotype chip (610K and OmniExpress)
 
 ### Derived Covariates
   + __DNAm BCC__: CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm
-  + __GEX BCC__: Cort_D1, ACTH_D1, Leukos_D1, Gran_D1, Mono_D1, Lymph_D1, hamd_D1 - cellular proportion estimates
   + __CellCODE BCC__: Cort_D1, ACTH_D1, Leukos_D1, Gran_D1, Mono_D1, Lymph_D1, hamd_D1 - cellular proportion estimates from CellCODE 
   + __DNAm SV__: 62 significant Surrogate Variables (SV)
   + __GEX SV__: 43 significant Surrogate Variables (SV)
@@ -120,7 +120,7 @@ covar.names <- c("Dex", "Sex", "Status", "Age", "BMI_D1", "SNP_Chip", "Batch")
 ```{r, include = T, eval = T}
 id.names <- c("Sample_ID", "DNA_ID", "RNA_ID", "DNAm_ID", "Pat_ID")
 covar.names <- c("Dex", "Sex", "Status", "Age", "BMI_D1", "SNP_Chip", "Batch")
-pheno.full %>% select(id.names, covar.names)
+pheno.full %>% dplyr::select(id.names, covar.names)
 ```
 
 ### Some Analyses {.tabset .tabset-fade .tabset-pills}
@@ -128,11 +128,11 @@ pheno.full %>% select(id.names, covar.names)
 ```{r, include = F, eval = T}
 id.names <- c("DNA_ID", "RNA_ID")
 covar.names <- c("Dex", "Sex", "Status", "Age", "BMI_D1", "SNP_Chip", "Batch")
-summary(pheno.full %>% select(id.names, covar.names))
+summary(pheno.full %>% dplyr::select(id.names, covar.names))
 ```
 
 ```{r, include = F, eval = T}
-plt.df <- pheno.full %>% select(id.names, covar.names)
+plt.df <- pheno.full %>% dplyr::select(id.names, covar.names)
 
 plt.df$Status  <- as.factor(plt.df$Status)
 plt.df$Sex     <- as.factor(plt.df$Sex)
@@ -247,8 +247,8 @@ colnames(dnam.pcs) <- paste0("DNAm_PC", 1:10)
 ```
 
 ```{r combine-all-data, include = F, eval = T}
-bcc.gex  <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
-bcc.gex <- bcc.gex %>% 
+bcc  <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
+bcc <- bcc %>% 
   mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
 bcc.meth <- pheno[, c("CD8T", "CD4T", "NK", "Bcell", "Mono", "Gran")]
 bcc.cellcode <- pheno[, c("Neutrophil_CellCODE", "Tcell_CellCODE", "Monocyte_CellCODE", "Bcell_CellCODE",
@@ -257,7 +257,7 @@ sv.gex   <- pheno[, paste0("V", 1:10)] # c("V1", "V2", "V3", "V4", "V5")]
 sv.meth  <- pheno[, paste0("DNAm_SV", 1:10)]# c("DNAm_SV1", "DNAm_SV2", "DNAm_SV3")]
 snp.pcs  <- pheno[, paste0("PC", 1:5)]
 
-tmp.df <- data.frame(sv.meth, meth = bcc.meth,  bcc.cellcode, gex = bcc.gex, gex = sv.gex, snp.pcs, dnam.pcs,
+tmp.df <- data.frame(sv.meth, meth = bcc.meth,  bcc.cellcode, bcc, gex = sv.gex, snp.pcs, dnam.pcs,
                      Dex = as.numeric(pheno$Dex), Status = as.numeric(pheno$Status), Sex = as.numeric(pheno$Sex), BMI = pheno$BMI_D1, 
                      Age = pheno$Age, DNAm_Age = pheno$mAge_Hovath, DNAm_Smoke = pheno$DNAm_SmokingScore) %>% 
   na.omit() %>% 
@@ -272,7 +272,7 @@ cor.mtrx <- cor(tmp.df)
 # cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), -which(colnames(cor.mtrx) %in% c(paste0("DNAm_SV", 1:10), paste0("DNAm_PC", 1:10)))]
 cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), which(colnames(cor.mtrx) %in% c(paste("meth", colnames(bcc.meth), sep = "." ),
                                                                                   colnames(bcc.cellcode),
-                                                                                  paste("gex", colnames(bcc.gex), sep = "." )))]
+                                                                                  colnames(bcc)))]
 par(cex = 1)
 corrplot(cor.mtrx.plt, 
          method = "color", cl.pos = "b", cl.cex = 0.6,
@@ -332,7 +332,8 @@ corrplot(cor.mtrx.plt,
 
 ```{r out.width = "98%", fig.cap = "Relationship of the top 10 PCs derived from DNAm data with available and derived covariates", include = T, eval = T}
 cor.mtrx.plt <- cor.mtrx[paste0("DNAm_PC", 1:10), c(paste("meth", colnames(bcc.meth), sep = "." ), 
-                                                    paste("gex", colnames(bcc.gex), sep = "." ))]
+                                                    colnames(bcc.cellcode),
+                                                    colnames(bcc))]
 par(cex = 1)
 corrplot(cor.mtrx.plt, 
          method = "color", cl.pos = "b", cl.cex = 0.6,
@@ -574,15 +575,15 @@ colnames(gex.pcs) <- paste0("GEX_PC", 1:10)
 ```
 
 ```{r combine-all-data-gex, include = F, eval = T}
-bcc.gex  <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
-bcc.gex <- bcc.gex %>% 
+bcc  <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
+bcc <- bcc %>% 
   mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
 bcc.meth <- pheno[, c("CD8T", "CD4T", "NK", "Bcell", "Mono", "Gran")]
 sv.gex   <- pheno[, paste0("V", 1:10)] 
 sv.meth  <- pheno[, paste0("DNAm_SV", 1:10)]
 snp.pcs  <- pheno[, paste0("PC", 1:5)]
 
-tmp.df <- data.frame(sv.meth, meth = bcc.meth, gex = bcc.gex, gex = sv.gex, snp.pcs, gex.pcs,
+tmp.df <- data.frame(sv.meth, meth = bcc.meth, bcc, bcc.cellcode, gex = sv.gex, snp.pcs, gex.pcs,
                      Dex = as.numeric(pheno$Dex), Status = as.numeric(pheno$Status), Sex = as.numeric(pheno$Sex), BMI = pheno$BMI_D1, 
                      Age = pheno$Age, DNAm_Age = pheno$mAge_Hovath, DNAm_Smoke = pheno$DNAm_SmokingScore) %>% 
   na.omit() %>% 
@@ -596,7 +597,8 @@ cor.mtrx <- cor(tmp.df)
 ```{r out.width = "98%", fig.cap = "Relationship of the top 10 SVs derived from GEX data with available and derived covariates", include = T, eval = T}
 # cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), -which(colnames(cor.mtrx) %in% c(paste0("DNAm_SV", 1:10), paste0("DNAm_PC", 1:10)))]
 cor.mtrx.plt <- cor.mtrx[paste0("gex.V", 1:10), which(colnames(cor.mtrx) %in% c(paste("meth", colnames(bcc.meth), sep = "." ), 
-                                                                                paste("gex", colnames(bcc.gex), sep = "." )))]
+                                                                                colnames(bcc.cellcode),
+                                                                                colnames(bcc)))]
 par(cex = 1)
 corrplot(cor.mtrx.plt, 
          method = "color", cl.pos = "b", cl.cex = 0.6,
@@ -658,7 +660,8 @@ corrplot(cor.mtrx.plt,
 
 ```{r out.width = "98%", fig.cap = "Relationship of the top 10 PCs derived from GEX data with available and derived covariates", include = T, eval = T}
 cor.mtrx.plt <- cor.mtrx[paste0("GEX_PC", 1:10), c(paste("meth", colnames(bcc.meth), sep = "." ), 
-                                                   paste("gex", colnames(bcc.gex), sep = "." ))]
+                                                   colnames(bcc.cellcode),
+                                                   colnames(bcc))]
 par(cex = 1)
 corrplot(cor.mtrx.plt, 
          method = "color", cl.pos = "b", cl.cex = 0.6,
@@ -971,8 +974,8 @@ summary(glmm)
 ### Omic BCCs Correlation 
 
 ```{r combine-all-data-integrative, include = F, eval = T}
-bcc.gex      <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
-bcc.gex      <- bcc.gex %>% mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
+bcc          <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
+bcc          <- bcc %>% mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
 bcc.meth     <- pheno[, c("CD8T", "CD4T", "NK", "Bcell", "Mono", "Gran")]
 bcc.cellcode <- pheno[, c("Neutrophil_CellCODE", "Tcell_CellCODE", "Monocyte_CellCODE", "Bcell_CellCODE",
                           "NKcell_CellCODE", "PlasmaCell_CellCODE", "DendriticCell_CellCODE")]
@@ -980,7 +983,7 @@ sv.gex   <- pheno[, paste0("V", 1:10)]
 sv.meth  <- pheno[, paste0("DNAm_SV", 1:10)]
 snp.pcs  <- pheno[, paste0("PC", 1:5)]
 
-tmp.df <- data.frame(meth = bcc.meth, gex = bcc.gex, bcc.cellcode, sv.meth, gex = sv.gex, snp.pcs) %>%
+tmp.df <- data.frame(meth = bcc.meth, bcc, bcc.cellcode, sv.meth, gex = sv.gex, snp.pcs) %>%
                     # Dex = as.numeric(pheno$Dex), Status = as.numeric(pheno$Status), Sex = as.numeric(pheno$Sex), BMI = pheno$BMI_D1, 
                     # Age = pheno$Age) %>% 
   na.omit() %>% 
@@ -992,11 +995,11 @@ cor.mtrx <- cor(tmp.df)
 ```{r out.width = "98%", fig.cap = "Relationship of the BCCs", include = T, eval = T}
 # cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), -which(colnames(cor.mtrx) %in% c(paste0("DNAm_SV", 1:10), paste0("DNAm_PC", 1:10)))]
 cor.mtrx.plt <- cor.mtrx[which(rownames(cor.mtrx) %in% c(paste("meth", colnames(bcc.meth), sep = "." ),
-                                                           paste("gex", colnames(bcc.gex), sep = "." ),
+                                                           colnames(bcc),
                                                            colnames(bcc.cellcode))), 
                          which(colnames(cor.mtrx) %in% c(paste("meth", colnames(bcc.meth), sep = "." ),
-                                                           paste("gex", colnames(bcc.gex), sep = "." ),
-                                                           colnames(bcc.cellcode)))]
+                                                         colnames(bcc),
+                                                         colnames(bcc.cellcode)))]
 
 
 corrplot(cor.mtrx.plt, 

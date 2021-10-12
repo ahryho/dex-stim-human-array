@@ -289,7 +289,7 @@ plot(hc.mdl, ylab = "Height", xlab = " ", main = " ")
 ###### Map
 
 ```{r include = F, eval = T}
-sub.grp  <- as.factor(cutree(hc.mdl, k = 3)) # length(kmeans.mdl$size))
+sub.grp  <- as.factor(cutree(hc.mdl, k = 2)) # length(kmeans.mdl$size))
 pca      <- left_join(eigenvec, pheno[Dex == 1, .(DNA_ID, Status, SNP_Chip, Sex)], by = c("FID" = "DNA_ID"))
 ```
 
@@ -408,7 +408,7 @@ write.csv2(na.id,
 ggplot(data = eigenvec, aes(C1, C2, color = S_Land)) +
   geom_vline(xintercept = 0, linetype = "dashed", size = 0.4) +
   geom_hline(yintercept = 0, linetype = "dashed", size = 0.4) +
-  geom_point(size = 1, alpha = 1) +
+  geom_point(size = 2, alpha = 1) +
   xlab(paste0("PC1 (", signif(pve$pve[1], 2), "%)")) +
   ylab(paste0("PC2 (", signif(pve$pve[2], 2), "%)")) +
   labs(col = "Land") +

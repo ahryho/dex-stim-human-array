@@ -55,6 +55,6 @@ VolcanoPlot <- function(df, pval, fc, model = "SV"){
            legend.position = "none") +
     labs(title = paste0("Volcano plot: ", model, " model with FDR <= ", pval, " and abs(FC) >= ", fc),
          x = "Fold Change", y = "-log10 FDR") +
-    annotate(geom = "text", x = 7*fc,  y = -log10(min(df$FDR))/2, label = nr.hypermethyl, color = "red", fontsize = 10, fontface = "bold") +
-    annotate(geom = "text", x = - 7*fc,  y = -log10(min(df$FDR))/2, label = nr.hypomethyl, color = "red", fontsize = 10, fontface = "bold")
+    annotate(geom = "text", x = 7*fc + 0.1,  y = -log10(min(df$FDR))/2, label = nr.hypermethyl, color = "red", fontsize = 10, fontface = "bold") +
+    annotate(geom = "text", x = - 7*fc - 0.1,  y = -log10(min(df$FDR))/2, label = nr.hypomethyl, color = "red", fontsize = 10, fontface = "bold")
 }

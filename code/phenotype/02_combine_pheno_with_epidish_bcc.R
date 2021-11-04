@@ -28,12 +28,23 @@ bcc.cellcode <- pheno[, c("Neutrophil_CellCODE", "Tcell_CellCODE", "Monocyte_Cel
                           "NKcell_CellCODE", "PlasmaCell_CellCODE", "DendriticCell_CellCODE")]
 bcc.epidish  <- pheno[, c("epidish_rpc.B", "epidish_rpc.NK", "epidish_rpc.CD4T", "epidish_rpc.CD8T", "epidish_rpc.Mono", "epidish_rpc.Neutro", "epidish_rpc.Eosino")]
 
+sv.meth  <- pheno[, paste0("DNAm_SV", 1:3)]
+snp.pcs  <- pheno[, paste0("PC", 1:2)]
+sv.gex   <- pheno[, paste0("V", 1:5)] 
+
 # Plot
 
-tmp.df <- data.frame(meth = bcc.meth, bcc, bcc.cellcode, bcc.epidish) %>%
-                     #sv.meth, gex = sv.gex, snp.pcs) %>%
-  # Dex = as.numeric(pheno$Dex), Status = as.numeric(pheno$Status), Sex = as.numeric(pheno$Sex), BMI = pheno$BMI_D1, 
-  # Age = pheno$Age) %>% 
+tmp.df <- data.frame(#  bcc, bcc.cellcode,
+  minfi = bcc.meth,
+  bcc.epidish,
+  sv.meth,
+  snp.pcs,
+  gex = sv.gex, 
+  # Dex = as.numeric(pheno$Dex), 
+  Status = as.numeric(pheno$Status), 
+  Sex = as.numeric(pheno$Sex), BMI = pheno$BMI_D1, 
+  SS  = pheno$DNAm_SmokingScore,
+  Age = pheno$Age) %>% 
   na.omit() %>% 
   scale()
 

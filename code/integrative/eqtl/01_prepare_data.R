@@ -80,6 +80,21 @@ fwrite(methyl.mtrx.dex,
        paste0(output.eqtm.pre, "methyl_beta_mtrx_dex.csv"),
        quote = F, row.names = F, sep = ";")
 
+# Calculate the differences betwenn veh and dex
+
+all(rownames(methyl.mtrx.veh) == rownames(methyl.mtrx.dex))
+order.idx  <- match(colnames(methyl.mtrx.dex), colnames(methyl.mtrx.veh))
+
+methyl.mtrx.dex <- methyl.mtrx.dex[, colnames(methyl.mtrx.veh)]
+all(colnames(methyl.mtrx.veh) == colnames(methyl.mtrx.dex))
+
+methyl.mtrx.delta <- methyl.mtrx.veh[-1] - methyl.mtrx.dex[-1] 
+methyl.mtrx.delta <- cbind(methyl.mtrx.veh[1], methyl.mtrx.delta)
+
+fwrite(methyl.mtrx.delta, 
+       paste0(output.eqtm.pre, "methyl_beta_mtrx_delta.csv"),
+       quote = F, row.names = F, sep = ";")
+
 # Preapare GEX data
 veh.ids <- pheno[Dex == 0 & !is.na(DNAm_ID), .(DNA_ID, RNA_ID)]
 dex.ids <- pheno[Dex == 1 & !is.na(DNAm_ID), .(DNA_ID, RNA_ID)]
@@ -111,14 +126,6 @@ fwrite(gex.mtrx.veh.t,
 
 fwrite(gex.mtrx.dex.t, 
        paste0(output.eqtm.pre, "gex_mtrx_dex.csv"),
-       quote = F, row.names = F, sep = ";")
-
-# Prepare file with SNP coordinates
-snp.loc <- snp.bim %>% dplyr::select(V2, V1, V4) %>% unique()
-colnames(snp.loc) <- c("SNP", "chr", "pos")
-
-fwrite(snp.loc, 
-       paste0(output.eqtm.pre, "snp_locations.csv"),
        quote = F, row.names = F, sep = ";")
 
 # Prepare file with SNP coordinates
@@ -212,4 +219,5 @@ all(colnames(methyl.mtrx.dex)[-1] == colnames(bio.mtrx.t)[-1])
 fwrite(bio.mtrx.t, 
        paste0(output.eqtm.pre, "bio_mtrx_methyl_dex.csv"),
        quote = F, row.names = F, sep = ";")
+
 

@@ -27,4 +27,4 @@ sbatch --job-name=$job_name --part=$partition \
   --nodelist=$partition$node --mem=$memory --output=$out_fn \
   --wrap="Rscript --vanilla /home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/code/integrative/eqtl/03_run_eqtl.R $src_dir $rslt_dir"
 
-# ./03_run_eqtl dex /home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/ /home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/ pe 7 500Gb
+# ./03_run_eqtl.sh dex /home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/ /home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/ pe 7 500Gb

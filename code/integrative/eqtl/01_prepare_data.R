@@ -17,7 +17,7 @@ db_ilmn_gene <- fread("~/bio/datasets/kimono/mapping/mapping_ilmn_ensg_gene.csv"
 db_gene_snp <- fread("~/bio/datasets/kimono/mapping/mapping_snp_gene_distance.csv")
 
 snp.kimono.mtrx    <- fread("~/bio/datasets/kimono/input/snp.csv")
-snp.bim            <- fread("~/bio/datasets/snps/Dex_genoData_SNPs.bim")
+snp.bim            <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/final_imputed_qc_snps/dex_geno_imputed_ld.bim")
 pheno              <- fread(pheno.fn, na.strings = c('#N/A', "NA"), dec = ",") %>% setDT()
 pheno              <- pheno[Include == 1]    
 methyl.mtrx        <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_beta_combat_mtrx.rds")
@@ -48,7 +48,18 @@ fwrite(snp.mtrx,
        quote = F, row.names = F, sep = ";")
 
 
-snp.mtrx <- fread( paste0(src.snps.data.pre, "snp_mtrx.csv"))
+snp.mtrx <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx.csv")
+colnames(snp.mtrx)[1] <- "SNP"
+snp.mtrx <- snp.mtrx[, -2]
+
+all(colnames(snp.mtrx)[-1] == colnames(methyl.mtrx.dex.sign)[-1])
+
+order.idx <- c(0, match(colnames(methyl.mtrx.dex.sign)[-1], colnames(snp.mtrx)[-1])) + 1
+snp.mtrx  <- snp.mtrx[, ..order.idx]
+
+fwrite(snp.mtrx, 
+       paste0("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx.csv"),
+       quote = F, row.names = F, sep = ";")
 
 # Prepare methylation data
 
@@ -147,6 +158,13 @@ cpg.loc$chr       <- gsub("[^0-9.]", "",  cpg.loc$chr)
 
 fwrite(cpg.loc, 
        paste0(output.eqtm.pre, "cpg_locations.csv"),
+       quote = F, row.names = F, sep = ";")
+
+cpg.loc <- fread(paste0(output.eqtm.pre, "cpg_locations.csv"))
+cpg.loc[["pos_end"]] <- cpg.loc$pos
+
+fwrite(cpg.loc, 
+       paste0(output.eqtm.pre, "cpg_locations_meqtls.csv"),
        quote = F, row.names = F, sep = ";")
 
 # Prepare file with ENSG coordinates

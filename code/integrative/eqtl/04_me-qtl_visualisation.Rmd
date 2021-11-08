@@ -163,10 +163,25 @@ ggplot(meqtl.dex.full.df, aes(x = dist)) + geom_histogram(alpha = .9)
 ggplot(meqtl.veh.full.df, aes(x = dist)) + geom_histogram(alpha = .9)
 ```
 
+## Upset plots
 
+### SNP level
+
+Upset plots (like VENN) to compare the datasets with each other:
+  
 ```{r}
-  meqtl.fltr.df$SNP %>% unique() %>% length()
-  meqtl.fltr.df$CpG_ID %>% unique() %>% length()
+library(UpSetR)
+
+meqtls.snps <- list(delta = meqtl.delta.full.df$SNP, dex = meqtl.dex.full.df$SNP, veh = meqtl.veh.full.df$SNP)
+
+upset(fromList(meqtls.snps), 
+      sets = c("delta", "dex", "veh"),
+      nsets = 3, 
+      nintersects = 50, 
+      mainbar.y.label = "# SNP's", 
+      text.scale = 2, 
+      keep.order = T,
+      sets.bar.color = c("#A6D854", "#4292C6", "#FDAE6B")) #, "#A6D854", "#4292C6", "#FDAE6B"))
 ```
 
 ```{r}

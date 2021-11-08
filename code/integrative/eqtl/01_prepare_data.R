@@ -48,17 +48,19 @@ fwrite(snp.mtrx,
        quote = F, row.names = F, sep = ";")
 
 
-snp.mtrx <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx.csv")
+snp.mtrx <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx_dex.csv")
 colnames(snp.mtrx)[1] <- "SNP"
-snp.mtrx <- snp.mtrx[, -2]
+# snp.mtrx <- snp.mtrx[, -192]
 
-all(colnames(snp.mtrx)[-1] == colnames(methyl.mtrx.dex.sign)[-1])
+methyl.mtrx <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/methyl_beta_mtrx_veh.csv")
 
-order.idx <- c(0, match(colnames(methyl.mtrx.dex.sign)[-1], colnames(snp.mtrx)[-1])) + 1
+all(colnames(snp.mtrx)[-1] == colnames(methyl.mtrx)[-1])
+
+order.idx <- c(0, match(colnames(methyl.mtrx)[-1], colnames(snp.mtrx)[-1])) + 1
 snp.mtrx  <- snp.mtrx[, ..order.idx]
 
 fwrite(snp.mtrx, 
-       paste0("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx.csv"),
+       paste0("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx_delta.csv"),
        quote = F, row.names = F, sep = ";")
 
 # Prepare methylation data

@@ -156,6 +156,32 @@ meqtl.all.full.df <- rbind(meqtl.delta.full.df[, treatment := "delta"],
                            meqtl.veh.full.df[, treatment := "veh"])
 ```
 
+# MANHATTAN PLOT
+```{r, include = F, eval = T}
+library(stringr)
+library(QCEWAS)
+
+a <- str_split_fixed(me.add.cis$gene, "-", 2)
+me.add.cis$chr <- substring(a[,1],4,length(a[,1]))
+me.add.cis$POS <- a[,2]
+colnames(me.add.cis) <- c("snps" ,'gene',"stats" ,"P_VAL" , "fdr", 'beta',"CHR", 'POS')
+me.add.cis$CHR <- as.numeric(me.add.cis$CHR)
+me.add.cis$POS <- as.numeric(me.add.cis$POS)
+
+trace("EWAS_plots",edit=TRUE)
+meqtl.delta.no.fdr.df[, P_VAL := `p-value`]
+meqtl.delta.no.fdr.df[, CHR := chr]
+meqtl.delta.no.fdr.df[, MAPINFO := pos_cpg]
+EWAS_plots(meqtl.delta.no.fdr.df,
+           plot_QQ = FALSE,
+           plot_Man = TRUE,
+           plot_cutoff_p = 1,
+           plot_QQ_bands = FALSE,
+           high_quality_plots = FALSE,
+           save_name = paste("~/bio/code/mpip/dex-stim-human-array/output/plots/meqtl_delta_mth_plt")
+           )
+```
+
 # Hits
 
 Check the number of found eQTLs, unique CpGs and SNPs in all datasets.
@@ -236,7 +262,43 @@ sign.hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment")
           axis.title.x = element_blank())
 ```
 
-# Upset plots
+## Distribution of CpGs per SNPs {.tabset .tabset-fade .tabset-pills}
+
+### delta
+
+```{r out.width = "95%", include = F, eval = T}
+
+plt.df <- data.frame(rbind(cbind(Frequency = plyr::count(meqtl.delta.full.df$SNP)$freq, treatment = "delta"),
+                              cbind(Frequency = plyr::count(meqtl.dex.full.df$SNP)$freq, treatment = "dex"),
+                              cbind(Frequency = plyr::count(meqtl.veh.full.df$SNP)$freq, treatment = "veh")))
+
+plt.df$Frequency <- as.numeric(plt.df$Frequency)
+
+ggplot(plt.df, aes(x = Frequency, fill = treatment)) + 
+  geom_histogram(aes(color = treatment), bins = 5, alpha = 0.5) +
+  theme(legend.position = "none", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10)) +
+  scale_x_continuous() +
+  # scale_y_continuous(labels = scientific) +
+  labs(title = paste0("Distribution of CpGs per SNPs (cis), FDR = ", fdr.thr), 
+       y = "Density", 
+       x = "Nr of CpGs") +
+  facet_wrap(~ treatment, ncol = 3)
+```
+
+```{r out.width = "95%", include = T, eval = T}
+hist(plyr::count(meqtl.veh.full.df$SNP)$freq, 
+     breaks = 30,
+     main = paste0("Distribution of CpGs per SNPs (delta) fdr <= ", fdr.thr),
+     xlab = 'Nr of CpGs')
+```
+```
+
+# Upset plots{.tabset .tabset-fade .tabset-pills}
 
 ## SNP level
   

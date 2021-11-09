@@ -73,18 +73,24 @@ knitr::include_graphics("../Rmds/img/dnam_qc_roadmap.png")
 
 As a result, __740'358 CpGs__ were included in the meQTL analysis.
 
-The correction for treatment, sex, case / control status, age, BMI,  smoking score, first two principal components (PCs) for population stratification and first three significant Surrogate Variables (SVs) was done. 
+The correction for treatment, sex, case / control status, age, BMI,  smoking score, first two principal components (PCs) for population stratification and first three significant Surrogate Variables (SVs) was done in a cis-window of ±1M bp using the linear regression model of Matrix eQTL. 
 
-For cis-QTL analyses, false discovery rate (FDR) of 5% was chosen. 
+The meQTL analysis led to 
+  + __123'399'492__ dex cis-meQTLs
+  + __123'573'064__ veh cis-meQTLs
+
+The false discovery rate (FDR) of 5% was chosen. 
 
 ```{sh}
-meqtl_rslt_dir=
+meqtl_rslt_dir="~/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL"
 awk 'NR == 1 || $6 < 0.05' $meqtl_rslt_dir/me-qtl_cis_result_dex.csv > $meqtl_rslt_dir/me-qtl_cis_result_dex_fdr_005.csv
 ```
 
 ```{r, include = F, eval = T}
 src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/geno_imputed_qc_ld/"
+# out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/geno_imputed_qc_ld/"
+
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
 cpg.loc.fn  <- paste0(src.dir.pre, "cpg_locations.csv")
 snp.loc.fn  <- paste0(src.dir.pre, "snp_locations.csv")
@@ -98,8 +104,8 @@ snp.loc  <- fread(snp.loc.fn)
 snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/Dex_genoData_SNPs.bim")
 colnames(snp.bim) <- c("chr", "SNP", "pos_morgans", "pos", "snp_allele1", "snp_allele2")
 
-meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_result_dex.csv")
-meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_result_veh.csv")
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_result_dex_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_result_veh_fdr_005.csv")
 meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_result_delta.csv")
 
 meqtl.dex.df   <- fread(meqtl.dex.fn)
@@ -108,7 +114,7 @@ meqtl.delta.df <- fread(meqtl.delta.fn)
 ```
 
 ```{r, include = F, eval = T}
-GetFullmeQTLdf <- function(meqtl.df, fdr.thr = 0.01){
+GetFullmeQTLdf <- function(meqtl.df, fdr.thr = 0.05){
   colnames(meqtl.df) <- c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
   
   meqtl.fltr.df <- meqtl.df[fdr <= fdr.thr, ] %>% unique()
@@ -141,9 +147,9 @@ meqtl.veh.no.fdr.df   <- GetFullmeQTLdf(meqtl.veh.df, fdr.thr = fdr.thr)
 # head(meqtl.df)
 fdr.thr  <- 0.05
 
-meqtl.delta.full.df <- GetFullmeQTLdf(meqtl.delta.df)
-meqtl.dex.full.df   <- GetFullmeQTLdf(meqtl.dex.df)
-meqtl.veh.full.df   <- GetFullmeQTLdf(meqtl.veh.df)
+meqtl.delta.full.df <- GetFullmeQTLdf(meqtl.delta.df, fdr.thr)
+meqtl.dex.full.df   <- GetFullmeQTLdf(meqtl.dex.df, fdr.thr)
+meqtl.veh.full.df   <- GetFullmeQTLdf(meqtl.veh.df, fdr.thr)
 ```
 
 ```{r}
@@ -152,7 +158,7 @@ meqtl.all.full.df <- rbind(meqtl.delta.full.df[, treatment := "delta"],
                            meqtl.veh.full.df[, treatment := "veh"])
 ```
 
-# MANHATTAN PLOT
+<!-- # MANHATTAN PLOT -->
 ```{r, include = F, eval = F}
 library(stringr)
 library(QCEWAS)

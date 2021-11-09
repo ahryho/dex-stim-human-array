@@ -81,12 +81,12 @@ res <- foreach(cpg =  1:nrow(beta.mtrx), .combine = rbind, .packages = 'lme4') %
   # for (cpg in 1:nrow(beta.mtrx)){
   sample <- pheno$Sample_ID #pheno$Individual
   
-  lmer.null  <- lmer(beta.mtrx[cpg, ] ~ pheno$Sex + pheno$Age + pheno$BMI + pheno$Status + 
+  lmer.null  <- lmer(beta.mtrx[cpg, ] ~ pheno$Sex + pheno$Age + pheno$BMI + pheno$Status + pheno$DNAm_SmokingScore +
                        pheno$DNAm_SV1 + pheno$DNAm_SV2 + pheno$DNAm_SV3 + 
                        pheno$PC1 + pheno$PC2 + 
                        (1|sample), REML = F)
   
-  lmer.model <- lmer(beta.mtrx[cpg, ] ~ pheno$Sex + pheno$Age + pheno$BMI + pheno$Status + 
+  lmer.model <- lmer(beta.mtrx[cpg, ] ~ pheno$Sex + pheno$Age + pheno$BMI + pheno$Status + pheno$DNAm_SmokingScore +
                        pheno$DNAm_SV1 + pheno$DNAm_SV2 + pheno$DNAm_SV3 + 
                        pheno$PC1 + pheno$PC2 + 
                        pheno$Group + (1|sample), REML = F)

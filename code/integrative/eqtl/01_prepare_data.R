@@ -54,13 +54,15 @@ colnames(snp.mtrx)[1] <- "SNP"
 
 methyl.mtrx <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/methyl_beta_mtrx_veh.csv")
 
-all(colnames(snp.mtrx)[-1] == colnames(methyl.mtrx)[-1])
+snp.mtrx.veh <- snp.mtrx %>% select(SNP, colnames(methyl.mtrx)[-1])
 
-order.idx <- c(0, match(colnames(methyl.mtrx)[-1], colnames(snp.mtrx)[-1])) + 1
-snp.mtrx  <- snp.mtrx[, ..order.idx]
+all(colnames(snp.mtrx.veh)[-1] == colnames(methyl.mtrx)[-1])
 
-fwrite(snp.mtrx, 
-       paste0("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx_delta.csv"),
+# order.idx <- c(0, match(colnames(methyl.mtrx)[-1], colnames(snp.mtrx)[-1])) + 1
+# snp.mtrx  <- snp.mtrx[, ..order.idx]
+
+fwrite(snp.mtrx.veh, 
+       paste0("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx_veh.csv"),
        quote = F, row.names = F, sep = ";")
 
 # Prepare methylation data

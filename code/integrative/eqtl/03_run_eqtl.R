@@ -1,3 +1,5 @@
+if (!require("MatrixEQTL")) 
+  install.packages("MatrixEQTL")
 library(MatrixEQTL)
 library(data.table)
 
@@ -7,9 +9,12 @@ treatment    <- as.character(args[1]) #"veh"
 eqtm.in.pre  <- as.character(args[2]) #"~/bio/datasets/eQTM/"
 eqtm.res.pre <- as.character(args[3]) # paste0("~/bio/datasets/eQTM/result/")
 
-treatment <- "delta"
-eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-eqtm.res.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+treatment <- "dex"
+# eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/test/"
+# eqtm.res.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/test/"
+
+eqtm.in.pre <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+eqtm.res.pre <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
 cpg.loc.fn <- paste0(eqtm.in.pre, "cpg_locations.csv")
 ensg.loc.fn <- paste0(eqtm.in.pre, "ensg_locations.csv")
@@ -20,7 +25,7 @@ snp.layer.fn <- paste0(eqtm.in.pre, "snp_mtrx_", treatment, ".csv")
 methyl.layer.fn <- paste0(eqtm.in.pre, "methyl_beta_mtrx_", treatment, ".csv")
 bio.layer.fn  <- paste0(eqtm.in.pre, "bio_mtrx_methyl_", treatment, ".csv")
 
-eqtm.cis.result.fn <- paste0(eqtm.res.pre, "me-qtl_cis_result_", treatment, ".csv")
+eqtm.cis.result.fn <- paste0(eqtm.res.pre, "me-qtl_cis_result_test", treatment, ".csv")
 eqtm.trans.result.fn <- paste0(eqtm.res.pre, "me-qtl_trans_result_", treatment, ".csv")
 
 # Load data
@@ -57,7 +62,7 @@ RunMatrixEQTL <- function(snp.fn, gex.fn, bio.fn, cis.res.fn, trans.res.fn, cis.
   snps$fileOmitCharacters <- "NA"  # denote missing values;
   snps$fileSkipRows       <- 1     # one row of column labels
   snps$fileSkipColumns    <- 1     # one column of row labels
-  snps$fileSliceSize      <- 2000  # read file in pieces of 2,000 rows
+  snps$fileSliceSize      <- 1e5   # read file in pieces of 2,000 rows
   snps$LoadFile(snp.fn)
   
   # GEX Data
@@ -110,4 +115,4 @@ me.all <- RunMatrixEQTL(snp.fn = snp.layer.fn, # methyl.layer.fn,
                         trans.res.fn = eqtm.trans.result.fn, 
                         cis.cutoff = 5e-2, trans.cutoff = 0)
 
-saveRDS(me.all, file =  paste0(eqtm.res.pre, "me-eqtl_matrx_", treatment, ".RDS"))
+saveRDS(me.all, file =  paste0(eqtm.res.pre, "me-qtl_matrx_", treatment, ".RDS"))

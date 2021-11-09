@@ -17,7 +17,7 @@ pheno.fn        <- paste0(src.pheno.data.pre, "pheno_full_for_kimono.csv")
 # Load data
 
 x <- fread(paste0(snp.src.dir, "plinkgen_X.txt"))
-y <- fread(paste0(snp.src.dir, "dex_geno_imputed_ld.sample"), header = F)
+y <- fread(paste0(snp.src.dir, "dex_geno_imputed.sample"), header = F)
 z <- fread(paste0(snp.src.dir, "snps_positions.txt"), header = F)
 
 pheno <- fread(pheno.fn, na.strings = c('#N/A', ''))
@@ -53,7 +53,8 @@ colnames(new_x_1) <- c("sample", y$V1[3:length(y$V1)])
 
 # Keep only columns (samples) that are in the rest of the data
 
-dna.ids   <- unique(pheno[!is.na(pheno$DNAm_ID), "DNA_ID"])
+# dna.ids   <- unique(pheno[!is.na(pheno$DNAm_ID), "DNA_ID"])
+dna.ids   <- unique(pheno[Include == 1, "DNA_ID"])
 whichcols <- c("sample", colnames(new_x_1)[colnames(new_x_1) %in% dna.ids$DNA_ID])
 
 # extract them
@@ -65,6 +66,7 @@ new_x_2[,(changeCols):= lapply(.SD, as.integer), .SDcols = changeCols]
 str(new_x_2)
 
 new_x_2 <- cbind(z$SNP, new_x_2)
+new_x_2 <- new_x_2[, -c("sample")]
 
 fwrite(new_x_2, 
        "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx.csv",

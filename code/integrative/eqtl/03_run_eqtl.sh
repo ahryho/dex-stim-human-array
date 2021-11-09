@@ -6,8 +6,8 @@ if [ $# -ne 6 ]; then
           Second argument: source folder path 
 	        Third argument: result folder path
 	        Fourth argument: partition
-	        Fifth argiment: node
-	        Sixth argument: memoty in Gb"
+	        Fifth argument: node
+	        Sixth argument: memory in Gb"
     exit 1
 fi
 

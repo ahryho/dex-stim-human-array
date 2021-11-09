@@ -61,18 +61,8 @@ library(factoextra)
 ***
 To explore the cis regulatory effects of SNPs on DNA methylation, the meQTL analysis was performed using a linear regression implemented in the R package "MatrixEQTL".
 
-The __SNP data__ first underwent QC analysis:
-
-1. Subset data:
-    + MAF >= 5%
-    + filter only SNPs
-    + exclude MHC region
-2. LD pruning based on pairwise correlation with the following options:
-    + a window of 200 SNPs: to calculate LD between each pair of SNPs
-    + remove one of a pair if the LD is greater than 0.2
-    + short the window 100 SNPs forward
-
-After genotype QC, __100'085 SNPs__ were included in the meQTL study.
+In the meQTL study, the imputed QC __SNP data__ (no LD pruning, the MHC regions are included) were used.
+The data includes __3'957'338 SNPs__.
 
 The __DNAm data__ underwent the folowing QC analysis steps:
 
@@ -85,11 +75,16 @@ As a result, __740'358 CpGs__ were included in the meQTL analysis.
 
 The correction for treatment, sex, case / control status, age, BMI,  smoking score, first two principal components (PCs) for population stratification and first three significant Surrogate Variables (SVs) was done. 
 
-For cis-QTL analyses, false discovery rate (FDR) of 1% was chosen. 
+For cis-QTL analyses, false discovery rate (FDR) of 5% was chosen. 
+
+```{sh}
+meqtl_rslt_dir=
+awk 'NR == 1 || $6 < 0.05' $meqtl_rslt_dir/me-qtl_cis_result_dex.csv > $meqtl_rslt_dir/me-qtl_cis_result_dex_fdr_005.csv
+```
 
 ```{r, include = F, eval = T}
 src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/geno_imputed_qc_ld/"
 
 cpg.loc.fn  <- paste0(src.dir.pre, "cpg_locations.csv")
 snp.loc.fn  <- paste0(src.dir.pre, "snp_locations.csv")
@@ -99,7 +94,8 @@ cpg.loc  <- fread(cpg.loc.fn)
 snp.loc  <- fread(snp.loc.fn)
 # ensg.loc <- fread(ensg.loc.fn)
 
-snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/final_imputed_qc_snps/dex_geno_imputed_ld.bim")
+# snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/final_imputed_qc_snps/mtrx/dex_geno_imputed_ld.bim")
+snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/Dex_genoData_SNPs.bim")
 colnames(snp.bim) <- c("chr", "SNP", "pos_morgans", "pos", "snp_allele1", "snp_allele2")
 
 meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_result_dex.csv")
@@ -133,7 +129,7 @@ meqtl.rds <- readRDS("~/bio/code/mpip/dex-stim-human-array/output/data/integrati
 plot(meqtl.rds)
 ```
 
-```{r, include = F, eval = T}
+```{r, include = F, eval = F}
 fdr.thr <- 1
 
 meqtl.delta.no.fdr.df <- GetFullmeQTLdf(meqtl.delta.df, fdr.thr = fdr.thr)
@@ -143,7 +139,7 @@ meqtl.veh.no.fdr.df   <- GetFullmeQTLdf(meqtl.veh.df, fdr.thr = fdr.thr)
 
 ```{r, include = F, eval = T}
 # head(meqtl.df)
-fdr.thr  <- 0.01
+fdr.thr  <- 0.05
 
 meqtl.delta.full.df <- GetFullmeQTLdf(meqtl.delta.df)
 meqtl.dex.full.df   <- GetFullmeQTLdf(meqtl.dex.df)
@@ -157,7 +153,7 @@ meqtl.all.full.df <- rbind(meqtl.delta.full.df[, treatment := "delta"],
 ```
 
 # MANHATTAN PLOT
-```{r, include = F, eval = T}
+```{r, include = F, eval = F}
 library(stringr)
 library(QCEWAS)
 
@@ -186,9 +182,9 @@ EWAS_plots(meqtl.delta.no.fdr.df,
 
 Check the number of found eQTLs, unique CpGs and SNPs in all datasets.
 
-## Before filtering
+<!-- ## Before filtering -->
 
-```{r, include = F, eval = T}
+```{r, include = F, eval = F}
 hits.df <- data.table(c(meqtl.delta.no.fdr.df$fdr  %>% length(), 
                         meqtl.delta.no.fdr.df$CpG_ID %>% unique() %>% length(),
                         meqtl.delta.no.fdr.df$SNP %>% unique() %>% length()),
@@ -204,7 +200,7 @@ rownames(hits.df) <- c("cis-meQTLs", "CpG", "SNP")
 colnames(hits.df) <- c("delta", "dex", "veh")
 ```
 
-```{r out.width = "95%", include = T, eval = T}
+```{r out.width = "95%", include = F, eval = F}
 hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment"), value.name = "cnt") %>%
   ggplot(aes(y = cnt, x = Var2, fill = as.factor(as.numeric(Var2)))) +
    # geom_violin(width = 0.4) +
@@ -224,7 +220,7 @@ hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment"), val
           axis.title.x = element_blank())
 ```
 
-## Significant Hits (FDR <= 1%)
+## Significant Hits (FDR <= 5%)
 
 ```{r, include = F, eval = T}
 sign.hits.df <- data.table(c(meqtl.delta.full.df$fdr  %>% length(), 
@@ -266,7 +262,7 @@ sign.hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment")
 
 ### delta
 
-```{r out.width = "95%", include = F, eval = T}
+```{r out.width = "95%", include = F, eval = F}
 
 plt.df <- data.frame(rbind(cbind(Frequency = plyr::count(meqtl.delta.full.df$SNP)$freq, treatment = "delta"),
                               cbind(Frequency = plyr::count(meqtl.dex.full.df$SNP)$freq, treatment = "dex"),
@@ -275,7 +271,7 @@ plt.df <- data.frame(rbind(cbind(Frequency = plyr::count(meqtl.delta.full.df$SNP
 plt.df$Frequency <- as.numeric(plt.df$Frequency)
 
 ggplot(plt.df, aes(x = Frequency, fill = treatment)) + 
-  geom_histogram(aes(color = treatment), bins = 5, alpha = 0.5) +
+  geom_histogram(aes(color = treatment),  bins = 15, alpha = 0.5) +
   theme(legend.position = "none", 
         legend.title = element_blank(),
         panel.grid.major = element_blank(),
@@ -291,12 +287,26 @@ ggplot(plt.df, aes(x = Frequency, fill = treatment)) +
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
-hist(plyr::count(meqtl.veh.full.df$SNP)$freq, 
-     breaks = 30,
+hist(plyr::count(meqtl.delta.full.df$SNP)$freq, 
+     breaks = max(plyr::count(meqtl.delta.full.df$SNP)$freq) + 1,
      main = paste0("Distribution of CpGs per SNPs (delta) fdr <= ", fdr.thr),
      xlab = 'Nr of CpGs')
 ```
+
+```{r out.width = "95%", include = T, eval = T}
+hist(plyr::count(meqtl.dex.full.df$SNP)$freq, 
+     breaks = 15,
+     main = paste0("Distribution of CpGs per SNPs (delta) fdr <= ", fdr.thr),
+     xlab = 'Nr of CpGs')
 ```
+
+```{r out.width = "95%", include = T, eval = T}
+hist(plyr::count(meqtl.veh.full.df$SNP)$freq, 
+     breaks = 10,
+     main = paste0("Distribution of CpGs per SNPs (delta) fdr <= ", fdr.thr),
+     xlab = 'Nr of CpGs')
+```
+
 
 # Upset plots{.tabset .tabset-fade .tabset-pills}
 

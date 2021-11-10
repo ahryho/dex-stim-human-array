@@ -3,7 +3,7 @@ library(data.table)
 
 # Set up parameters
 
-output.eqtm.pre <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL"
+output.eqtm.pre <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
 
 # src.pheno.data.pre <- "~/bio/code/mpip/dex-stim-human-array/data/pheno/"
 # src.snps.data.pre  <-"~/bio/datasets/snps/"
@@ -217,7 +217,7 @@ pheno$DNAm_SV3 <- as.numeric(pheno$DNAm_SV3)
 covariates <- colnames(pheno)
 
 cov.list <- c("DNA_ID",
-              "Dex", "Sex", "Status", "Age", "BMI_D1", "DNAm_SmokingScore",
+              "Sex", "Status", "Age", "BMI_D1", "DNAm_SmokingScore",
               # "V1", "V2", "V3",
               "DNAm_SV1", "DNAm_SV2", "DNAm_SV3", 
               "PC1", "PC2")

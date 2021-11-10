@@ -95,19 +95,29 @@ fwrite(methyl.mtrx.dex,
        paste0(output.eqtm.pre, "methyl_beta_mtrx_dex.csv"),
        quote = F, row.names = F, sep = ";")
 
-# Calculate the differences betwenn veh and dex
+# Calculate the differences between veh and dex
+
+# Residuals
+
+lmer.res.out.fn <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/dnam_residuals/"
+methyl.mtrx.veh <- fread(paste0(lmer.res.out.fn, "dnam_residuals_veh.csv"))
+methyl.mtrx.dex <- fread(paste0(lmer.res.out.fn, "dnam_residuals_dex.csv"), select = colnames(methyl.mtrx.veh))
+
+# methyl.mtrx.veh <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/dnam_residuals/dnam_residuals_veh.csv")
+# methyl.mtrx.dwx <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/dnam_residuals/dnam_residuals_dex.csv")
 
 all(rownames(methyl.mtrx.veh) == rownames(methyl.mtrx.dex))
 order.idx  <- match(colnames(methyl.mtrx.dex), colnames(methyl.mtrx.veh))
 
-methyl.mtrx.dex <- methyl.mtrx.dex[, colnames(methyl.mtrx.veh)]
+# methyl.mtrx.dex <- methyl.mtrx.dex[, colnames(methyl.mtrx.veh)]
 all(colnames(methyl.mtrx.veh) == colnames(methyl.mtrx.dex))
 
-methyl.mtrx.delta <- methyl.mtrx.veh[-1] - methyl.mtrx.dex[-1] 
-methyl.mtrx.delta <- cbind(methyl.mtrx.veh[1], methyl.mtrx.delta)
+methyl.mtrx.delta <- methyl.mtrx.veh[,-1] - methyl.mtrx.dex[,-1] 
+methyl.mtrx.delta <- cbind(methyl.mtrx.veh[,1], methyl.mtrx.delta)
 
 fwrite(methyl.mtrx.delta, 
-       paste0(output.eqtm.pre, "methyl_beta_mtrx_delta.csv"),
+       paste0(lmer.res.out.fn, "methyl_beta_mtrx_delta.csv"),
+       # paste0(output.eqtm.pre, "methyl_beta_mtrx_delta.csv"),
        quote = F, row.names = F, sep = ";")
 
 # Preapare GEX data
@@ -242,4 +252,21 @@ fwrite(bio.mtrx.t,
        paste0(output.eqtm.pre, "bio_mtrx_methyl_dex.csv"),
        quote = F, row.names = F, sep = ";")
 
+# DELTA
+cov.list <- c("DNA_ID",
+              "Sex", "Status", "Age", "BMI_D1", "DNAm_SmokingScore",
+              "PC1", "PC2")
 
+bio.mtrx <- pheno[Dex == 0 & !is.na(DNAm_ID), ] %>% dplyr::select(cov.list)
+
+bio.mtrx.t <- dcast(melt(bio.mtrx, id.vars = "DNA_ID"), variable ~ DNA_ID)
+colnames(bio.mtrx.t)[1] <-  "Feature"
+
+all(colnames(snp.mtrx.veh)[-1] == colnames(bio.mtrx.t)[-1])
+
+order.idx  <- c(0, match(colnames(snp.mtrx.veh)[-1], colnames(bio.mtrx.t)[-1])) + 1
+bio.mtrx.t <- bio.mtrx.t[, ..order.idx]
+
+fwrite(bio.mtrx.t, 
+       paste0(output.eqtm.pre, "bio_mtrx_methyl_delta.csv"),
+       quote = F, row.names = F, sep = ";")

@@ -70,7 +70,7 @@ samples.ids <- as.character(pheno$DNA_ID)
 
 # 2. Making sure about samples in pheno and and betas matrix in the same order
 table(colnames(beta.mtrx) %in% samples.ids)
-pheno   <- pheno[match(colnames(beta.mtrx), pheno$DNAm_ID ),]
+# pheno   <- pheno[match(colnames(beta.mtrx), pheno$DNAm_ID ),]
 all(samples.ids == colnames(beta.mtrx))
 
 beta.mtrx <- as.matrix(beta.mtrx)
@@ -81,15 +81,12 @@ no.cores <- detectCores() - 1
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-# res <- foreach(cpg = 1:3, .combine = rbind, .packages = 'lme4') %dopar% {
-res <- foreach(cpg =  1:nrow(beta.mtrx), .combine = rbind, .packages = 'lme4') %dopar% {
-  
-  # for (cpg in 1:nrow(beta.mtrx)){
-  lm.model <- lm(beta.mtrx[cpg, ] ~ pheno$Sex + pheno$Age + pheno$BMI + pheno$Status + pheno$DNAm_SmokingScore +
+# res <- foreach(cpg = 1:3, .combine = rbind) %dopar% {
+res <- foreach(cpg =  1:nrow(beta.mtrx), .combine = rbind) %dopar% { # .packages = 'lme4') %dopar% {
+  lm.model <- lm(beta.mtrx[cpg, ] ~ pheno$Sex + pheno$Age + pheno$BMI_D1 + pheno$Status + pheno$DNAm_SmokingScore +
                        pheno$DNAm_SV1 + pheno$DNAm_SV2 + pheno$DNAm_SV3 + 
                        pheno$PC1 + pheno$PC2)
-  #, REML = F)
-  
+
   residuals(lm.model)
 }
 

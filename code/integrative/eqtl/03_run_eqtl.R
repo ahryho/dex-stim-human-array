@@ -9,7 +9,7 @@ treatment    <- as.character(args[1]) #"veh"
 eqtm.in.pre  <- as.character(args[2]) #"~/bio/datasets/eQTM/"
 eqtm.res.pre <- as.character(args[3]) # paste0("~/bio/datasets/eQTM/result/")
 
-treatment <- "dex"
+treatment <- "delta"
 # eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/test/"
 # eqtm.res.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/test/"
 
@@ -21,6 +21,7 @@ ensg.loc.fn <- paste0(eqtm.in.pre, "ensg_locations.csv")
 snp.loc.fn <- paste0(eqtm.in.pre, "snp_locations.csv")
 
 # gex.layer.fn <- paste0(eqtm.in.pre, "gex_mtrx_", treatment, ".csv")
+# snp.layer.fn <- paste0(eqtm.in.pre, "snp_mtrx_veh.csv")
 snp.layer.fn <- paste0(eqtm.in.pre, "snp_mtrx_", treatment, ".csv")
 methyl.layer.fn <- paste0(eqtm.in.pre, "methyl_beta_mtrx_", treatment, ".csv")
 bio.layer.fn  <- paste0(eqtm.in.pre, "bio_mtrx_methyl_", treatment, ".csv")

@@ -49,7 +49,6 @@ fwrite(snp.mtrx,
 
 snp.mtrx <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx.csv")
 colnames(snp.mtrx)[1] <- "SNP"
-# snp.mtrx <- snp.mtrx[, -192]
 
 methyl.mtrx <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/methyl_beta_mtrx_veh.csv")
 

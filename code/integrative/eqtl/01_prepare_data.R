@@ -47,8 +47,7 @@ fwrite(snp.mtrx,
        paste0(src.snps.data.pre, "snp_mtrx.csv"),
        quote = F, row.names = F, sep = ";")
 
-
-snp.mtrx <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx_dex.csv")
+snp.mtrx <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx.csv")
 colnames(snp.mtrx)[1] <- "SNP"
 # snp.mtrx <- snp.mtrx[, -192]
 
@@ -56,13 +55,13 @@ methyl.mtrx <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matr
 
 snp.mtrx.veh <- snp.mtrx %>% select(SNP, colnames(methyl.mtrx)[-1])
 
-all(colnames(snp.mtrx.veh)[-1] == colnames(methyl.mtrx)[-1])
+all(colnames(snp.mtrx)[-1] == colnames(methyl.mtrx.dex)[-1])
 
 # order.idx <- c(0, match(colnames(methyl.mtrx)[-1], colnames(snp.mtrx)[-1])) + 1
 # snp.mtrx  <- snp.mtrx[, ..order.idx]
 
-fwrite(snp.mtrx.veh, 
-       paste0("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx_veh.csv"),
+fwrite(snp.mtrx, 
+       paste0("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx.csv"),
        quote = F, row.names = F, sep = ";")
 
 # Prepare methylation data
@@ -95,6 +94,9 @@ fwrite(methyl.mtrx.dex,
        paste0(output.eqtm.pre, "methyl_beta_mtrx_dex.csv"),
        quote = F, row.names = F, sep = ";")
 
+# methyl.mtrx.dex <- fread(paste0(output.eqtm.pre, "methyl_beta_mtrx_dex.csv"), select = dex.ids$DNA_ID)
+# methyl.mtrx.veh <- fread(paste0(output.eqtm.pre, "methyl_beta_mtrx_veh.csv"), select = veh.ids$DNA_ID)
+
 # Calculate the differences between veh and dex
 
 # Residuals
@@ -104,7 +106,7 @@ methyl.mtrx.veh <- fread(paste0(lmer.res.out.fn, "dnam_residuals_veh.csv"))
 methyl.mtrx.dex <- fread(paste0(lmer.res.out.fn, "dnam_residuals_dex.csv"), select = colnames(methyl.mtrx.veh))
 
 # methyl.mtrx.veh <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/dnam_residuals/dnam_residuals_veh.csv")
-# methyl.mtrx.dwx <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/dnam_residuals/dnam_residuals_dex.csv")
+# methyl.mtrx.dex <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/dnam_residuals/dnam_residuals_dex.csv")
 
 all(rownames(methyl.mtrx.veh) == rownames(methyl.mtrx.dex))
 order.idx  <- match(colnames(methyl.mtrx.dex), colnames(methyl.mtrx.veh))
@@ -252,12 +254,12 @@ fwrite(bio.mtrx.t,
        paste0(output.eqtm.pre, "bio_mtrx_methyl_dex.csv"),
        quote = F, row.names = F, sep = ";")
 
-# DELTA
-cov.list <- c("DNA_ID",
-              "Sex", "Status", "Age", "BMI_D1", "DNAm_SmokingScore",
-              "PC1", "PC2")
+bio.mtrx <- fread(paste0(output.eqtm.pre, "bio_mtrx_methyl_dex.csv"))
 
-bio.mtrx <- pheno[Dex == 0 & !is.na(DNAm_ID), ] %>% dplyr::select(cov.list)
+# DELTA
+cov.list <- c()
+
+bio.mtrx.t <- pheno[Dex == 0 & !is.na(DNAm_ID), ] %>% dplyr::select(cov.list)
 
 bio.mtrx.t <- dcast(melt(bio.mtrx, id.vars = "DNA_ID"), variable ~ DNA_ID)
 colnames(bio.mtrx.t)[1] <-  "Feature"

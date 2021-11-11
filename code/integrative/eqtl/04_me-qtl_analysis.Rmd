@@ -90,7 +90,7 @@ The meQTL analysis led to
 
   + __123'399'644__ dex cis-meQTLs
 
-  + __123'573'064__ veh cis-meQTLs
+  + __123'574'933__ veh cis-meQTLs
 
   + __100,392,506__ delta cis-meQTLs
 
@@ -104,7 +104,6 @@ awk 'NR == 1 || $6 < 0.05' me-qtl_cis_result_dex.csv > me-qtl_cis_result_dex_fdr
 ```{r, include = F, eval = T}
 src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
 # out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/geno_imputed_qc_ld/"
-
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
 cpg.loc.fn  <- paste0(src.dir.pre, "cpg_locations.csv")
@@ -133,7 +132,7 @@ meqtl.delta.df <- fread(meqtl.delta.fn)
 GetFullmeQTLdf <- function(meqtl.df, fdr.thr = 0.05){
   colnames(meqtl.df) <- c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
   
-  meqtl.fltr.df <- meqtl.df[fdr <= fdr.thr, ] %>% unique()
+  meqtl.fltr.df <- meqtl.df[fdr < fdr.thr, ] %>% unique()
   
   meqtl.full.df <- left_join(meqtl.fltr.df, snp.bim) %>% mutate(pos_snp = pos) %>% select(-c(pos, pos_morgans))
   meqtl.full.df <- left_join(meqtl.full.df, cpg.loc[, .(CpG_ID, chr, pos)]) %>% 
@@ -227,8 +226,9 @@ hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment"), val
   ggplot(aes(y = cnt, x = Var2, fill = as.factor(as.numeric(Var2)))) +
    # geom_violin(width = 0.4) +
     geom_col() +
-    geom_text(aes(label = cnt, y = cnt), stat = "identity", 
-          vjust = -0.5, size = 3) +
+    geom_text(aes(label = comma(cnt, accuracy = 1L), y = cnt), 
+              stat = "identity", 
+              vjust = -0.5, size = 3) +
     # scale_y_continuous(labels = unit_format(unit = "M", scale = 1e-6)) +
     # scale_fill_viridis(discrete = TRUE, alpha = 0.9, option = "C") +
     labs(title = " ", y = "Count", x = " ") + 
@@ -242,7 +242,7 @@ hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment"), val
           axis.title.x = element_blank())
 ```
 
-## Significant Hits (FDR <= 5%)
+## Significant Hits, FDR < 0.05
 
 ```{r, include = F, eval = T}
 sign.hits.df <- data.table(c(meqtl.delta.full.df$fdr  %>% length(), 
@@ -265,8 +265,9 @@ sign.hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment")
   ggplot(aes(y = cnt, x = Var2, fill = as.factor(as.numeric(Var2)))) +
    # geom_violin(width = 0.4) +
     geom_col() +
-    geom_text(aes(label = cnt, y = cnt), stat = "identity", 
-          vjust = -0.5, size = 3) +
+        geom_text(aes(label = comma(cnt, accuracy = 1L), y = cnt), 
+              stat = "identity", 
+              vjust = -0.2, size = 2.5) + 
     scale_y_continuous(labels = scientific) +
     # scale_fill_viridis(discrete = TRUE, alpha = 0.9, option = "C") +
     labs(title = " ", y = "Count", x = " ") + 
@@ -315,7 +316,8 @@ upset(fromList(meqtls.cpg),
       text.scale = 1, 
       keep.order = T,
       sets.bar.color = c(2, 3, 4), 
-      order.by = "freq")
+      order.by = "freq",
+      )
 ```
 
 # Scatter plot {.tabset .tabset-fade .tabset-pills}
@@ -335,8 +337,7 @@ upset(fromList(meqtls.cpg),
          #  panel.grid.major = element_blank(),
           panel.background = element_blank(),
           plot.title = element_text(size = 10),
-          axis.title = element_text(size = 8),
-          axis.title.x = element_blank())
+          axis.title = element_text(size = 8))
 ```
 
 ## delta
@@ -355,8 +356,7 @@ upset(fromList(meqtls.cpg),
          #  panel.grid.major = element_blank(),
           panel.background = element_blank(),
           plot.title = element_text(size = 10),
-          axis.title = element_text(size = 8),
-          axis.title.x = element_blank())
+          axis.title = element_text(size = 8))
 ```
 
 ## dex
@@ -375,8 +375,7 @@ upset(fromList(meqtls.cpg),
          #  panel.grid.major = element_blank(),
           panel.background = element_blank(),
           plot.title = element_text(size = 10),
-          axis.title = element_text(size = 8),
-          axis.title.x = element_blank())
+          axis.title = element_text(size = 8))
 ```
 
 ## veh
@@ -395,8 +394,7 @@ upset(fromList(meqtls.cpg),
          #  panel.grid.major = element_blank(),
           panel.background = element_blank(),
           plot.title = element_text(size = 10),
-          axis.title = element_text(size = 8),
-          axis.title.x = element_blank())
+          axis.title = element_text(size = 8))
 ```
 
 # Distances
@@ -439,7 +437,7 @@ ggplot(meqtl.all.full.df, aes(x = dist, fill = treatment)) +
        y = "Density") 
 ```
 
-```{r out.width = "95%", include = T, eval = T}
+```{r out.width = "100%", include = T, eval = T}
 library(mltools)
 library(ggrepel)
 
@@ -450,8 +448,8 @@ bins.df <- cbind(bins.df, treatment = meqtl.all.full.df$treatment)
 ggplot(bins.df, aes(DistanceInterval, fill = treatment)) + 
   geom_bar(position = position_dodge()) +
   stat_count(geom = "text", 
-             aes(label = stat(count)),
-             position = position_dodge(1),  vjust = -1, colour = "black", cex = 3) +
+             aes(label = comma(..count.., accuracy = 1L)),
+             position = position_dodge(1),  vjust = -1, colour = "black", cex = 2) +
   theme(legend.position = c(.1,.9), 
         legend.title = element_blank(),
         panel.grid.major = element_blank(),
@@ -469,51 +467,96 @@ ggplot(bins.df, aes(DistanceInterval, fill = treatment)) +
 
 ## delta
 
-```{r out.width = "95%", include = F, eval = F}
+```{r out.width = "100%", include = T, eval = T}
 
-plt.df <- data.frame(rbind(cbind(Frequency = plyr::count(meqtl.delta.full.df$SNP)$freq, treatment = "delta"),
-                              cbind(Frequency = plyr::count(meqtl.dex.full.df$SNP)$freq, treatment = "dex"),
-                              cbind(Frequency = plyr::count(meqtl.veh.full.df$SNP)$freq, treatment = "veh")))
+# plt.df <- data.frame(rbind(cbind(Frequency = plyr::count(meqtl.delta.full.df$SNP)$freq, treatment = "delta"),
+#                            cbind(Frequency = plyr::count(meqtl.dex.full.df$SNP)$freq, treatment = "dex"),
+#                            cbind(Frequency = plyr::count(meqtl.veh.full.df$SNP)$freq, treatment = "veh")))
 
+plt.df <- data.frame(cbind(Frequency = plyr::count(meqtl.delta.full.df$SNP)$freq, treatment = "delta"))
 plt.df$Frequency <- as.numeric(plt.df$Frequency)
 
-ggplot(plt.df, aes(x = Frequency, fill = treatment)) + 
-  geom_histogram(aes(color = treatment),  bins = 15, alpha = 0.5) +
+nr.bins <- max(plt.df$Frequency)
+
+ggplot(plt.df, aes(x = Frequency)) + 
+  geom_histogram(color = "red", fill = "red", bins =  nr.bins, alpha = 0.5) +
+  stat_count(geom = "text", 
+             aes(label = comma(..count.., accuracy = 1L)),
+             position = position_dodge(1), angle = 0,  vjust = -0.5, hjust = 0.5, colour = "black", cex = 3) +
   theme(legend.position = "none", 
         legend.title = element_blank(),
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 10),
-        axis.title = element_text(size = 10)) +
-  scale_x_continuous() +
-  # scale_y_continuous(labels = scientific) +
-  labs(title = paste0("Distribution of CpGs per SNPs (cis), FDR = ", fdr.thr), 
+        axis.title = element_text(size = 10),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  scale_x_continuous(breaks = seq(1, nr.bins, 1)) +
+  scale_y_continuous(labels = scientific) +
+  labs(title = paste0("Distribution of CpGs per SNPs (cis), FDR < ", fdr.thr), 
        y = "Density", 
        x = "Nr of CpGs") +
-  facet_wrap(~ treatment, ncol = 3)
+  facet_wrap(~ treatment, ncol = 1)
 ```
 
-```{r out.width = "95%", include = T, eval = T}
+```{r out.width = "95%", include = F, eval = F}
 hist(plyr::count(meqtl.delta.full.df$SNP)$freq, 
      breaks = max(plyr::count(meqtl.delta.full.df$SNP)$freq) + 1,
-     main = paste0("Distribution of CpGs per SNPs (delta) fdr <= ", fdr.thr),
+     main = paste0("Distribution of CpGs per SNPs (delta) fdr < ", fdr.thr),
      xlab = 'Nr of CpGs')
 ```
 
 ## dex
 
-```{r out.width = "95%", include = T, eval = T}
-hist(plyr::count(meqtl.dex.full.df$SNP)$freq, 
-     breaks = 15,
-     main = paste0("Distribution of CpGs per SNPs (dex) fdr <= ", fdr.thr),
-     xlab = 'Nr of CpGs')
+```{r out.width = "100%", include = T, eval = T}
+plt.df <- data.frame(cbind(Frequency = plyr::count(meqtl.dex.full.df$SNP)$freq, treatment = "dex"))
+plt.df$Frequency <- as.numeric(plt.df$Frequency)
+
+nr.bins <- max(plt.df$Frequency)
+
+ggplot(plt.df, aes(x = Frequency)) + 
+  geom_histogram(color = "green", fill = "green", bins =  nr.bins, alpha = 0.5) +
+  stat_count(geom = "text", 
+             aes(label = comma(..count.., accuracy = 1L)),
+             position = position_dodge(1), angle = 80,  hjust = -0.2, colour = "black", cex = 2) +
+  theme(legend.position = "none", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 6)) +
+  scale_x_continuous(breaks = seq(1, nr.bins, 1)) +
+  scale_y_continuous(labels = scientific) +
+  labs(title = paste0("Distribution of CpGs per SNPs (cis), FDR < ", fdr.thr), 
+       y = "Density", 
+       x = "Nr of CpGs") +
+  facet_wrap(~ treatment, ncol = 1)
 ```
 
 ## veh
 
-```{r out.width = "95%", include = T, eval = T}
-hist(plyr::count(meqtl.veh.full.df$SNP)$freq, 
-     breaks = 10,
-     main = paste0("Distribution of CpGs per SNPs (veh) fdr <= ", fdr.thr),
-     xlab = 'Nr of CpGs')
+```{r out.width = "100%", include = T, eval = T}
+plt.df <- data.frame(cbind(Frequency = plyr::count(meqtl.veh.full.df$SNP)$freq, treatment = "veh"))
+plt.df$Frequency <- as.numeric(plt.df$Frequency)
+
+nr.bins <- max(plt.df$Frequency)
+
+ggplot(plt.df, aes(x = Frequency)) + 
+  geom_histogram(color = "blue", fill = "blue", bins =  nr.bins, alpha = 0.5) +
+  stat_count(geom = "text", 
+             aes(label = comma(..count.., accuracy = 1L)),
+             position = position_dodge(1), angle = 80,  hjust = -0.2, colour = "black", cex = 2) +
+  theme(legend.position = "none", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1, size = 6)) +
+  scale_x_continuous(breaks = seq(1, nr.bins, 1)) +
+  scale_y_continuous(labels = scientific) +
+  labs(title = paste0("Distribution of CpGs per SNPs (cis), FDR < ", fdr.thr), 
+       y = "Density", 
+       x = "Nr of CpGs") +
+  facet_wrap(~ treatment, ncol = 1)
 ```

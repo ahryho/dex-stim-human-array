@@ -26,8 +26,7 @@ outlier.list <- c("MPIPSYKL_004888", "MPIPSYKL_007801", "MPIPSYKL_008512", "MPIP
 pheno.full[pheno.full$DNA_ID %in% outlier.list, "Include"] <- 0
 table(pheno.full$Include)
 
-
 # Save 
-write.csv2(pheno.full.new, 
+write.csv2(pheno.full, 
            file = "~/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv", 
            row.names = F, quote = F)

@@ -29,8 +29,8 @@ if(treatment == "delta")
   bio.layer.fn <- SlicedData$new() else
     bio.layer.fn <- paste0(eqtm.in.pre, "bio_mtrx_methyl.csv")
 
-eqtm.cis.result.fn <- paste0(eqtm.res.pre, "me-qtl_cis_result_test", treatment, ".csv")
-eqtm.trans.result.fn <- paste0(eqtm.res.pre, "me-qtl_trans_result_", treatment, ".csv")
+eqtm.cis.result.fn <- paste0(eqtm.res.pre, "me-qtl_cis_result_", treatment, "v02.csv")
+eqtm.trans.result.fn <- paste0(eqtm.res.pre, "me-qtl_trans_result_", treatment, "v02.csv")
 
 # Load data
 
@@ -119,4 +119,4 @@ me.all <- RunMatrixEQTL(snp.fn = snp.layer.fn, # methyl.layer.fn,
                         trans.res.fn = eqtm.trans.result.fn, 
                         cis.cutoff = 5e-2, trans.cutoff = 0)
 
-saveRDS(me.all, file =  paste0(eqtm.res.pre, "me-qtl_matrx_", treatment, ".RDS"))
+saveRDS(me.all, file =  paste0(eqtm.res.pre, "me-qtl_matrx_", treatment, "v02.RDS"))

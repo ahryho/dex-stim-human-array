@@ -61,7 +61,7 @@ qc/subset/dex_imputed_bggt_all_qc.bim + qc/subset/dex_imputed_bggt_all_qc.fam
 
 ### __LD Pruning__
 
-1. Run LD pruning and exclude te set of SNOs licated in the MHC region:
+1. Run LD pruning and exclude the set of SNPs located in the MHC region:
 
 ```{sh imputed-ld-pruning-darina, eval = F}
 plink --bfile qc/subset/dex_imputed_bggt_all_qc --indep-pairwise 200 100  0.2 --out ld_200_100/ld/dex_geno_imputed_ld

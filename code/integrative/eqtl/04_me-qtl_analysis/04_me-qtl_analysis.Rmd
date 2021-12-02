@@ -75,7 +75,7 @@ As a result, __740'358 CpGs__ were included in the meQTL analysis.
 
 The correction for treatment, sex, case / control status, age, BMI,  smoking score, first two principal components (PCs) for population stratification and first three significant Surrogate Variables (SVs) was done in a cis-window of ±1M bp using the linear regression model of Matrix eQTL. 
 
-Delat (differences between baseline and dex-stimulation) was donr based on residuals following the algorithm:
+Delta (differences between baseline and dex-stimulation) was done based on residuals following the algorithm:
 
   1. lm_treatment <- lm(beta.mtrx[cpg, ] ~ Sex + Age + BMI + Status + Smoking_Score +
                                            DNAm_SV_treatment{1-3} + PC{1-2})

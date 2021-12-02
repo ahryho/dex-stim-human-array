@@ -1,5 +1,5 @@
 ***
-# MatrixEQTL result meQTLs analysis
+# __MatrixEQTL Primary Results__
 ***
 
 ```{r, include = F, eval = T}
@@ -100,7 +100,7 @@ EWAS_plots(meqtl.delta.no.fdr.df,
            )
 ```
 
-# Hits
+## Hits
 
 Check the number of found eQTLs, unique CpGs and SNPs in all datasets.
 
@@ -143,7 +143,7 @@ hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment"), val
           axis.title.x = element_blank())
 ```
 
-## Significant Hits, FDR < 0.05
+### Significant Hits, FDR < 0.05
 
 ```{r, include = F, eval = T}
 sign.hits.df <- data.table(c(meqtl.delta.full.df$fdr  %>% length(), 
@@ -182,9 +182,9 @@ sign.hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment")
           axis.title.x = element_blank())
 ```
 
-# Upset plots{.tabset .tabset-fade .tabset-pills}
+## Upset plots{.tabset .tabset-fade .tabset-pills}
 
-## SNP level
+### SNP level
   
 ```{r out.width = "95%", include = T, eval = T}
 library(UpSetR)
@@ -202,7 +202,7 @@ upset(fromList(meqtls.snps),
       order.by = "freq")
 ```
 
-## CpG level
+### CpG level
 
 ```{r out.width = "95%", include = T, eval = T}
 library(UpSetR)
@@ -221,9 +221,9 @@ upset(fromList(meqtls.cpg),
       )
 ```
 
-# Scatter plot {.tabset .tabset-fade .tabset-pills}
+## Scatter plot {.tabset .tabset-fade .tabset-pills}
 
-## all
+### all
 
 ```{r out.width = "95%", include = T, eval = T}
   ggplot(meqtl.all.full.df, aes(x = beta, y = -log10(fdr), shape = treatment, color = treatment)) +
@@ -241,7 +241,7 @@ upset(fromList(meqtls.cpg),
           axis.title = element_text(size = 8))
 ```
 
-## delta
+### delta
 
 ```{r out.width = "95%", include = T, eval = T}
 
@@ -260,7 +260,7 @@ upset(fromList(meqtls.cpg),
           axis.title = element_text(size = 8))
 ```
 
-## dex
+### dex
 
 ```{r out.width = "95%", include = T, eval = T}
 
@@ -279,7 +279,7 @@ upset(fromList(meqtls.cpg),
           axis.title = element_text(size = 8))
 ```
 
-## veh
+### veh
 
 ```{r out.width = "95%", include = T, eval = T}
 
@@ -298,7 +298,7 @@ upset(fromList(meqtls.cpg),
           axis.title = element_text(size = 8))
 ```
 
-# Distances
+## Distances
 
 ```{r out.width = "95%", include = F, eval = F}
 ggplot(meqtl.delta.full.df, aes(x = dist)) + geom_histogram(alpha = .9)
@@ -364,9 +364,9 @@ ggplot(bins.df, aes(DistanceInterval, fill = treatment)) +
        y = "No. cis-meQTLs") 
 ```
 
-# Distribution of CpGs per SNPs {.tabset .tabset-fade .tabset-pills}
+## Distribution of CpGs per SNPs {.tabset .tabset-fade .tabset-pills}
 
-## delta
+### delta
 
 ```{r out.width = "100%", include = T, eval = T}
 
@@ -406,7 +406,7 @@ hist(plyr::count(meqtl.delta.full.df$SNP)$freq,
      xlab = 'Nr of CpGs')
 ```
 
-## dex
+### dex
 
 ```{r out.width = "100%", include = T, eval = T}
 plt.df <- data.frame(cbind(Frequency = plyr::count(meqtl.dex.full.df$SNP)$freq, treatment = "dex"))
@@ -434,7 +434,7 @@ ggplot(plt.df, aes(x = Frequency)) +
   facet_wrap(~ treatment, ncol = 1)
 ```
 
-## veh
+### veh
 
 ```{r out.width = "100%", include = T, eval = T}
 plt.df <- data.frame(cbind(Frequency = plyr::count(meqtl.veh.full.df$SNP)$freq, treatment = "veh"))

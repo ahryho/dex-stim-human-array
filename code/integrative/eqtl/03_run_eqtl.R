@@ -9,12 +9,15 @@ treatment    <- as.character(args[1]) #"veh"
 eqtm.in.pre  <- as.character(args[2]) #"~/bio/datasets/eQTM/"
 eqtm.res.pre <- as.character(args[3]) # paste0("~/bio/datasets/eQTM/result/")
 
-treatment <- "delta"
+treatment <- "veh"
+type      <- "" # "_dnam_bcc" #""
+mval <- "_mval" # ""
+
 # eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/test/"
 # eqtm.res.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/test/"
 
 eqtm.in.pre  <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-eqtm.res.pre <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+eqtm.res.pre <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/me-eqtl_cis_results_06122021"
 
 cpg.loc.fn  <- paste0(eqtm.in.pre, "cpg_locations.csv")
 ensg.loc.fn <- paste0(eqtm.in.pre, "ensg_locations.csv")
@@ -23,14 +26,14 @@ snp.loc.fn  <- paste0(eqtm.in.pre, "snp_locations.csv")
 # gex.layer.fn <- paste0(eqtm.in.pre, "gex_mtrx_", treatment, ".csv")
 
 snp.layer.fn    <- paste0(eqtm.in.pre, "snp_mtrx.csv")
-methyl.layer.fn <- paste0(eqtm.in.pre, "methyl_beta_mtrx_", treatment, ".csv")
+methyl.layer.fn <- paste0(eqtm.in.pre, "methyl", mval, "_mtrx_", treatment, ".csv")
 
 if(treatment == "delta") 
   bio.layer.fn <- SlicedData$new() else
-    bio.layer.fn <- paste0(eqtm.in.pre, "bio_mtrx_methyl.csv")
+    bio.layer.fn <- paste0(eqtm.in.pre, "bio_mtrx_methyl_", treatment, type, ".csv")
 
-eqtm.cis.result.fn <- paste0(eqtm.res.pre, "me-qtl_cis_result_", treatment, "v02.csv")
-eqtm.trans.result.fn <- paste0(eqtm.res.pre, "me-qtl_trans_result_", treatment, "v02.csv")
+eqtm.cis.result.fn <- paste0(eqtm.res.pre, "me-qtl_cis_result_", treatment, type, mval, ".csv")
+eqtm.trans.result.fn <- paste0(eqtm.res.pre, "me-qtl_trans_result_", treatment, type, mval, ".csv")
 
 # Load data
 
@@ -119,4 +122,4 @@ me.all <- RunMatrixEQTL(snp.fn = snp.layer.fn, # methyl.layer.fn,
                         trans.res.fn = eqtm.trans.result.fn, 
                         cis.cutoff = 5e-2, trans.cutoff = 0)
 
-saveRDS(me.all, file =  paste0(eqtm.res.pre, "me-qtl_matrx_", treatment, "v02.RDS"))
+saveRDS(me.all, file =  paste0(eqtm.res.pre, "me-qtl_matrx_", treatment, type, mval, ".RDS"))

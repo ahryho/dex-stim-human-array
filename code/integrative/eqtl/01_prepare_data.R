@@ -21,6 +21,7 @@ snp.bim            <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/fina
 pheno              <- fread(pheno.fn, na.strings = c('#N/A', "NA"), dec = ",") %>% setDT()
 pheno              <- pheno[Include == 1]    
 methyl.mtrx        <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_beta_combat_mtrx.rds")
+methyl.mval.mtrx   <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_mval_combat_mtrx.rds")
 gex.mtrx.veh       <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_veh.csv")
 gex.mtrx.dex       <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_dex.csv")
 
@@ -69,6 +70,8 @@ fwrite(snp.mtrx,
 veh.ids <- pheno[Dex == 0 & !is.na(DNAm_ID), .(DNA_ID, DNAm_ID)]
 dex.ids <- pheno[Dex == 1 & !is.na(DNAm_ID), .(DNA_ID, DNAm_ID)]
 
+methyl.mtrx <- methyl.mval.mtrx
+
 methyl.mtrx.veh <- methyl.mtrx[, colnames(methyl.mtrx) %in% veh.ids$DNAm_ID]
 methyl.mtrx.dex <- methyl.mtrx[, colnames(methyl.mtrx) %in% dex.ids$DNAm_ID]
 
@@ -86,11 +89,11 @@ methyl.mtrx.dex["CpG_ID"] <- rownames(methyl.mtrx.dex)
 methyl.mtrx.dex           <- methyl.mtrx.dex %>% dplyr::select(CpG_ID, everything())
 
 fwrite(methyl.mtrx.veh, 
-       paste0(output.eqtm.pre, "methyl_beta_mtrx_veh.csv"),
+       paste0(output.eqtm.pre, "methyl_mval_mtrx_veh.csv"),
        quote = F, row.names = F, sep = ";")
 
 fwrite(methyl.mtrx.dex, 
-       paste0(output.eqtm.pre, "methyl_beta_mtrx_dex.csv"),
+       paste0(output.eqtm.pre, "methyl_mval_mtrx_dex.csv"),
        quote = F, row.names = F, sep = ";")
 
 # methyl.mtrx.dex <- fread(paste0(output.eqtm.pre, "methyl_beta_mtrx_dex.csv"), select = dex.ids$DNA_ID)
@@ -253,7 +256,7 @@ fwrite(bio.mtrx.t,
        paste0(output.eqtm.pre, "bio_mtrx_methyl_dex.csv"),
        quote = F, row.names = F, sep = ";")
 
-bio.mtrx <- fread(paste0(output.eqtm.pre, "bio_mtrx_methyl_dex.csv"))
+# bio.mtrx <- fread(paste0(output.eqtm.pre, "bio_mtrx_methyl.csv"))
 
 # DELTA
 cov.list <- c()
@@ -270,4 +273,42 @@ bio.mtrx.t <- bio.mtrx.t[, ..order.idx]
 
 fwrite(bio.mtrx.t, 
        paste0(output.eqtm.pre, "bio_mtrx_methyl_delta.csv"),
+       quote = F, row.names = F, sep = ";")
+
+
+# Bio layer with DNAm BCCs:
+
+cov.list <- c("DNA_ID",
+              "Sex", "Status", "Age", "BMI_D1", "DNAm_SmokingScore",
+              "CD8T", "CD4T", "NK", "Bcell", "Mono", "Gran",
+              "PC1", "PC2")
+
+# VEH
+bio.mtrx <- pheno[Dex == 0 & !is.na(DNAm_ID), ] %>% dplyr::select(cov.list)
+
+bio.mtrx.t <- dcast(melt(bio.mtrx, id.vars = "DNA_ID"), variable ~ DNA_ID)
+colnames(bio.mtrx.t)[1] <-  "Feature"
+
+all(colnames(methyl.mtrx.veh)[-1] == colnames(bio.mtrx.t)[-1])
+
+order.idx  <- c(0, match(colnames(methyl.mtrx.veh)[-1], colnames(bio.mtrx.t)[-1])) + 1
+bio.mtrx.t <- bio.mtrx.t[, ..order.idx]
+
+fwrite(bio.mtrx.t, 
+       paste0(output.eqtm.pre, "bio_mtrx_methyl_veh_dnam_bcc.csv"),
+       quote = F, row.names = F, sep = ";")
+
+# DEX
+bio.mtrx <- pheno[Dex == 1 & !is.na(DNAm_ID), ] %>% dplyr::select(cov.list)
+
+bio.mtrx.t <- dcast(melt(bio.mtrx, id.vars = "DNA_ID"), variable ~ DNA_ID)
+colnames(bio.mtrx.t)[1] <-  "Feature"
+
+order.idx  <- c(0, match(colnames(methyl.mtrx.dex)[-1], colnames(bio.mtrx.t)[-1])) + 1
+bio.mtrx.t <- bio.mtrx.t[, ..order.idx]
+
+all(colnames(methyl.mtrx.dex)[-1] == colnames(bio.mtrx.t)[-1])
+
+fwrite(bio.mtrx.t, 
+       paste0(output.eqtm.pre, "bio_mtrx_methyl_dex_dnam_bcc.csv"),
        quote = F, row.names = F, sep = ";")

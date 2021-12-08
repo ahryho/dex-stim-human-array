@@ -32,5 +32,5 @@ sbatch --job-name=$job_name --part=$partition \
   --nodelist=$partition$node --mem=$memory --output=$out_fn \
   --wrap="Rscript --vanilla $r_script $beta_mtrx_fn $pheno_fn $rslt_dir/$rslt_lmem_fn $treatment"
 
-# ./00_run_lm_residuals.sh lm_residuals_svs_pcs_smoke.R /home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/dnam_residuals/dnam_residuals dex pe 7 900Gb
+# ./00_run_lm_residuals.sh lm_residuals_svs_pcs_smoke.R /home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/dnam_residuals/dnam_residuals_dex dex pe 7 900Gb
 

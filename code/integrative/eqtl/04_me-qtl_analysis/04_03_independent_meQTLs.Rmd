@@ -352,15 +352,18 @@ methyl.change.df.plt[["meQTL_ID"]] <- paste(methyl.change.df.plt$SNP, methyl.cha
 ```{r out.width = "95%", include = T, eval = T}
 library(ggplot2)
 
-ggplot(lmem.rslt, aes(x = MAD)) +
-  geom_density(alpha = 1, size = 1) +
+mad.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/methylation/mad_score_dnam_beta_values.csv")
+
+ggplot(mad.df, aes(x = MAD, fill = treatment, color = treatment)) +
+  geom_density(alpha = 0.2, size = 1) +
   theme(legend.position = "bottom", 
         legend.title = element_blank(),
         #  panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 10),
         axis.title = element_text(size = 8)) +
-   labs(title = "DNAm MAD Score Density Plot")
+  xlim(0,2) +
+  labs(title = "DNAm MAD Score Density Plot")
 
 ```
 
@@ -412,7 +415,7 @@ ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape =
 library(ggplot2)
 
 fdr.thr <- 0.05
-mad.thr <- 0.1
+mad.thr <- 10
 maf.thr <- 0.2
 
 methyl.change.df.plt <- methyl.change.df.plt[!is.na(methyl.change.df.plt$methyl_change),]
@@ -429,10 +432,16 @@ freq <- fread("/Users/anastasiia_hry/bio/code/mpip/dex-stim-human-array/data/snp
 # methyl.change.df.plt.tmp <- distinct(methyl.change.df.plt.tmp, SNP, .keep_all = T)
 # methyl.change.df.plt.tmp <- distinct(methyl.change.df.plt.tmp, CpG_ID, .keep_all = T)
 
-mad.cpgs <- lmem.rslt[abs(lmem.rslt$MAD) >= mad.thr, PROBE_ID]
-# mad.cpgs <- lmem.rslt[lmem.rslt$FDR <= 0.01, PROBE_ID]
-methyl.change.df.plt.tmp <- methyl.change.df.plt[CpG_ID %in% mad.cpgs]
-methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID"))
+mad.cpgs.veh <- mad.df[mad.df$perc <= mad.thr & mad.df$treatment == "veh", CpG_ID]
+mad.cpgs.dex <- mad.df[mad.df$perc <= mad.thr & mad.df$treatment == "dex", CpG_ID]
+mad.cpgs.delta <- intersect(mad.cpgs.veh, mad.cpgs.dex) 
+
+methyl.change.df.plt.tmp <- data.frame(rbind(
+  methyl.change.df.plt[treatment == "veh" & CpG_ID %in% mad.cpgs.veh],
+  methyl.change.df.plt[treatment == "dex" & CpG_ID %in% mad.cpgs.dex],
+  methyl.change.df.plt[treatment == "delta" & CpG_ID %in% mad.cpgs.delta]))
+
+methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID")) %>% setDT()
 methyl.change.df.plt.tmp <- methyl.change.df.plt.tmp[ALT_FREQS >= maf.thr ]
 
 ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape = treatment, color = treatment)) +

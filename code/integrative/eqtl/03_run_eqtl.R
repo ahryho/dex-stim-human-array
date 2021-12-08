@@ -9,15 +9,15 @@ treatment    <- as.character(args[1]) #"veh"
 eqtm.in.pre  <- as.character(args[2]) #"~/bio/datasets/eQTM/"
 eqtm.res.pre <- as.character(args[3]) # paste0("~/bio/datasets/eQTM/result/")
 
-treatment <- "veh"
+treatment <- "delta"
 type      <- "" # "_dnam_bcc" #""
-mval <- "_mval" # ""
+mval <- "_beta" #"_mval"
 
 # eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/test/"
-# eqtm.res.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/test/"
+# eqtm.res.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
 eqtm.in.pre  <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-eqtm.res.pre <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/me-eqtl_cis_results_06122021"
+eqtm.res.pre <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
 cpg.loc.fn  <- paste0(eqtm.in.pre, "cpg_locations.csv")
 ensg.loc.fn <- paste0(eqtm.in.pre, "ensg_locations.csv")
@@ -41,13 +41,15 @@ cpg.loc  <- fread(cpg.loc.fn)
 # ensg.loc <- fread(ensg.loc.fn)
 snp.loc  <- fread(snp.loc.fn)
 
-# gex.layer <- fread(gex.layer.fn) 
+# gex.layer <- fread(gex.layer.fn)
+# snp.layer <- fread(snp.layer.fn)
 # methyl.layer <- fread(methyl.layer.fn)
 # bio.layer <- fread(bio.layer.fn)
 
 # Check the colnames of layers are in the same order
 
-# gex.layer[, colnames(gex.layer) %in% colnames(methyl.layer)]
+# all(colnames(snp.layer)[-1] == colnames(methyl.layer)[-1])
+# snp.layer[, colnames(snp.layer) %in% colnames(methyl.layer)]
 # bio.layer[, colnames(bio.layer) %in% colnames(methyl.layer)]
 
 RunMatrixEQTL <- function(snp.fn, gex.fn, bio.fn, cis.res.fn, trans.res.fn, cis.cutoff, trans.cutoff){

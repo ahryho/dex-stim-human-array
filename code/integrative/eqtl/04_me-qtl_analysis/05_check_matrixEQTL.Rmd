@@ -1,0 +1,333 @@
+---
+title: "cis-meQTLs Analysis"
+author:
+- name: Anastasiia Hryhorzhevska
+  email: anastasiia_hry@psych.mpg.de
+  url: https://github.com/ahryho
+  affiliation: Max Planck Institute of Psychiatry
+  affiliation_url: https://www.psych.mpg.de/2664393/medizinische-genomforschung
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    toc: yes
+    toc_float: yes
+    df_print: paged
+    css: style.css
+    code_folding: hide
+subtitle: Check meQTL delta approach
+editor_options:
+  chunk_output_type: console
+---
+
+```{r, include=FALSE}
+options(digits = 4, width = 100, stringsAsFactors = T)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 100),
+                      tidy=TRUE,
+                      fig.pos = "H",
+                      dpi = 600,
+                      warning = FALSE, 
+                      message = FALSE, 
+                      cache = TRUE, 
+                      cache.lazy = FALSE)
+
+# define DT as the standard printing method for data.frame
+library(knitr)
+library(DT)
+knit_print.data.frame <- function(x, ...) {
+  knit_print(DT::datatable(x,
+                           filter="top",
+                           rownames = FALSE,
+                           extensions = "FixedColumns",
+                           options = list(
+                             scrollX = TRUE,
+                             pageLength = 5
+                             
+                           )), ...)
+}
+
+registerS3method("knit_print", "data.frame", knit_print.data.frame)
+
+library(data.table)
+library(dplyr)
+library(lme4)
+library(MatrixEQTL)
+```
+
+```{r read-data, include = F, eval = T}
+# out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/me-qtl_cis_result_delta_fdr_005.csv"
+# out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/ind_me-qtl_cis/delta/"
+
+treatment <- "delta"
+
+col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
+meqtl.delta.df     <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/me-qtl_cis_result_delta_fdr_005.csv", col.names = col.names)
+snp.delta.lst      <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/ind_me-qtl_cis/delta/me-qtl_cis_ind_delta_valid_snps.txt", col.names = "SNP")
+ind.meqtl.delta.df <- left_join(snp.delta.lst, meqtl.delta.df)
+
+meqtl.dex.df     <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/me-eqtl_cis_results_06122021/me-qtl_cis_result_dex_fdr_005.csv", col.names = col.names)
+snp.dex.lst      <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/me-eqtl_cis_results_06122021/ind_me-qtl_cis/dex/me-qtl_cis_ind_dex_valid_snps.txt", col.names = "SNP")
+ind.meqtl.dex.df <- left_join(snp.dex.lst, meqtl.dex.df)
+
+# Pheno Data
+
+pheno     <- read.csv2("~/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv") #, na.strings = "#N/A") 
+pheno     <- pheno[pheno$Include == 1, ]
+
+# DNAm data
+
+methyl.layer.dex <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/methyl_beta_mtrx_dex.csv")
+rownames(methyl.layer.dex) <- methyl.layer.dex$CpG_ID
+
+beta.mtrx        <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_beta_combat_mtrx.rds")
+
+# Genotype
+
+snp.layer        <- fread( "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/snp_mtrx.csv")
+pheno$Sample_ID  <- as.factor(pheno$Sample_ID)
+pheno$Sex        <- as.factor(pheno$Sex)
+# pheno$Group      <- as.factor(pheno$Group)
+pheno$Age        <- as.numeric(pheno$Age)
+pheno$BMI        <- as.numeric(pheno$BMI)
+pheno$Status     <- as.factor(pheno$Status)
+
+# SVs:
+pheno$DNAm_SV1  <- as.numeric(as.character(pheno$DNAm_SV1))
+pheno$DNAm_SV2  <- as.numeric(as.character(pheno$DNAm_SV2), dec = ".")
+pheno$DNAm_SV3  <- as.numeric(as.character(pheno$DNAm_SV3))
+
+# PCs:
+pheno$PC1  <- as.numeric(pheno$PC1)
+pheno$PC2  <- as.numeric(pheno$PC2)  
+
+# Smkoing Score
+pheno$DNAm_SmokingScore <- as.numeric(pheno$DNAm_SmokingScore)
+```
+
+```{r prepare-data, include = F, eval = T}
+
+beta.mtrx <- beta.mtrx[, colnames(beta.mtrx) %in% pheno$DNAm_ID]
+
+snp.layer.tmp    <- snp.layer[, -1]
+
+all(colnames(beta.mtrx) == pheno[, "DNAm_ID"])
+pheno   <- pheno[match(colnames(beta.mtrx), pheno$DNAm_ID ),]
+
+all(colnames(beta.mtrx) == pheno[, "DNAm_ID"])
+order.idx  <- match(as.character(pheno[, "DNAm_ID"]), colnames(beta.mtrx))
+beta.mtrx <- beta.mtrx[, order.idx]
+all(colnames(beta.mtrx) == as.character(pheno[, "DNAm_ID"]))
+
+# all(colnames(snp.layer)[-1] == pheno[pheno$Group == "dex", "DNA_ID"])
+# order.idx  <- c(0, match(pheno[pheno$Group == "dex", "DNA_ID"], colnames(snp.layer)[-1])) + 1
+# snp.layer <- snp.layer[, ..order.idx]
+
+# Get the most significant meQTL
+
+ind.meqtl.delta.df <- ind.meqtl.delta.df[order(ind.meqtl.delta.df$fdr, decreasing = F), ]
+
+snp.id <- ind.meqtl.delta.df$SNP[1]
+cpg.id <- ind.meqtl.delta.df$CpG_ID[1]
+
+snp.vec    <- data.frame(t(snp.layer[SNP == snp.id, ]))
+snp.vec[["DNA_ID"]] <- rownames(snp.vec)
+snp.vec <- snp.vec [-1, ]
+colnames(snp.vec) <- c("SNP", "DNA_ID")
+
+pheno     <- left_join(pheno, snp.vec)
+pheno$SNP <- scale(as.numeric(pheno$SNP))
+```
+
+```{r lmem, unclude = T, eval = T}
+cg <- which(rownames(beta.mtrx) == cpg.id)
+
+sample <-  pheno$Sample_ID
+
+lmer.null  <- lmer(beta.mtrx[cg, ] ~ pheno$SNP + pheno$Sex + pheno$Age + pheno$BMI + pheno$Status + pheno$DNAm_SmokingScore +
+                     pheno$DNAm_SV1 + pheno$DNAm_SV2 + pheno$DNAm_SV3 + 
+                     pheno$PC1 + pheno$PC2 + 
+                     (1|sample), REML = F)
+
+lmer.model <- lmer(beta.mtrx[cg, ] ~ pheno$SNP + pheno$Sex + pheno$Age + pheno$BMI + pheno$Status + pheno$DNAm_SmokingScore +
+                     pheno$DNAm_SV1 + pheno$DNAm_SV2 + pheno$DNAm_SV3 + 
+                     pheno$PC1 + pheno$PC2 + 
+                     pheno$Group + (1|sample), REML = F)
+
+res.anova  <- anova(lmer.null, lmer.model)
+# signif(res.anova$"Pr(>Chisq)"[2], 4)
+
+# Fixed effect 
+# lmer.model@beta
+#vcoef(summary(lmer.model))[ , "Estimate"]
+
+# Randomm effect
+# lmer.model@theta
+
+slurm.res <- c(beta = as.numeric(ind.meqtl.delta.df[SNP == snp.id & CpG_ID == cpg.id, "beta"]),
+               t_stat = as.numeric(ind.meqtl.delta.df[SNP == snp.id & CpG_ID == cpg.id, "t-stat"]), 
+               p_val = as.numeric(ind.meqtl.delta.df[SNP == snp.id & CpG_ID == cpg.id, "p-value"]))
+
+lmm.res <- c(fix.eff = lmer.model@beta[2], random.eff = lmer.model@theta, pvalue_anova = res.anova$"Pr(>Chisq)"[2]);
+```
+
+```{r}
+methyl.layer.delta <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/dnam_residuals/methyl_beta_mtrx_delta.csv")
+# table(colnames(methyl.layer.delta)[-1] %in% pheno.dex[, "DNA_ID"])
+# all(colnames(methyl.layer.delta)[-1] == pheno.dex[, "DNA_ID"])
+# order.idx  <- c(0, match(pheno.dex[, "DNA_ID"], colnames(methyl.layer.delta)[-1])) + 1
+# methyl.layer.delta <- methyl.layer.delta[, ..order.idx]
+# all(colnames(methyl.layer.delta)[-1] == pheno.dex[, "DNA_ID"])
+
+beta.mtrx.delta <- methyl.layer.delta[, -1]
+```
+
+```{r}
+eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/test/"
+snp.layer.fn    <- paste0(eqtm.in.pre, "snp_mtrx.csv")
+methyl.layer.fn <- paste0(eqtm.in.pre, "methyl_beta_mtrx_delta.csv")
+
+cpg.vec <- t(beta.mtrx.delta[cg, ])
+
+# Create 3 SlicedData objects for the analysis
+snps1 <- SlicedData$new( matrix( pheno.dex$SNP, nrow = 1 ) );
+gene1 <- SlicedData$new( matrix( cpg.vec, nrow = 1 ) );
+cvrt1 <- SlicedData$new();
+
+  snps                    <-  SlicedData$new()
+  snps$fileDelimiter      <- ";"   # the TAB character
+  snps$fileOmitCharacters <- "NA"  # denote missing values;
+  snps$fileSkipRows       <- 1     # one row of column labels
+  snps$fileSkipColumns    <- 1     # one column of row labels
+  snps$fileSliceSize      <- 1e5   # read file in pieces of 2,000 rows
+  snps$LoadFile(snp.layer.fn)
+  
+  # GEX Data
+  gene                    <- SlicedData$new()
+  gene$fileDelimiter      <-  ";"  # the TAB character
+  gene$fileOmitCharacters <- "NA"  # denote missing values;
+  gene$fileSkipRows       <- 1     # one row of column labels
+  gene$fileSkipColumns    <- 1     # one column of row labels
+  gene$fileSliceSize      <- 1e5   # read file in pieces of 100,000 rows
+  gene$LoadFile(methyl.layer.fn)
+
+# Produce no output files
+filename <- NULL; # tempfile()
+
+# Call the main analysis function
+me <- Matrix_eQTL_main(
+  snps = snps1, #snps1,
+  gene = gene1, #gene1,
+  cvrt = cvrt1,
+  output_file_name.cis = filename,
+  pvOutputThreshold = 0.05,
+  useModel = modelLINEAR,
+  errorCovariance = numeric(),
+  cisDist = 1e6,
+  verbose = TRUE,
+  pvalue.hist = FALSE );
+
+# Pull Matrix eQTL results - t-statistic and p-value
+beta   <- me$all$eqtls$beta;
+tstat  <- me$all$eqtls$statistic;
+pvalue <- me$all$eqtls$pvalue;
+matrix.etl.local.res <- c(beta = beta, t_stat = tstat, p_value = pvalue);
+```
+
+```{r}
+
+{
+  print(paste0("Delta for CpG = ", cpg.id, " and SNP = ", snp.id))
+  print("LMM from r-package 'lme4': ")
+  print( lmm.res)
+  print("ANOVA :")
+  print(res.anova)
+  print("MatrixEQTL slurm:")
+  print(slurm.res)
+  print("MatrixEQTL local: ")
+  print(matrix.etl.local.res)
+}
+```
+
+```{r check-dex-prepare-data, include=F, eval=T}
+pheno.dex     <- pheno[pheno$Group == "dex",]
+
+# table(colnames(methyl.layer.dex)[-1] %in% pheno.dex[, "DNA_ID"])
+# all(colnames(methyl.layer.dex)[-1] == pheno.dex[, "DNA_ID"])
+# order.idx  <- c(0, match(pheno.dex[, "DNA_ID"], colnames(methyl.layer.dex)[-1])) + 1
+# methyl.layer.dex <- methyl.layer.dex[, ..order.idx]
+# all(colnames(methyl.layer.dex)[-1] == pheno.dex[, "DNA_ID"])
+
+beta.mtrx.dex <- methyl.layer.dex[, -1]
+
+cpg.vec   <- t(beta.mtrx.dex[cg, ])
+pheno.dex <- data.frame(cbind(cpg.vec, pheno.dex))
+colnames(pheno.dex)[1] <- "CpG_ID"
+```
+
+```{r check-dex-lm, include=F, eval=T}
+dex.lm <- lm(CpG_ID ~ SNP + Sex + Age + BMI_D1 + Status + DNAm_SmokingScore + DNAm_SV1 + DNAm_SV2 + DNAm_SV3 + PC1 + PC2, data = pheno.dex)
+
+dex.lm.coef <- summary(dex.lm)$coefficients[2, c("Estimate","t value", "Pr(>|t|)")]
+dex.lm.coef
+
+# dex.lm <- lm( beta.mtrx.dex[cg, ] ~ pheno.dex$SNP + pheno.dex$Sex + pheno.dex$Age + pheno.dex$BMI + pheno.dex$Status + pheno.dex$DNAm_SmokingScore +
+#                      pheno.dex$DNAm_SV1 + pheno.dex$DNAm_SV2 + pheno.dex$DNAm_SV3 + 
+#                      pheno.dex$PC1 + pheno.dex$PC2 );
+```
+
+```{r check-dex-matrixeqtl-local, include = F, eval = T}
+cov.list <- c("Sex", "Status", "Age", "BMI_D1", "DNAm_SmokingScore",
+              "DNAm_SV1", "DNAm_SV2", "DNAm_SV3", 
+              # "CD8T", "CD4T", "NK", "Bcell", "Mono", "Gran",
+              "PC1", "PC2")
+
+# Create 3 SlicedData objects for the analysis
+snps1 <- SlicedData$new( matrix( pheno.dex$SNP, nrow = 1 ) );
+gene1 <- SlicedData$new( matrix( pheno.dex$CpG_ID, nrow = 1 ) );
+cvrt1 <- SlicedData$new( t(pheno.dex[, cov.list]) );
+
+# Produce no output files
+filename <- NULL; # tempfile()
+
+# Call the main analysis function
+me <- Matrix_eQTL_main(
+  snps = snps1,
+  gene = gene1,
+  cvrt = cvrt1,
+  output_file_name = filename,
+  pvOutputThreshold = 1,
+  useModel = modelLINEAR,
+  errorCovariance = numeric(),
+  verbose = TRUE,
+  pvalue.hist = FALSE );
+
+# Pull Matrix eQTL results - t-statistic and p-value
+beta   <- me$all$eqtls$beta;
+tstat  <- me$all$eqtls$statistic;
+pvalue <- me$all$eqtls$pvalue;
+matrix.etl.local.res <- c(beta = beta, t_stat = tstat, p_value = pvalue);
+```
+
+```{r include = T, eval = T}
+slurm.dex.res <- c(beta = as.numeric(ind.meqtl.dex.df[SNP == snp.id & CpG_ID == cpg.id, "beta"]),
+                   t_stat = as.numeric(ind.meqtl.dex.df[SNP == snp.id & CpG_ID == cpg.id, "t-stat"]), 
+                   p_val = as.numeric(ind.meqtl.dex.df[SNP == snp.id & CpG_ID == cpg.id, "p-value"]))
+```
+
+
+```{r}
+{
+  print(paste0("DEX for CpG = ", cpg.id, " and SNP = ", snp.id))
+  print("MatrixEQTL slurm: ")
+  print(slurm.dex.res)
+  print("Linear model: ")
+  print( dex.lm.coef)
+  print("MatrixEQTL local: ")
+  print(matrix.etl.local.res)
+}
+
+```
+
+

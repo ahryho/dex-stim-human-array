@@ -563,46 +563,86 @@ ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape =
 
 ## Boxplots for significant meQTLs
 
-```{r include = F, eval = T}
-mad.thr <- 0.1
-maf.thr <- 0.2
+```{r}
+eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
 
-methyl.change.df.plt <- methyl.change.df.plt[!is.na(methyl.change.df.plt$methyl_change),]
-methyl.change.df.plt.tmp <- methyl.change.df.plt
+snp.df.fn <- paste0(eqtm.in.pre, "snp_mtrx.csv")
+snp.df    <- fread(snp.df.fn)
 
-mad.cpgs <- lmem.rslt[abs(lmem.rslt$MAD) >= mad.thr, PROBE_ID]
-# mad.cpgs <- lmem.rslt[lmem.rslt$FDR <= 0.01, PROBE_ID]
-methyl.change.df.plt.tmp <- methyl.change.df.plt[CpG_ID %in% mad.cpgs]
-methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID"))
-methyl.change.df.plt.tmp <- methyl.change.df.plt.tmp[ALT_FREQS >= maf.thr ]
+methyl.beta.df.fn   <- paste0(eqtm.in.pre, "methyl_beta_mtrx_dex.csv")
+methyl.beta.dex.df  <- fread(methyl.beta.df.fn) 
+
+methyl.beta.df.fn   <- paste0(eqtm.in.pre, "methyl_beta_mtrx_veh.csv")
+methyl.beta.veh.df  <- fread(methyl.beta.df.fn) 
+
+all(colnames(snp.df)[-1] == colnames(methyl.beta.dex.df)[-1])
+all(colnames(snp.df)[-1] == colnames(methyl.beta.veh.df)[-1])
+```
+
+## Scatter plot
+
+```{r, include = F, eval = T}
+meqtl.all.full.df <- rbind(ind.meqtl.dex.df[, treatment := "dex"],
+                           ind.meqtl.veh.df[, treatment := "veh"],
+                           ind.meqtl.delta.df[, treatment := "delta"])
+
+meqtl.all.full.df <- meqtl.all.full.df[!is.na(meqtl.all.full.df$fdr),]
+meqtl.all.full.df[["meQTL_ID"]] <- paste(meqtl.all.full.df$SNP, meqtl.all.full.df$CpG_ID, sep = "-")
+```
+
+```{r}
+GetBetValuesDF <- function(methyl.beta.df, treatment){
+  beta.values.df    <- methyl.beta.df[CpG_ID %in% meqtl.for.boxplot$CpG_ID, -1]
+  beta.values.df    <- rbind(beta.values.df, snp.df[SNP == meqtl.for.boxplot$SNP, -1])
+  beta.values.df    <- data.frame(t(beta.values.df)) %>% setDT()
+  colnames(beta.values.df) <- c("CpG", "SNP")
+  beta.values.df$SNP <- as.factor(beta.values.df$SNP)
+  beta.values.df[SNP == 0, SNP := "AA"]; beta.values.df[SNP == 1, SNP := "AB"]; beta.values.df[SNP == 2, SNP := "BB"] 
+  
+  beta.values.df$treatment <- treatment
+  beta.values.df
+}
+```
+
+```{r}
+# summary(meqtl.all.full.df[treatment == "dex"])
+meqtl.for.boxplot <- meqtl.all.full.df[treatment == "delta"][fdr == min(fdr)] # beta == max(beta)
+meqtl.for.boxplot
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
-library(ggplot2)
+ggplot(meqtl.all.full.df, aes(x = beta, y = -log10(fdr), shape = treatment, color = treatment)) +
+  geom_point(alpha = 1.5, size = 1.2) +
+#  geom_point(data = meqtl.for.boxplot, aes(x = beta, y = -log10(fdr)), alpha = 1.5, size = 3) +
+  geom_label_repel(data = meqtl.for.boxplot,
+                  aes(x = beta,
+                      y =  -log10(fdr),
+                      label = meQTL_ID),
+                  box.padding = unit(0.35, "lines"),
+                  point.padding = unit(0.5, "lines"),
+                  segment.color = 'grey50',
+                  nudge_y = -5, size = 3) +
+  scale_x_continuous(labels = scientific) +
+  geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
+  geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
+  # scale_y_continuous(trans = 'log10')+
+  # labs(title = " ", y = "", x = " ") + 
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        #  panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+        xlab("Effect size, MatrixEQTL")
+```
+```{r}
+beta.values.dex.df <- GetBetValuesDF(methyl.beta.dex.df, "dex")
+beta.values.veh.df <- GetBetValuesDF(methyl.beta.veh.df, "veh")
 
-methyl.change.df[["meQTL_ID"]] <- paste(methyl.change.df$SNP, methyl.change.df$CpG_ID, sep = "-")
-methyl.change.dex.df[["meQTL_ID"]] <- paste(methyl.change.dex.df$SNP, methyl.change.dex.df$CpG_ID, sep = "-")
-methyl.change.veh.df[["meQTL_ID"]] <- paste(methyl.change.veh.df$SNP, methyl.change.veh.df$CpG_ID, sep = "-")
+beta.values.df <- rbind(beta.values.dex.df, beta.values.veh.df)
 
-methyl.change.df <- methyl.change.df[order(methyl.change.df$fdr),]
-
-intersect.meqtl <- intersect(methyl.change.dex.df$meQTL_ID, methyl.change.veh.df$meQTL_ID)
-intersect.meqtl <- intersect.meqtl[intersect.meqtl %in% methyl.change.df.plt.tmp$meQTL_ID]
-# union.snp.change <- union(methyl.change.dex.df$SNP, methyl.change.veh.df$SNP)
-# union.snp <- union(snp.dex.lst, snp.veh.lst)
-
-# methyl.change.plt.df <- reshape2::melt(methyl.change.df[meQTL_ID %in% intersect.meqtl$meQTL_ID, c("ref_mean", "heterozyg_mean", "non_ref_mean", "treatment")], id = "treatment", variable = "Genotype", value.name = "Mean")
-
-x.df <- methyl.change.df[meQTL_ID %in% intersect.meqtl]
-snp  <- x.df$SNP[1]
-snp.df <-  methyl.change.df[methyl.change.df$SNP == snp]
-
-methyl.change.plt.df <- reshape2::melt(snp.df[, c("ref_mean", "heterozyg_mean", "non_ref_mean", "treatment")], id = "treatment", variable = "Genotype", value.name = "Mean")
-
-levels(methyl.change.plt.df$Genotype) <- c("AA", "AB", "BB")
-
-methyl.change.plt.df %>%
-  ggplot(aes(y = Mean, x = Genotype, fill = treatment)) +
+beta.values.df %>%
+  ggplot(aes(y = CpG, x = SNP, fill = treatment)) +
     geom_boxplot(width = 0.2, color = "black") +
     scale_fill_viridis(discrete = TRUE, alpha = 0.5) +
     theme( panel.background = element_blank(),
@@ -610,47 +650,7 @@ methyl.change.plt.df %>%
            axis.title = element_text(size = 10),
            axis.text.x = element_text(angle = 0, hjust = 0.5), 
            legend.position = "bottom") +
-    labs(y = "Beta methylation, mean", title = paste0(snp, ", DNAm MAD <= ", mad.thr, " and MAF >= ", maf.thr))
-```
-
-
-```{r out.width = "95%", include = T, eval = T}
-snp  <- x.df$SNP[2]
-snp.df <-  methyl.change.df[methyl.change.df$SNP == snp]
-
-methyl.change.plt.df <- reshape2::melt(snp.df[, c("ref_mean", "heterozyg_mean", "non_ref_mean", "treatment")], id = "treatment", variable = "Genotype", value.name = "Mean")
-
-levels(methyl.change.plt.df$Genotype) <- c("AA", "AB", "BB")
-
-methyl.change.plt.df %>%
-  ggplot(aes(y = Mean, x = Genotype, fill = treatment)) +
-    geom_boxplot(width = 0.2, color = "black") +
-    scale_fill_viridis(discrete = TRUE, alpha = 0.5) +
-    theme( panel.background = element_blank(),
-           plot.title = element_text(size = 10),
-           axis.title = element_text(size = 10),
-           axis.text.x = element_text(angle = 0, hjust = 0.5), 
-           legend.position = "bottom") +
-    labs(y = "Beta methylation, mean", title = paste0(snp, ", DNAm MAD <= ", mad.thr, " and MAF >= ", maf.thr))
-```
-
-
-```{r out.width = "95%", include = T, eval = T}
-snp  <- x.df$SNP[3]
-snp.df <-  methyl.change.df[methyl.change.df$SNP == snp]
-
-methyl.change.plt.df <- reshape2::melt(snp.df[, c("ref_mean", "heterozyg_mean", "non_ref_mean", "treatment")], id = "treatment", variable = "Genotype", value.name = "Mean")
-
-levels(methyl.change.plt.df$Genotype) <- c("AA", "AB", "BB")
-
-methyl.change.plt.df %>%
-  ggplot(aes(y = Mean, x = Genotype, fill = treatment)) +
-    geom_boxplot(width = 0.2, color = "black") +
-    scale_fill_viridis(discrete = TRUE, alpha = 0.5) +
-    theme( panel.background = element_blank(),
-           plot.title = element_text(size = 10),
-           axis.title = element_text(size = 10),
-           axis.text.x = element_text(angle = 0, hjust = 0.5), 
-           legend.position = "bottom") +
-    labs(y = "Beta methylation, mean", title = paste0(snp, ", DNAm MAD <= ", mad.thr, " and MAF >= ", maf.thr))
+    labs(y = paste0(meqtl.for.boxplot$CpG_ID, ", DNAm beta value"), 
+         x = meqtl.for.boxplot$SNP,
+         title = paste0("Effect size = ", signif(meqtl.for.boxplot$beta, 4), " and FDR = ", signif(meqtl.for.boxplot$fdr, 2)))
 ```

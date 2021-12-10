@@ -9,7 +9,7 @@ treatment    <- as.character(args[1]) #"veh"
 eqtm.in.pre  <- as.character(args[2]) #"~/bio/datasets/eQTM/"
 eqtm.res.pre <- as.character(args[3]) # paste0("~/bio/datasets/eQTM/result/")
 
-treatment <- "delta"
+treatment <- "dex"
 type      <- "" # "_dnam_bcc" #""
 mval <- "_beta" #"_mval"
 
@@ -35,6 +35,8 @@ if(treatment == "delta")
 eqtm.cis.result.fn <- paste0(eqtm.res.pre, "me-qtl_cis_result_", treatment, type, mval, ".csv")
 eqtm.trans.result.fn <- paste0(eqtm.res.pre, "me-qtl_trans_result_", treatment, type, mval, ".csv")
 
+# eqtm.cis.result.fn <- NULL
+# eqtm.trans.result.fn <- NULL
 # Load data
 
 cpg.loc  <- fread(cpg.loc.fn)
@@ -95,23 +97,23 @@ RunMatrixEQTL <- function(snp.fn, gex.fn, bio.fn, cis.res.fn, trans.res.fn, cis.
   }
   
   # 3. Run Matrix_eQTL
-  me <- Matrix_eQTL_main(
-    snps = snps,
-    gene = gene,
-    cvrt = cvrt,
-    output_file_name = trans.res.fn,
-    pvOutputThreshold = pvOutputThreshold_tra , #pvOutputThreshold_tra only cis
+  me.all <- Matrix_eQTL_main(
+    snps = snps1,
+    gene = gene1,
+    cvrt = cvrt1,
     useModel = useModel,
     errorCovariance = errorCovariance,
-    verbose = TRUE,
-    output_file_name.cis = cis.res.fn,
-    pvOutputThreshold.cis = pvOutputThreshold_cis,
     snpspos = snp.loc, #cpg.loc,
     genepos = cpg.loc, #ensg.loc,
+    output_file_name.cis = cis.res.fn,
+    pvOutputThreshold.cis = pvOutputThreshold_cis,
     cisDist = cisDist,
+    output_file_name = trans.res.fn,
+    pvOutputThreshold = pvOutputThreshold_tra , #pvOutputThreshold_tra only cis
     pvalue.hist = "qqplot",
     min.pv.by.genesnp = FALSE,
-    noFDRsaveMemory = FALSE)
+    noFDRsaveMemory = FALSE,
+    verbose = TRUE)
   
   return (me)
 }

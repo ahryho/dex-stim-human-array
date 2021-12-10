@@ -137,7 +137,7 @@ snp.vec <- snp.vec [-1, ]
 colnames(snp.vec) <- c("SNP", "DNA_ID")
 
 pheno     <- left_join(pheno, snp.vec)
-pheno$SNP <- scale(as.numeric(pheno$SNP))
+# pheno$SNP <- scale(as.numeric(pheno$SNP))
 ```
 
 ```{r lmem, unclude = T, eval = T}
@@ -188,10 +188,8 @@ eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQT
 snp.layer.fn    <- paste0(eqtm.in.pre, "snp_mtrx.csv")
 methyl.layer.fn <- paste0(eqtm.in.pre, "methyl_beta_mtrx_delta.csv")
 
-cpg.vec <- t(beta.mtrx.delta[cg, ])
-
 # Create 3 SlicedData objects for the analysis
-snps1 <- SlicedData$new( matrix( pheno.dex$SNP, nrow = 1 ) );
+snps1 <- SlicedData$new( matrix( pheno$SNP, nrow = 1 ) );
 gene1 <- SlicedData$new( matrix( cpg.vec, nrow = 1 ) );
 cvrt1 <- SlicedData$new();
 
@@ -267,7 +265,7 @@ colnames(pheno.dex)[1] <- "CpG_ID"
 ```
 
 ```{r check-dex-lm, include=F, eval=T}
-dex.lm <- lm(CpG_ID ~ SNP + Sex + Age + BMI_D1 + Status + DNAm_SmokingScore + DNAm_SV1 + DNAm_SV2 + DNAm_SV3 + PC1 + PC2, data = pheno.dex)
+dex.lm <- lm(CpG_ID ~ as.numeric(as.character(SNP)) + Sex + Age + BMI_D1 + Status + DNAm_SmokingScore + DNAm_SV1 + DNAm_SV2 + DNAm_SV3 + PC1 + PC2, data = pheno.dex)
 
 dex.lm.coef <- summary(dex.lm)$coefficients[2, c("Estimate","t value", "Pr(>|t|)")]
 dex.lm.coef
@@ -284,7 +282,7 @@ cov.list <- c("Sex", "Status", "Age", "BMI_D1", "DNAm_SmokingScore",
               "PC1", "PC2")
 
 # Create 3 SlicedData objects for the analysis
-snps1 <- SlicedData$new( matrix( pheno.dex$SNP, nrow = 1 ) );
+snps1 <- SlicedData$new( matrix( as.numeric(as.character(pheno.dex$SNP)), nrow = 1 ) );
 gene1 <- SlicedData$new( matrix( pheno.dex$CpG_ID, nrow = 1 ) );
 cvrt1 <- SlicedData$new( t(pheno.dex[, cov.list]) );
 
@@ -296,17 +294,25 @@ me <- Matrix_eQTL_main(
   snps = snps1,
   gene = gene1,
   cvrt = cvrt1,
-  output_file_name = filename,
+  output_file_name.cis = filename,
   pvOutputThreshold = 1,
   useModel = modelLINEAR,
   errorCovariance = numeric(),
+  snpspos = snp.loc, #cpg.loc,
+  genepos = cpg.loc, #ensg.loc,
+  cisDist = 1e6,
   verbose = TRUE,
-  pvalue.hist = FALSE );
+  pvalue.hist = "qqplot" );
 
 # Pull Matrix eQTL results - t-statistic and p-value
 beta   <- me$all$eqtls$beta;
 tstat  <- me$all$eqtls$statistic;
 pvalue <- me$all$eqtls$pvalue;
+matrix.etl.local.res <- c(beta = beta, t_stat = tstat, p_value = pvalue);
+
+beta   <- me$cis$eqtls$beta;
+tstat  <- me$cis$eqtls$statistic;
+pvalue <- me$cis$eqtls$pvalue;
 matrix.etl.local.res <- c(beta = beta, t_stat = tstat, p_value = pvalue);
 ```
 

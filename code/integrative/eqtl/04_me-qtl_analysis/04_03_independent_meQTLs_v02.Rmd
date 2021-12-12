@@ -315,30 +315,29 @@ write.table(methyl.change.veh.df,
 ```{r include = F, eval = T}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
-methyl.change.dex.fn <- paste0(out.dir.pre, "me-qtl_cis_ind_methyl_change_dex_fdr_005.csv")
+methyl.change.dex.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_methyl_change_dex_fdr_005.csv")
 methyl.change.dex.df <- fread(methyl.change.dex.fn)
 
-methyl.change.veh.fn <- paste0(out.dir.pre, "me-qtl_cis_ind_methyl_change_veh_fdr_005.csv")
+methyl.change.veh.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_methyl_change_veh_fdr_005.csv")
 methyl.change.veh.df <- fread(methyl.change.veh.fn)
 
-methyl.change.df     <- rbind(methyl.change.dex.df, methyl.change.veh.df)
-methyl.change.df[["ref_mean_darina_2"]] <- (2 * methyl.change.df$ref_mean + methyl.change.df$heterozyg_mean) / (2 * 196)
-methyl.change.df[["non_ref_mean_darina_2"]] <- (2 * methyl.change.df$non_ref_mean + methyl.change.df$heterozyg_mean) / (2 * 196)
-methyl.change.df[["methyl_change_darina_2"]] <- methyl.change.df$ref_mean_darina_2 - methyl.change.df$non_ref_mean_darina_2
+methyl.change.dex.df <- left_join(methyl.change.df, ind.meqtl.dex.df)
+methyl.change.veh.df <- left_join(methyl.change.df, ind.meqtl.veh.df)
 
-methyl.change.df <- methyl.change.df[!(methyl.change.df$ref_mean == 0), ]
+methyl.change.df     <- rbind(methyl.change.dex.df , methyl.change.veh.df)
 
 lmem.rslt.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_svs_pcs_rslt.txt'
 lmem.rslt    <- fread(lmem.rslt.fn)
 ind.meqtl.delta.df.2 <- left_join(ind.meqtl.delta.df, lmem.rslt, by = c("CpG_ID" = "PROBE_ID")) %>%
   select(colnames(ind.meqtl.delta.df), "FC")
-colnames(ind.meqtl.delta.df.2)[7] <- "methyl_change"
-ind.meqtl.delta.df.2[["treatment"]] <- "delta"
+colnames(ind.meqtl.delta.df.2)[ncol(ind.meqtl.delta.df.2)] <- "methyl_change"
+# ind.meqtl.delta.df.2[["treatment"]] <- "delta"
 
 methyl.change.df.plt <- rbind(methyl.change.df[, c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr", "treatment", "methyl_change")],
-                              ind.meqtl.delta.df.2)
+                              ind.meqtl.delta.df.2[, c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr", "treatment", "methyl_change")])
 
 methyl.change.df.plt[["meQTL_ID"]] <- paste(methyl.change.df.plt$SNP, methyl.change.df.plt$CpG_ID, sep = "-")
+methyl.change.df.plt$methyl_change <- as.numeric(methyl.change.df.plt$methyl_change)
 # methyl.change.df.plt <- rbind(methyl.change.df[, c("methyl_change", "fdr", "treatment")], 
 #                               ind.meqtl.delta.df.2[, c("methyl_change", "fdr", "treatment")])
 ```
@@ -382,42 +381,12 @@ ggplot(lmem.rslt, aes(x = FC)) +
 
 ## Scatter Plots
 
-```{r include = F, eval = F}
-library(ggplot2)
-
-fdr.thr <- 0.05
-
-# colnames(ind.meqtl.delta.df.2)[7] <- "methyl_change_darina_2"
-
-# methyl.change.df.darina.plt <- rbind(methyl.change.df[, c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr", "treatment", "methyl_change_darina_2")],
-#                               ind.meqtl.delta.df.2)
-
-ggplot(methyl.change.df, aes(x = methyl_change_darina_2, y = -log10(fdr), shape = treatment, color = treatment)) +
-  geom_point(alpha = 1.5, size = 1.2) +
-  scale_x_continuous(labels = scientific) +
-  geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
-  geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
-  # scale_y_continuous(trans = 'log10')+
-  # labs(title = " ", y = "", x = " ") + 
-  theme(legend.position = "bottom", 
-        legend.title = element_blank(),
-        #  panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8)) +
-  xlab("Methylation change") +
-  labs(title = "Scatter Plot, no filters, Darina suggestion")
-```
-
 ```{r out.width = "95%", include = T, eval = T}
 library(ggplot2)
 
 fdr.thr <- 0.05
 
-methyl.change.df.plt <- methyl.change.df.plt[!is.na(methyl.change.df.plt$methyl_change),]
-methyl.change.df.plt.tmp <- methyl.change.df.plt
-
-ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape = treatment, color = treatment)) +
+ggplot(methyl.change.df.plt, aes(x = methyl_change, y = -log10(fdr), shape = treatment, color = treatment)) +
   geom_point(alpha = 1.5, size = 1.2) +
   scale_x_continuous(labels = scientific) +
   geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
@@ -438,11 +407,8 @@ ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape =
 library(ggplot2)
 
 fdr.thr <- 0.05
-mad.thr <- 90
-maf.thr <- 0.2
-
-methyl.change.df.plt <- methyl.change.df.plt[!is.na(methyl.change.df.plt$methyl_change),]
-methyl.change.df.plt.tmp <- methyl.change.df.plt
+mad.thr <- 80
+maf.thr <- 0.1
 
 freq <- fread("/Users/anastasiia_hry/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/freq.afreq")
 # methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID"))
@@ -454,15 +420,17 @@ mad.cpgs.veh <- mad.df[mad.df$perc >= mad.thr & mad.df$treatment == "veh", CpG_I
 mad.cpgs.dex <- mad.df[mad.df$perc >= mad.thr & mad.df$treatment == "dex", CpG_ID]
 mad.cpgs.delta <- intersect(mad.cpgs.veh, mad.cpgs.dex) 
 
-methyl.change.df.plt.tmp <- data.frame(rbind(
+# methyl.change.df.plt.tmp <- methyl.change.df[treatment == "dex" & CpG_ID %in% mad.cpgs.dex]
+
+methyl.change.df.plt.2 <- data.frame(rbind(
   methyl.change.df.plt[treatment == "veh" & CpG_ID %in% mad.cpgs.veh],
   methyl.change.df.plt[treatment == "dex" & CpG_ID %in% mad.cpgs.dex],
   methyl.change.df.plt[treatment == "delta" & CpG_ID %in% mad.cpgs.delta]))
 
-methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID")) %>% setDT()
-methyl.change.df.plt.tmp <- methyl.change.df.plt.tmp[ALT_FREQS >= maf.thr ]
+methyl.change.df.plt.2 <- left_join(methyl.change.df.plt.2, freq, by = c("SNP" = "ID")) %>% setDT()
+methyl.change.df.plt.2 <- methyl.change.df.plt.2[ALT_FREQS >= maf.thr ]
 
-ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape = treatment, color = treatment)) +
+ggplot(methyl.change.df.plt.2, aes(x = methyl_change, y = -log10(fdr), shape = treatment, color = treatment)) +
   geom_point(alpha = 1.5, size = 1.2) +
   scale_x_continuous(labels = scientific) +
   geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
@@ -477,88 +445,6 @@ ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape =
         axis.title = element_text(size = 8)) +
   xlab("Methylation change")  +
   labs(title = paste0("Scatter Plot: MAD >= ", mad.thr, "% and MAF >= ", maf.thr))
-```
-
-```{r out.width = "95%", include = T, eval = T}
-library(ggplot2)
-
-fdr.thr <- 0.05
-mad.thr <- 98
-maf.thr <- 0.2
-
-methyl.change.df.plt <- methyl.change.df.plt[!is.na(methyl.change.df.plt$methyl_change),]
-methyl.change.df.plt.tmp <- methyl.change.df.plt
-
-# q.obj <- qvalue(meqtl.all.full.df$`p-value`, pi0 = 1)
-
-# methyl.change.df.plt.tmp[["qval"]] <- q.obj$qvalues
-# nrow(methyl.change.df.plt.tmp[qval <= fdr.thr])
-
-freq <- fread("/Users/anastasiia_hry/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/freq.afreq")
-# methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID"))
-# methyl.change.df.plt.tmp <- methyl.change.df.plt.tmp[order(methyl.change.df.plt.tmp$fdr),]
-# methyl.change.df.plt.tmp <- distinct(methyl.change.df.plt.tmp, SNP, .keep_all = T)
-# methyl.change.df.plt.tmp <- distinct(methyl.change.df.plt.tmp, CpG_ID, .keep_all = T)
-
-mad.cpgs.veh <- mad.df[mad.df$perc >= mad.thr & mad.df$treatment == "veh", CpG_ID]
-mad.cpgs.dex <- mad.df[mad.df$perc >= mad.thr & mad.df$treatment == "dex", CpG_ID]
-mad.cpgs.delta <- intersect(mad.cpgs.veh, mad.cpgs.dex) 
-
-methyl.change.df.plt.tmp <- data.frame(rbind(
-  methyl.change.df.plt[treatment == "veh" & CpG_ID %in% mad.cpgs.veh],
-  methyl.change.df.plt[treatment == "dex" & CpG_ID %in% mad.cpgs.dex],
-  methyl.change.df.plt[treatment == "delta" & CpG_ID %in% mad.cpgs.delta]))
-
-methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID")) %>% setDT()
-methyl.change.df.plt.tmp <- methyl.change.df.plt.tmp[ALT_FREQS >= maf.thr ]
-
-ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape = treatment, color = treatment)) +
-  geom_point(alpha = 1.5, size = 1.2) +
-  scale_x_continuous(labels = scientific) +
-  geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
-  geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
-  # scale_y_continuous(trans = 'log10')+
-  # labs(title = " ", y = "", x = " ") + 
-  theme(legend.position = "bottom", 
-        legend.title = element_blank(),
-        #  panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8)) +
-  xlab("Methylation change")  +
-  labs(title = paste0("Scatter Plot: MAD >= ", mad.thr, "% and MAF >= ", maf.thr))
-```
-
-```{r out.width = "95%", include = T, eval = T}
-library(ggplot2)
-
-fdr.thr <- 0.05
-dnam.fdr.thr <- 0.05
-maf.thr <- 0.2
-
-methyl.change.df.plt <- methyl.change.df.plt[!is.na(methyl.change.df.plt$methyl_change),]
-methyl.change.df.plt.tmp <- methyl.change.df.plt
-
-mad.cpgs <- lmem.rslt[abs(lmem.rslt$FDR) <= dnam.fdr.thr, PROBE_ID]
-methyl.change.df.plt.tmp <- methyl.change.df.plt[CpG_ID %in% mad.cpgs]
-methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID"))
-methyl.change.df.plt.tmp <- methyl.change.df.plt.tmp[ALT_FREQS >= maf.thr ]
-
-ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape = treatment, color = treatment)) +
-  geom_point(alpha = 1.5, size = 1.2) +
-  scale_x_continuous(labels = scientific) +
-  geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
-  geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
-  # scale_y_continuous(trans = 'log10')+
-  # labs(title = " ", y = "", x = " ") + 
-  theme(legend.position = "bottom", 
-        legend.title = element_blank(),
-        #  panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8)) +
-  xlab("Methylation change")  +
-  labs(title = paste0("Scatter Plot, DNAm FDR <= ", dnam.fdr.thr, " and MAF >= ", maf.thr))
 ```
 
 ## Boxplots for significant meQTLs

@@ -296,7 +296,7 @@ me <- Matrix_eQTL_main(
   cvrt = cvrt1,
   output_file_name.cis = filename,
   pvOutputThreshold = 1,
-  useModel = modelLINEAR,
+  useModel = modelANOVA,
   errorCovariance = numeric(),
   snpspos = snp.loc, #cpg.loc,
   genepos = cpg.loc, #ensg.loc,

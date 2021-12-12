@@ -101,7 +101,7 @@ The false discovery rate (FDR) of 5% was chosen.
 
 ```{sh, include = F, eval = F}
 meqtl_rslt_dir="~/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL"
-awk 'NR == 1 || $6 < 0.05' me-qtl_cis_result_dex.csv > me-qtl_cis_result_dex_fdr_005.csv
+awk 'NR == 1 || $6 < 0.05' me-qtl_cis_result_delta.csv > me-qtl_cis_result_delta_fdr_005.csv
 ```
 
 ```{r child = c('04_01_me-qtl_analysis.Rmd', '04_03_independent_meQTLs_v02.Rmd')}

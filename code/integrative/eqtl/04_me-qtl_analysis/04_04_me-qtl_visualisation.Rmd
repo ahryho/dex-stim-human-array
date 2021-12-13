@@ -1,0 +1,228 @@
+---
+title: "cis-meQTLs Analysis"
+subtitle: "Dexamethasone-Stimulated Human Array Project"
+author: 
+  - name: Anastasiia Hryhorzhevska
+    email: anastasiia_hry@psych.mpg.de
+    url: https://github.com/ahryho
+    affiliation: Max Planck Institute of Psychiatry
+    affiliation_url: https://www.psych.mpg.de/2664393/medizinische-genomforschung
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    df_print: paged
+    css: style.css
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=FALSE}
+options(digits = 4, width = 100, stringsAsFactors = T)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 100),
+                      tidy=TRUE,
+                      fig.pos = "H",
+                      dpi = 600,
+                      warning = FALSE, 
+                      message = FALSE, 
+                      cache = TRUE, 
+                      cache.lazy = FALSE)
+
+# define DT as the standard printing method for data.frame
+library(knitr)
+library(DT)
+knit_print.data.frame <- function(x, ...) {
+  knit_print(DT::datatable(x,
+                           filter="top",
+                           rownames = FALSE,
+                           extensions = "FixedColumns",
+                           options = list(
+                             scrollX = TRUE,
+                             pageLength = 5
+                             
+                           )), ...)
+}
+
+registerS3method("knit_print", "data.frame", knit_print.data.frame)
+```
+
+***
+# __Significant meQTLs. Visualisation__
+***
+
+```{r, include = F, eval = T}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(scales)
+library(factoextra)
+library(viridis)
+library(knitr)
+
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv")
+
+col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
+
+ind.meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
+ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
+ind.meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
+```
+
+```{r, include = F, eval = T}
+meqtl.all.full.df <- rbind(ind.meqtl.dex.df[, treatment := "dex"],
+                           ind.meqtl.veh.df[, treatment := "veh"],
+                           ind.meqtl.delta.df[, treatment := "delta"])
+
+meqtl.all.full.df <- meqtl.all.full.df[!is.na(meqtl.all.full.df$fdr),]
+meqtl.all.full.df[["meQTL_ID"]] <- paste(meqtl.all.full.df$SNP, meqtl.all.full.df$CpG_ID, sep = "-")
+```
+
+```{r, include=F, eval=T}
+eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+
+snp.df.fn <- paste0(eqtm.in.pre, "snp_mtrx.csv")
+snp.df    <- fread(snp.df.fn)
+
+methyl.beta.df.fn   <- paste0(eqtm.in.pre, "methyl_beta_mtrx_dex.csv")
+methyl.beta.dex.df  <- fread(methyl.beta.df.fn) 
+
+methyl.beta.df.fn   <- paste0(eqtm.in.pre, "methyl_beta_mtrx_veh.csv")
+methyl.beta.veh.df  <- fread(methyl.beta.df.fn) 
+
+all(colnames(snp.df)[-1] == colnames(methyl.beta.dex.df)[-1])
+all(colnames(snp.df)[-1] == colnames(methyl.beta.veh.df)[-1])
+```
+
+<!-- ## Scatter plot and Boxplots for significant meQTLs -->
+
+```{r func-getbetavalues, include = F, eval = T}
+GetBetValuesDF <- function(methyl.beta.df, snp.df, selected.qtl, treatment){
+  beta.values.df    <- methyl.beta.df[CpG_ID %in% selected.qtl$CpG_ID, -1]
+  beta.values.df    <- rbind(beta.values.df, snp.df[SNP == selected.qtl$SNP, -1])
+  beta.values.df    <- data.frame(t(beta.values.df)) %>% setDT()
+  colnames(beta.values.df) <- c("CpG", "SNP")
+  beta.values.df$SNP <- as.factor(beta.values.df$SNP)
+  beta.values.df[SNP == 0, SNP := "AA"]; beta.values.df[SNP == 1, SNP := "AB"]; beta.values.df[SNP == 2, SNP := "BB"] 
+  
+  beta.values.df$treatment <- treatment
+  beta.values.df
+}
+```
+
+```{r func-plot-scatterplot, include = F, eval = T}
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+
+GetScatterPlot <- function(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05){
+  ggplot(meqtl.all.full.df, aes(x = beta, y = -log10(fdr), shape = treatment, color = treatment)) +
+    geom_point(alpha = 1.5, size = 1.2) +
+    geom_label_repel(data = selected.meqtl,
+                     aes(x = beta,
+                         y = -log10(fdr),
+                         label = meQTL_ID),
+                     fontface = 'bold',
+                     box.padding = unit(0.35, "lines"),
+                     point.padding = unit(0.5, "lines"),
+                     segment.color = 'grey50',
+                     nudge_x = 0.05, nudge_y = 10, 
+                     size = 3) +
+    scale_x_continuous(labels = scientific) +
+    geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
+    geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
+    # scale_y_continuous(trans = trans_reverser('log10')) +
+    # labs(title = " ", y = "", x = " ") + 
+    theme(legend.position = "bottom", 
+          legend.title = element_blank(),
+          #  panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 10),
+          axis.title = element_text(size = 8)) +
+    labs( x = "Effect size (FC), MatrixEQTL", 
+          title = paste0("Scatter plot for the independent significant at FDR <= ", fdr.thr, " meQTLs")) +
+    scale_colour_manual(values = cbPalette)
+}
+```
+
+```{r func-plot-boxplot, include = F, eval = T}
+cbPalette <- c(  "#009E73", "#E69F00", scale_colour_manual(values = cbPalette), "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+
+GetBoxPlot <- function(beta.values.df, selected.meqtl, fdr.thr = 0.05){
+  beta.values.df %>%
+    ggplot(aes(y = CpG, x = SNP, fill = treatment)) +
+      geom_boxplot(width = 0.2, color = "black") +
+      # scale_fill_viridis(discrete = TRUE, alpha = 0.5) +
+      scale_x_discrete(labels = snp.ind.cnt.df$label) +
+      theme( panel.background = element_blank(),
+             plot.title = element_text(size = 10),
+             axis.title = element_text(size = 10),
+             axis.text.x = element_text(angle = 0, hjust = 0.5), 
+             legend.position = "bottom", 
+             legend.title = element_blank()) +
+      labs(y = paste0(selected.meqtl$CpG_ID, ", DNAm beta value"), 
+           x = selected.meqtl$SNP,
+           title = paste0("Effect size = ", signif(selected.meqtl$beta, 4), " and FDR = ", signif(selected.meqtl$fdr, 2))) +
+    scale_fill_manual(values = cbPalette)
+}
+```
+
+## Delta with minimum FDR
+
+```{r include = T, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+selected.meqtl <- meqtl.all.full.df[treatment == "delta"][fdr == min(fdr)] # beta == max(beta)
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05)
+```
+
+```{r include = F, eval = T}
+beta.values.dex.df <- GetBetValuesDF(methyl.beta.dex.df, snp.df, selected.meqtl, "dex")
+beta.values.veh.df <- GetBetValuesDF(methyl.beta.veh.df, snp.df, selected.meqtl, "veh")
+beta.values.df     <- rbind(beta.values.dex.df, beta.values.veh.df)
+
+snp.ind.cnt.df <- beta.values.dex.df %>% count(SNP) # beta.values.df[ , .(count = count(SNP)), by = .(SNP, treatment)]
+snp.ind.cnt.df[, label := paste0(SNP, " (n = ", n, ")")]
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetBoxPlot(beta.values.df, selected.meqtl)
+```
+
+## Delta with maximum absolute FC
+
+```{r include = T, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+selected.meqtl <- meqtl.all.full.df[treatment == "delta"][beta == max(abs(beta))] # beta == max(beta)
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05)
+```
+
+```{r include = F, eval = T}
+beta.values.dex.df <- GetBetValuesDF(methyl.beta.dex.df, snp.df, selected.meqtl, "dex")
+beta.values.veh.df <- GetBetValuesDF(methyl.beta.veh.df, snp.df, selected.meqtl, "veh")
+beta.values.df     <- rbind(beta.values.dex.df, beta.values.veh.df)
+
+snp.ind.cnt.df <- beta.values.dex.df %>% count(SNP) # beta.values.df[ , .(count = count(SNP)), by = .(SNP, treatment)]
+snp.ind.cnt.df[, label := paste0(SNP, " (n = ", n, ")")]
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetBoxPlot(beta.values.df, selected.meqtl)
+```
+

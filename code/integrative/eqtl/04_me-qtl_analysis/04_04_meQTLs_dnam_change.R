@@ -51,7 +51,7 @@ snp.df    <- fread(snp.df.fn)
 # Dexamethasone
 ## ---------
 
-treatment <- "dex"
+treatment <- "delta"
 
 snp.lst.fn   <- paste0(out.dir.pre, "ind_me-qtl_cis/", treatment, "/me-qtl_cis_ind_", treatment, "_valid_snps.txt")
 snp.lst      <- fread(snp.lst.fn, col.names = "SNP")

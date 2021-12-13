@@ -56,6 +56,7 @@ library(scales)
 library(corrplot)
 library(factoextra)
 library(viridis)
+library(knitr)
 ```
 
 # Introduction
@@ -104,7 +105,7 @@ meqtl_rslt_dir="~/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrativ
 awk 'NR == 1 || $6 < 0.05' me-qtl_cis_result_delta.csv > me-qtl_cis_result_delta_fdr_005.csv
 ```
 
-```{r child = c('04_01_me-qtl_analysis.Rmd', '04_03_independent_meQTLs_v02.Rmd')}
+```{r child = c('04_01_me-qtl_analysis.Rmd', '04_03_independent_meQTLs_v02.Rmd', '04_04_me-qtl_visualisation')}
 # child = c('04_03_independent_meQTLs.Rmd')
 # child = c('04_01_me-qtl_analysis.Rmd', '04_02_independent_meQTLs.Rmd')
 ```

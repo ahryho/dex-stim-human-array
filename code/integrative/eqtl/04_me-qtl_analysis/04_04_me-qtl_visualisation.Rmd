@@ -118,10 +118,13 @@ GetBetValuesDF <- function(methyl.beta.df, snp.df, selected.qtl, treatment){
 ```
 
 ```{r func-plot-scatterplot, include = F, eval = T}
-cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
-
 GetScatterPlot <- function(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05){
+  
+  cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+  
   ggplot(meqtl.all.full.df, aes(x = beta, y = -log10(fdr), shape = treatment, color = treatment)) +
+    geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
+    geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
     geom_point(alpha = 1.5, size = 1.2) +
     geom_label_repel(data = selected.meqtl,
                      aes(x = beta,
@@ -134,8 +137,6 @@ GetScatterPlot <- function(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05){
                      nudge_x = 0.05, nudge_y = 10, 
                      size = 3) +
     scale_x_continuous(labels = scientific) +
-    geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
-    geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
     # scale_y_continuous(trans = trans_reverser('log10')) +
     # labs(title = " ", y = "", x = " ") + 
     theme(legend.position = "bottom", 
@@ -151,9 +152,10 @@ GetScatterPlot <- function(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05){
 ```
 
 ```{r func-plot-boxplot, include = F, eval = T}
-cbPalette <- c(  "#009E73", "#E69F00", scale_colour_manual(values = cbPalette), "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
-
 GetBoxPlot <- function(beta.values.df, selected.meqtl, fdr.thr = 0.05){
+  
+  cbPalette <- c(  "#009E73", "#E69F00", scale_colour_manual(values = cbPalette), "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+  
   beta.values.df %>%
     ggplot(aes(y = CpG, x = SNP, fill = treatment)) +
       geom_boxplot(width = 0.2, color = "black") +
@@ -199,11 +201,11 @@ snp.ind.cnt.df[, label := paste0(SNP, " (n = ", n, ")")]
 GetBoxPlot(beta.values.df, selected.meqtl)
 ```
 
-## Delta with maximum absolute FC
+## Delta with maximum positive FC
 
 ```{r include = T, eval = T}
 # summary(meqtl.all.full.df[treatment == "dex"])
-selected.meqtl <- meqtl.all.full.df[treatment == "delta"][beta == max(abs(beta))] # beta == max(beta)
+selected.meqtl <- meqtl.all.full.df[treatment == "delta"][beta == max(beta)] # beta == max(beta)
 kable(selected.meqtl %>% 
         select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
         mutate_if(is.numeric, funs(as.character(signif(., 3)))))
@@ -226,3 +228,145 @@ snp.ind.cnt.df[, label := paste0(SNP, " (n = ", n, ")")]
 GetBoxPlot(beta.values.df, selected.meqtl)
 ```
 
+## Delta with maximum negative FC
+
+```{r include = T, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+selected.meqtl <- meqtl.all.full.df[treatment == "delta"][beta == min(beta)] # beta == max(beta)
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05)
+```
+
+```{r include = F, eval = T}
+beta.values.dex.df <- GetBetValuesDF(methyl.beta.dex.df, snp.df, selected.meqtl, "dex")
+beta.values.veh.df <- GetBetValuesDF(methyl.beta.veh.df, snp.df, selected.meqtl, "veh")
+beta.values.df     <- rbind(beta.values.dex.df, beta.values.veh.df)
+
+snp.ind.cnt.df <- beta.values.dex.df %>% count(SNP) # beta.values.df[ , .(count = count(SNP)), by = .(SNP, treatment)]
+snp.ind.cnt.df[, label := paste0(SNP, " (n = ", n, ")")]
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetBoxPlot(beta.values.df, selected.meqtl)
+```
+
+## Delta with minimum absolute FC
+
+```{r include = T, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+selected.meqtl <- meqtl.all.full.df[treatment == "delta"][abs(beta) == min(abs(beta))] # beta == max(beta)
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05)
+```
+
+```{r include = F, eval = T}
+beta.values.dex.df <- GetBetValuesDF(methyl.beta.dex.df, snp.df, selected.meqtl, "dex")
+beta.values.veh.df <- GetBetValuesDF(methyl.beta.veh.df, snp.df, selected.meqtl, "veh")
+beta.values.df     <- rbind(beta.values.dex.df, beta.values.veh.df)
+
+snp.ind.cnt.df <- beta.values.dex.df %>% count(SNP) # beta.values.df[ , .(count = count(SNP)), by = .(SNP, treatment)]
+snp.ind.cnt.df[, label := paste0(SNP, " (n = ", n, ")")]
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetBoxPlot(beta.values.df, selected.meqtl)
+```
+
+## Only delta, but not VEH or DEX, min FDR
+
+```{r include = T, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+only.delta.meqtls <- setdiff(meqtl.all.full.df[treatment == "delta", meQTL_ID], 
+                             union(meqtl.all.full.df[treatment == "dex", meQTL_ID],
+                                   meqtl.all.full.df[treatment == "veh", meQTL_ID]))
+selected.meqtl <- meqtl.all.full.df[meQTL_ID %in% only.delta.meqtls][fdr == min(fdr)] # beta == max(beta)
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05)
+```
+
+```{r include = F, eval = T}
+beta.values.dex.df <- GetBetValuesDF(methyl.beta.dex.df, snp.df, selected.meqtl, "dex")
+beta.values.veh.df <- GetBetValuesDF(methyl.beta.veh.df, snp.df, selected.meqtl, "veh")
+beta.values.df     <- rbind(beta.values.dex.df, beta.values.veh.df)
+
+snp.ind.cnt.df <- beta.values.dex.df %>% count(SNP) # beta.values.df[ , .(count = count(SNP)), by = .(SNP, treatment)]
+snp.ind.cnt.df[, label := paste0(SNP, " (n = ", n, ")")]
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetBoxPlot(beta.values.df, selected.meqtl)
+```
+
+## Only DEX, but not DELTA or VEH, min FDR
+
+```{r include = T, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+only.dex.meqtls <- setdiff(meqtl.all.full.df[treatment == "dex", meQTL_ID], 
+                             union(meqtl.all.full.df[treatment == "delta", meQTL_ID],
+                                   meqtl.all.full.df[treatment == "veh", meQTL_ID]))
+selected.meqtl <- meqtl.all.full.df[meQTL_ID %in% only.dex.meqtls][fdr == min(fdr)] # beta == max(beta)
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05)
+```
+
+```{r include = F, eval = T}
+beta.values.dex.df <- GetBetValuesDF(methyl.beta.dex.df, snp.df, selected.meqtl, "dex")
+beta.values.veh.df <- GetBetValuesDF(methyl.beta.veh.df, snp.df, selected.meqtl, "veh")
+beta.values.df     <- rbind(beta.values.dex.df, beta.values.veh.df)
+
+snp.ind.cnt.df <- beta.values.dex.df %>% count(SNP) # beta.values.df[ , .(count = count(SNP)), by = .(SNP, treatment)]
+snp.ind.cnt.df[, label := paste0(SNP, " (n = ", n, ")")]
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetBoxPlot(beta.values.df, selected.meqtl)
+```
+
+## Only VEH, but not DEX or DELTA, min FDR
+
+```{r include = T, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+only.veh.meqtls <- setdiff(meqtl.all.full.df[treatment == "veh", meQTL_ID], 
+                           union(meqtl.all.full.df[treatment == "delta", meQTL_ID],
+                                 meqtl.all.full.df[treatment == "dex", meQTL_ID]))
+selected.meqtl <- meqtl.all.full.df[meQTL_ID %in% only.veh.meqtls][fdr == min(fdr)] # beta == max(beta)
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05)
+```
+
+```{r include = F, eval = T}
+beta.values.dex.df <- GetBetValuesDF(methyl.beta.dex.df, snp.df, selected.meqtl, "dex")
+beta.values.veh.df <- GetBetValuesDF(methyl.beta.veh.df, snp.df, selected.meqtl, "veh")
+beta.values.df     <- rbind(beta.values.dex.df, beta.values.veh.df)
+
+snp.ind.cnt.df <- beta.values.dex.df %>% count(SNP) # beta.values.df[ , .(count = count(SNP)), by = .(SNP, treatment)]
+snp.ind.cnt.df[, label := paste0(SNP, " (n = ", n, ")")]
+```
+
+```{r out.width = "95%", include = T, eval = T}
+GetBoxPlot(beta.values.df, selected.meqtl)
+```

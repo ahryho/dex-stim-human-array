@@ -8,7 +8,7 @@ The number of independent SNPs per cis-region was identified by LD pruning and c
 
 __Q:__ _Check the numbers and overlaps for all 3 runs (dex, veh, delta)_
 
-```{sh include = T, eval = F}
+```{sh include = F, eval = F}
 snp_dir=/binder/mgp/datasets/2020_DexStim_Array_Human/snps
 out_dir=/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/ind_me-qtl_cis
 
@@ -28,58 +28,31 @@ awk 'NR!=1 {print $3}' ind_me-qtl_cis/${treatment}/me-qtl_cis_ind_${treatment}.c
 
 ```{r, include = F, eval = T}
 library(data.table)
-src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-# out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/geno_imputed_qc_ld/"
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
-cpg.loc.fn  <- paste0(src.dir.pre, "cpg_locations.csv")
-snp.loc.fn  <- paste0(src.dir.pre, "snp_locations.csv")
-ensg.loc.fn <- paste0(src.dir.pre, "ensg_locations.csv")
-
-cpg.loc  <- fread(cpg.loc.fn)
-snp.loc  <- fread(snp.loc.fn)
-# ensg.loc <- fread(ensg.loc.fn)
-
-# snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/final_imputed_qc_snps/mtrx/dex_geno_imputed_ld.bim")
-snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/Dex_genoData_SNPs.bim")
-colnames(snp.bim) <- c("chr", "SNP", "pos_morgans", "pos", "snp_allele1", "snp_allele2")
-
-meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_result_dex_fdr_005.csv")
-meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_result_veh_fdr_005.csv")
-meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_result_delta_fdr_005.csv")
-# meqtl.delta.fn <- paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/geno_imputed_qc_ld/", "me-qtl_cis_result_delta.csv")
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv")
 
 col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
 
-meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
-meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
-meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
+ind.meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
+ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
+ind.meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
 ```
 
-```{r eval = T, include = F}
+```{r, include = F, eval = T}
+meqtl.all.full.df <- rbind(ind.meqtl.dex.df[, treatment := "dex"],
+                           ind.meqtl.veh.df[, treatment := "veh"],
+                           ind.meqtl.delta.df[, treatment := "delta"])
 
-### Independent SNPs
-library(dplyr)
+meqtl.all.full.df <- meqtl.all.full.df[!is.na(meqtl.all.full.df$fdr),]
+meqtl.all.full.df[["meQTL_ID"]] <- paste(meqtl.all.full.df$SNP, meqtl.all.full.df$CpG_ID, sep = "-")
+meqtl.all.full.df <- setDT(meqtl.all.full.df)
+```
 
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/ind_me-qtl_cis/"
-
-treatment <- "delta"
-
-snp.delta.fn       <- paste0(out.dir.pre, treatment, "/me-qtl_cis_ind_", treatment, "_valid_snps.txt")
-snp.delta.lst      <- fread(snp.delta.fn, col.names = "SNP")
-ind.meqtl.delta.df <- left_join(snp.delta.lst, meqtl.delta.df)
-
-treatment <- "dex"
-
-snp.dex.fn       <- paste0(out.dir.pre, treatment, "/me-qtl_cis_ind_", treatment, "_valid_snps.txt")
-snp.dex.lst      <- fread(snp.dex.fn, col.names = "SNP")
-ind.meqtl.dex.df <- left_join(snp.dex.lst, meqtl.dex.df)
-
-treatment <- "veh"
-
-snp.veh.fn       <- paste0(out.dir.pre, treatment, "/me-qtl_cis_ind_", treatment, "_valid_snps.txt")
-snp.veh.lst      <- fread(snp.veh.fn, col.names = "SNP")
-ind.meqtl.veh.df <- left_join(snp.veh.lst, meqtl.veh.df)
+```{r include = F, eval = T}
+freq <- fread("/Users/anastasiia_hry/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/freq.afreq")
 ```
 
 ## Significant Hits, FDR < 0.05
@@ -101,13 +74,15 @@ colnames(sign.hits.df) <- c("delta", "dex", "veh")
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
+
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+
 sign.hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment"), value.name = "cnt") %>%
   ggplot(aes(y = cnt, x = Var2, fill = as.factor(as.numeric(Var2)))) +
-   # geom_violin(width = 0.4) +
     geom_col() +
-        geom_text(aes(label = comma(cnt, accuracy = 1L), y = cnt), 
-              stat = "identity", 
-              vjust = -0.2, size = 2.5) + 
+    geom_text(aes(label = comma(cnt, accuracy = 1L), y = cnt), 
+                  stat = "identity", 
+                  vjust = -0.2, size = 2.5) + 
     scale_y_continuous(labels = scientific) +
     # scale_fill_viridis(discrete = TRUE, alpha = 0.9, option = "C") +
     labs(title = " ", y = "Count", x = " ") + 
@@ -118,17 +93,40 @@ sign.hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment")
           panel.background = element_blank(),
           plot.title = element_text(size = 10),
           axis.title = element_text(size = 8),
-          axis.title.x = element_blank())
+          axis.title.x = element_blank()) +
+  scale_fill_manual(values = cbPalette)
 ```
 
 ## Upset plots{.tabset .tabset-fade .tabset-pills}
+
+### meQTL level
+  
+```{r out.width = "95%", include = T, eval = T}
+library(UpSetR)
+
+meqtls.meqtls <- list(delta = meqtl.all.full.df[treatment == "delta", meQTL_ID], 
+                      dex = meqtl.all.full.df[treatment == "dex", meQTL_ID], 
+                      veh = meqtl.all.full.df[treatment == "veh", meQTL_ID])
+
+upset(fromList(meqtls.meqtls), 
+      sets = c("delta", "dex", "veh"),
+      nsets = 3, 
+      nintersects = 20, 
+      mainbar.y.label = "Number of intersections, SNP", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq")
+```
 
 ### SNP level
   
 ```{r out.width = "95%", include = T, eval = T}
 library(UpSetR)
 
-meqtls.snps <- list(delta = ind.meqtl.delta.df$SNP, dex = ind.meqtl.dex.df$SNP, veh = ind.meqtl.veh.df$SNP)
+meqtls.snps <- list(delta = ind.meqtl.delta.df$SNP, 
+                    dex = ind.meqtl.dex.df$SNP, 
+                    veh = ind.meqtl.veh.df$SNP)
 
 upset(fromList(meqtls.snps), 
       sets = c("delta", "dex", "veh"),
@@ -137,7 +135,7 @@ upset(fromList(meqtls.snps),
       mainbar.y.label = "Number of intersections, SNP", 
       text.scale = 1, 
       keep.order = T,
-      sets.bar.color = c(2, 3, 4), 
+      sets.bar.color = c("#0072B2", "#009E73", "#E69F00"), 
       order.by = "freq")
 ```
 
@@ -146,7 +144,9 @@ upset(fromList(meqtls.snps),
 ```{r out.width = "95%", include = T, eval = T}
 library(UpSetR)
 
-meqtls.cpg <- list(delta = ind.meqtl.delta.df$CpG_ID, dex = ind.meqtl.dex.df$CpG_ID, veh = ind.meqtl.veh.df$CpG_ID)
+meqtls.cpg <- list(delta = ind.meqtl.delta.df$CpG_ID, 
+                   dex = ind.meqtl.dex.df$CpG_ID, 
+                   veh = ind.meqtl.veh.df$CpG_ID)
 
 upset(fromList(meqtls.cpg), 
       sets = c("delta", "dex", "veh"),
@@ -155,60 +155,84 @@ upset(fromList(meqtls.cpg),
       mainbar.y.label = "Number of intersections, CpG", 
       text.scale = 1, 
       keep.order = T,
-      sets.bar.color = c(2, 3, 4), 
+      sets.bar.color = c("#0072B2", "#009E73", "#E69F00"), 
       order.by = "freq",
       )
 ```
 
 ## Scatter plot
 
-```{r, include = F, eval = T}
-meqtl.all.full.df <- rbind(ind.meqtl.dex.df[, treatment := "dex"],
-                           ind.meqtl.veh.df[, treatment := "veh"],
-                           ind.meqtl.delta.df[, treatment := "delta"])
+```{r func-scatterplot, include = F, eval = T}
+GetScatterPlot2 <- function(df, selected.meqtl = NULL, fdr.thr = 0.05, plot.title = NULL){
+  
+  cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+  
+  ggplot(df, aes(x = beta, y = -log10(fdr), shape = treatment, color = treatment)) +
+    geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
+    geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
+    geom_point(alpha = 1.5, size = 1.2) +
+    scale_x_continuous(labels = scientific) +
+    theme(legend.position = "bottom", 
+          legend.title = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 10),
+          axis.title = element_text(size = 8)) +
+    labs( x = "Effect size (FC)", 
+          title = plot.title) +
+    scale_colour_manual(values = cbPalette)
+}
 
-meqtl.all.full.df <- meqtl.all.full.df[!is.na(meqtl.all.full.df$fdr),]
+GetScatterPlot3 <- function(df, selected.meqtl = NULL, fdr.thr = 0.05, plot.title = NULL){
+  
+  cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+  
+  ggplot(df, aes(x = methyl_change, y = -log10(fdr), shape = treatment, color = treatment)) +
+    geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
+    geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
+    geom_point(alpha = 1.5, size = 1.2) +
+    scale_x_continuous(labels = scientific) +
+    theme(legend.position = "bottom", 
+          legend.title = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 10),
+          axis.title = element_text(size = 8)) +
+    labs( x = "Effect size (FC)", 
+          title = plot.title) +
+    scale_colour_manual(values = cbPalette)
+}
+```
+
+```{r out.width = "95%", include = T, eval = T}
+fdr.thr <- 0.05
+plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " meQTLs.",
+                     "\nResult of MatrixEQTL")
+GetScatterPlot2(meqtl.all.full.df, plot.title = plot.title)
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
 fdr.thr <- 0.05
 
-ggplot(meqtl.all.full.df, aes(x = beta, y = -log10(fdr), shape = treatment, color = treatment)) +
-  geom_point(alpha = 1.5, size = 1.2) +
-  scale_x_continuous(labels = scientific) +
-  geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
-  geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
-  # scale_y_continuous(trans = 'log10')+
-  # labs(title = " ", y = "", x = " ") + 
-  theme(legend.position = "bottom", 
-        legend.title = element_blank(),
-        #  panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8)) +
-        xlab("Effect size, MatrixEQTL")
-```
+plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " meQTLs.",
+                     "\nResult of MatrixEQTL")
 
-```{r out.width = "95%", include = T, eval = T}
-fdr.thr <- 0.05
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
 
 ggplot(meqtl.all.full.df, aes(x = `t-stat`, y = -log10(fdr), shape = treatment, color = treatment)) +
   geom_point(alpha = 1.5, size = 1.2) +
   scale_x_continuous(labels = scientific) +
   geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
   geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
-  # scale_y_continuous(trans = 'log10')+
-  # labs(title = " ", y = "", x = " ") + 
   theme(legend.position = "bottom", 
         legend.title = element_blank(),
-        #  panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 10),
         axis.title = element_text(size = 8)) +
-        xlab("t-stat, MatrixEQTL")
+  labs(x = "t-stat, MatrixEQTL",
+       title = plot.title) +
+  scale_colour_manual(values = cbPalette)
 ```
 
-# __Mean methylation level within an allele__
+# __Fold Change. Manual Calculation__
 
 ## Methodology 
 
@@ -235,119 +259,47 @@ For **delta**:
 Simply calculate the change of beta via beta value of dex - veh
 
 
-## Allele Frequencies
+<!-- ## Allele Frequencies -->
 
-Allele frequencies for each SNP were computed using PLINK and SNPs with minor allele frequencies < 0.2 were excluded
+<!-- Allele frequencies for each SNP were computed using PLINK and SNPs with minor allele frequencies < 0.2 were excluded -->
 
 
 ## CpGs with low variability
 
-To eliminate CpGs with low variability across patients, we kept sites with a median absolute deviation (MAD) higher than 0.1.
+<!-- To eliminate CpGs with low variability across patients, we kept sites with a median absolute deviation (MAD) higher than 0.9. -->
 
-```{r include = F, eval = F}
-GetMethylChange <- function(snp, meqtl.df, methyl.beta.df, treatment = "dex"){
-   snp.sub.df       <- snp.df[SNP == snp,]
-   meqtl.snp.cpg.id <- meqtl.df[SNP == snp.sub.df$SNP, ]
-   
-   sample.id   <- colnames(snp.sub.df)[snp.sub.df == 0]
-   homozyg.ref <- methyl.beta.df[rownames(methyl.beta.df) %in% meqtl.snp.cpg.id$CpG_ID, .(ref_mean = rowMeans(.SD)), .SDcols = sample.id]
-   
-   sample.id       <- colnames(snp.sub.df)[snp.sub.df == 2]
-   homozyg.non.ref <- methyl.beta.df[rownames(methyl.beta.df) %in% meqtl.snp.cpg.id$CpG_ID, .(non_ref_mean = rowMeans(.SD)), .SDcols = sample.id]
-   
-   sample.id <- colnames(snp.sub.df)[snp.sub.df == 1]
-   heterozyg <- methyl.beta.df[rownames(methyl.beta.df) %in% meqtl.snp.cpg.id$CpG_ID, .(heterozyg_mean = rowMeans(.SD)), .SDcols = sample.id]
-   
-   res <- cbind(meqtl.snp.cpg.id, heterozyg, homozyg.ref, homozyg.non.ref)
-   res[, methyl_change := ref_mean - non_ref_mean]
-   res[, treatment := treatment]
-}
-```
-
-```{r include = F, eval = F}
-eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-eqtm.in.pre  <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
-out.dir.pre  <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
-
-snp.df.fn <- paste0(eqtm.in.pre, "snp_mtrx.csv")
-snp.df    <- fread(snp.df.fn)
-
-treatment <- "dex"
-
-snp.lst.fn   <- paste0(out.dir.pre, "ind_me-qtl_cis/", treatment, "/me-qtl_cis_ind_", treatment, "_valid_snps.txt")
-snp.lst      <- fread(snp.lst.fn, col.names = "SNP")
-
-methyl.beta.df.fn <- paste0(eqtm.in.pre, "methyl_beta_mtrx_", treatment, ".csv")
-methyl.beta.df    <- fread(methyl.beta.df.fn) 
-rownames(methyl.beta.df) <- methyl.beta.df$CpG_ID
-
-meqtl.fn  <- paste0(out.dir.pre, "me-qtl_cis_result_", treatment, "_fdr_005.csv")
-col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
-meqtl.df  <- fread(meqtl.fn, col.names = col.names)
-
-methyl.change.dex.df <- do.call("rbind", apply(snp.lst, 1, GetMethylChange, meqtl.df, methyl.beta.df, treatment))
-
-write.table(methyl.change.dex.df, file = paste0(out.dir.pre, "me-qtl_cis_ind_methyl_change_", treatment, "_fdr_005.csv"), row.names = F, quote = F, sep = "\t", col.names = T, append = F)
-```
-
-```{r include = F, eval = F}
-treatment <- "veh"
-
-snp.lst.fn   <- paste0(out.dir.pre, "ind_me-qtl_cis/", treatment, "/me-qtl_cis_ind_", treatment, "_valid_snps.txt")
-snp.lst      <- fread(snp.lst.fn, col.names = "SNP")
-
-methyl.beta.df.fn <- paste0(eqtm.in.pre, "methyl_beta_mtrx_", treatment, ".csv")
-methyl.beta.df    <- fread(methyl.beta.df.fn) 
-rownames(methyl.beta.df) <- methyl.beta.df$CpG_ID
-
-meqtl.fn  <- paste0(out.dir.pre, "me-qtl_cis_result_", treatment, "_fdr_005.csv")
-col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
-meqtl.df  <- fread(meqtl.fn, col.names = col.names)
-
-methyl.change.veh.df <- do.call("rbind", apply(snp.lst, 1, GetMethylChange, meqtl.df, methyl.beta.df, treatment))
-
-write.table(methyl.change.veh.df,
-            file = paste0(out.dir.pre, "me-qtl_cis_ind_methyl_change_", treatment, "_fdr_005.csv"), row.names = F, quote = F, sep = "\t", col.names = T, append = F)
-```
 
 ```{r include = F, eval = T}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
-methyl.change.dex.fn <- paste0(out.dir.pre, "me-qtl_cis_ind_methyl_change_dex_fdr_005.csv")
+methyl.change.dex.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_methyl_change_dex_fdr_005.csv")
 methyl.change.dex.df <- fread(methyl.change.dex.fn)
-methyl.change.dex.df[["treatment"]] <- "dex"
-methyl.change.dex.df[is.na(methyl.change.dex.df$ref_mean), "ref_mean" ] <- 0
-methyl.change.dex.df$methyl_change <- methyl.change.dex.df$ref_mean - methyl.change.dex.df$non_ref_mean
 
-
-methyl.change.veh.fn <- paste0(out.dir.pre, "me-qtl_cis_ind_methyl_change_veh_fdr_005.csv")
+methyl.change.veh.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_methyl_change_veh_fdr_005.csv")
 methyl.change.veh.df <- fread(methyl.change.veh.fn)
-methyl.change.veh.df[["treatment"]] <- "veh"
-methyl.change.veh.df[is.na(methyl.change.veh.df$ref_mean), "ref_mean" ] <- 0
-methyl.change.veh.df$methyl_change <- methyl.change.veh.df$ref_mean - methyl.change.veh.df$non_ref_mean
 
-methyl.change.df     <- rbind(methyl.change.dex.df, methyl.change.veh.df)
+methyl.change.dex.df <- left_join(methyl.change.dex.df, ind.meqtl.dex.df)
+methyl.change.veh.df <- left_join(methyl.change.veh.df, ind.meqtl.veh.df)
+
+methyl.change.df     <- rbind(methyl.change.dex.df , methyl.change.veh.df)
 
 lmem.rslt.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_svs_pcs_rslt.txt'
 lmem.rslt    <- fread(lmem.rslt.fn)
 ind.meqtl.delta.df.2 <- left_join(ind.meqtl.delta.df, lmem.rslt, by = c("CpG_ID" = "PROBE_ID")) %>%
   select(colnames(ind.meqtl.delta.df), "FC")
-colnames(ind.meqtl.delta.df.2)[7] <- "methyl_change"
-ind.meqtl.delta.df.2[["treatment"]] <- "delta"
+colnames(ind.meqtl.delta.df.2)[ncol(ind.meqtl.delta.df.2)] <- "methyl_change"
+# ind.meqtl.delta.df.2[["treatment"]] <- "delta"
 
 methyl.change.df.plt <- rbind(methyl.change.df[, c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr", "treatment", "methyl_change")],
-                              ind.meqtl.delta.df.2)
+                              ind.meqtl.delta.df.2[, c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr", "treatment", "methyl_change")])
 
 methyl.change.df.plt[["meQTL_ID"]] <- paste(methyl.change.df.plt$SNP, methyl.change.df.plt$CpG_ID, sep = "-")
-# methyl.change.df.plt <- rbind(methyl.change.df[, c("methyl_change", "fdr", "treatment")], 
-#                               ind.meqtl.delta.df.2[, c("methyl_change", "fdr", "treatment")])
+methyl.change.df.plt$methyl_change <- as.numeric(methyl.change.df.plt$methyl_change)
+
 ```
+### DNAm Metrics Density Plots {.tabset .tabset-fade .tabset-pills}
 
-## DNAm Metrics Density Plots {.tabset .tabset-fade .tabset-pills}
-
-### MAD Score
+#### MAD Score
 
 ```{r out.width = "95%", include = T, eval = T}
 library(ggplot2)
@@ -358,230 +310,43 @@ ggplot(mad.df, aes(x = MAD, fill = treatment, color = treatment)) +
   geom_density(alpha = 0.2, size = 1) +
   theme(legend.position = "bottom", 
         legend.title = element_blank(),
-        #  panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 10),
         axis.title = element_text(size = 8)) +
-  xlim(0,2) +
-  labs(title = "DNAm MAD Score Density Plot")
-
-```
-
-### FC Score
-
-```{r out.width = "95%", include = T, eval = T}
-library(ggplot2)
-
-ggplot(lmem.rslt, aes(x = FC)) +
-  geom_density(alpha = 1, size = 1) +
-  theme(legend.position = "bottom", 
-        legend.title = element_blank(),
-        #  panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8)) +
-   labs(title = "DNAm FC Score Density Plot")
+  labs(title = "DNAm MAD Score Density Plot. Based on beta-values") +
+  scale_colour_manual(values = cbPalette[2:3])
 
 ```
 
 ## Scatter Plots
 
+
 ```{r out.width = "95%", include = T, eval = T}
-library(ggplot2)
-
 fdr.thr <- 0.05
-
-methyl.change.df.plt <- methyl.change.df.plt[!is.na(methyl.change.df.plt$methyl_change),]
-methyl.change.df.plt.tmp <- methyl.change.df.plt
-
-ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape = treatment, color = treatment)) +
-  geom_point(alpha = 1.5, size = 1.2) +
-  scale_x_continuous(labels = scientific) +
-  geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
-  geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
-  # scale_y_continuous(trans = 'log10')+
-  # labs(title = " ", y = "", x = " ") + 
-  theme(legend.position = "bottom", 
-        legend.title = element_blank(),
-        #  panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8)) +
-  xlab("Methylation change") +
-  labs(title = "Scatter Plot, no filters")
+plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " meQTLs.",
+                     "\nManual calculation. No filters")
+GetScatterPlot3(methyl.change.df.plt, plot.title = plot.title)
 ```
-
 ```{r out.width = "95%", include = T, eval = T}
 library(ggplot2)
 
 fdr.thr <- 0.05
-mad.thr <- 10
-maf.thr <- 0.2
+mad.thr <- 75
+maf.thr <- 0.1
 
-methyl.change.df.plt <- methyl.change.df.plt[!is.na(methyl.change.df.plt$methyl_change),]
-methyl.change.df.plt.tmp <- methyl.change.df.plt
-
-# q.obj <- qvalue(meqtl.all.full.df$`p-value`, pi0 = 1)
-
-# methyl.change.df.plt.tmp[["qval"]] <- q.obj$qvalues
-# nrow(methyl.change.df.plt.tmp[qval <= fdr.thr])
-
-freq <- fread("/Users/anastasiia_hry/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/freq.afreq")
-# methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID"))
-# methyl.change.df.plt.tmp <- methyl.change.df.plt.tmp[order(methyl.change.df.plt.tmp$fdr),]
-# methyl.change.df.plt.tmp <- distinct(methyl.change.df.plt.tmp, SNP, .keep_all = T)
-# methyl.change.df.plt.tmp <- distinct(methyl.change.df.plt.tmp, CpG_ID, .keep_all = T)
-
-mad.cpgs.veh <- mad.df[mad.df$perc <= mad.thr & mad.df$treatment == "veh", CpG_ID]
-mad.cpgs.dex <- mad.df[mad.df$perc <= mad.thr & mad.df$treatment == "dex", CpG_ID]
+mad.cpgs.veh <- mad.df[mad.df$perc >= mad.thr & mad.df$treatment == "veh", CpG_ID]
+mad.cpgs.dex <- mad.df[mad.df$perc >= mad.thr & mad.df$treatment == "dex", CpG_ID]
 mad.cpgs.delta <- intersect(mad.cpgs.veh, mad.cpgs.dex) 
 
-methyl.change.df.plt.tmp <- data.frame(rbind(
+methyl.change.df.plt.filt <- data.frame(rbind(
   methyl.change.df.plt[treatment == "veh" & CpG_ID %in% mad.cpgs.veh],
   methyl.change.df.plt[treatment == "dex" & CpG_ID %in% mad.cpgs.dex],
   methyl.change.df.plt[treatment == "delta" & CpG_ID %in% mad.cpgs.delta]))
 
-methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID")) %>% setDT()
-methyl.change.df.plt.tmp <- methyl.change.df.plt.tmp[ALT_FREQS >= maf.thr ]
+methyl.change.df.plt.filt <- left_join(methyl.change.df.plt.filt, freq, by = c("SNP" = "ID")) %>% setDT()
+methyl.change.df.plt.filt <- methyl.change.df.plt.filt[ALT_FREQS >= maf.thr ]
 
-ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape = treatment, color = treatment)) +
-  geom_point(alpha = 1.5, size = 1.2) +
-  scale_x_continuous(labels = scientific) +
-  geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
-  geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
-  # scale_y_continuous(trans = 'log10')+
-  # labs(title = " ", y = "", x = " ") + 
-  theme(legend.position = "bottom", 
-        legend.title = element_blank(),
-        #  panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8)) +
-  xlab("Methylation change")  +
-  labs(title = paste0("Scatter Plot, MAD >= ", mad.thr, " and MAF >= ", maf.thr))
-```
-```{r out.width = "95%", include = T, eval = T}
-library(ggplot2)
-
-fdr.thr <- 0.05
-dnam.fdr.thr <- 0.05
-maf.thr <- 0.2
-
-methyl.change.df.plt <- methyl.change.df.plt[!is.na(methyl.change.df.plt$methyl_change),]
-methyl.change.df.plt.tmp <- methyl.change.df.plt
-
-mad.cpgs <- lmem.rslt[abs(lmem.rslt$FDR) <= dnam.fdr.thr, PROBE_ID]
-methyl.change.df.plt.tmp <- methyl.change.df.plt[CpG_ID %in% mad.cpgs]
-methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID"))
-methyl.change.df.plt.tmp <- methyl.change.df.plt.tmp[ALT_FREQS >= maf.thr ]
-
-ggplot(methyl.change.df.plt.tmp, aes(x = methyl_change, y = -log10(fdr), shape = treatment, color = treatment)) +
-  geom_point(alpha = 1.5, size = 1.2) +
-  scale_x_continuous(labels = scientific) +
-  geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
-  geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
-  # scale_y_continuous(trans = 'log10')+
-  # labs(title = " ", y = "", x = " ") + 
-  theme(legend.position = "bottom", 
-        legend.title = element_blank(),
-        #  panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8)) +
-  xlab("Methylation change")  +
-  labs(title = paste0("Scatter Plot, DNAm FDR <= ", dnam.fdr.thr, " and MAF >= ", maf.thr))
-```
-
-## Boxplots for significant meQTLs
-
-```{r include = F, eval = T}
-mad.thr <- 0.1
-maf.thr <- 0.2
-
-methyl.change.df.plt <- methyl.change.df.plt[!is.na(methyl.change.df.plt$methyl_change),]
-methyl.change.df.plt.tmp <- methyl.change.df.plt
-
-mad.cpgs <- lmem.rslt[abs(lmem.rslt$MAD) >= mad.thr, PROBE_ID]
-# mad.cpgs <- lmem.rslt[lmem.rslt$FDR <= 0.01, PROBE_ID]
-methyl.change.df.plt.tmp <- methyl.change.df.plt[CpG_ID %in% mad.cpgs]
-methyl.change.df.plt.tmp <- left_join(methyl.change.df.plt.tmp, freq, by = c("SNP" = "ID"))
-methyl.change.df.plt.tmp <- methyl.change.df.plt.tmp[ALT_FREQS >= maf.thr ]
-```
-
-```{r out.width = "95%", include = T, eval = T}
-library(ggplot2)
-
-methyl.change.df[["meQTL_ID"]] <- paste(methyl.change.df$SNP, methyl.change.df$CpG_ID, sep = "-")
-methyl.change.dex.df[["meQTL_ID"]] <- paste(methyl.change.dex.df$SNP, methyl.change.dex.df$CpG_ID, sep = "-")
-methyl.change.veh.df[["meQTL_ID"]] <- paste(methyl.change.veh.df$SNP, methyl.change.veh.df$CpG_ID, sep = "-")
-
-methyl.change.df <- methyl.change.df[order(methyl.change.df$fdr),]
-
-intersect.meqtl <- intersect(methyl.change.dex.df$meQTL_ID, methyl.change.veh.df$meQTL_ID)
-intersect.meqtl <- intersect.meqtl[intersect.meqtl %in% methyl.change.df.plt.tmp$meQTL_ID]
-# union.snp.change <- union(methyl.change.dex.df$SNP, methyl.change.veh.df$SNP)
-# union.snp <- union(snp.dex.lst, snp.veh.lst)
-
-# methyl.change.plt.df <- reshape2::melt(methyl.change.df[meQTL_ID %in% intersect.meqtl$meQTL_ID, c("ref_mean", "heterozyg_mean", "non_ref_mean", "treatment")], id = "treatment", variable = "Genotype", value.name = "Mean")
-
-x.df <- methyl.change.df[meQTL_ID %in% intersect.meqtl]
-snp  <- x.df$SNP[1]
-snp.df <-  methyl.change.df[methyl.change.df$SNP == snp]
-
-methyl.change.plt.df <- reshape2::melt(snp.df[, c("ref_mean", "heterozyg_mean", "non_ref_mean", "treatment")], id = "treatment", variable = "Genotype", value.name = "Mean")
-
-levels(methyl.change.plt.df$Genotype) <- c("AA", "AB", "BB")
-
-methyl.change.plt.df %>%
-  ggplot(aes(y = Mean, x = Genotype, fill = treatment)) +
-    geom_boxplot(width = 0.2, color = "black") +
-    scale_fill_viridis(discrete = TRUE, alpha = 0.5) +
-    theme( panel.background = element_blank(),
-           plot.title = element_text(size = 10),
-           axis.title = element_text(size = 10),
-           axis.text.x = element_text(angle = 0, hjust = 0.5), 
-           legend.position = "bottom") +
-    labs(y = "Beta methylation, mean", title = paste0(snp, ", DNAm MAD <= ", mad.thr, " and MAF >= ", maf.thr))
-```
-
-
-```{r out.width = "95%", include = T, eval = T}
-snp  <- x.df$SNP[2]
-snp.df <-  methyl.change.df[methyl.change.df$SNP == snp]
-
-methyl.change.plt.df <- reshape2::melt(snp.df[, c("ref_mean", "heterozyg_mean", "non_ref_mean", "treatment")], id = "treatment", variable = "Genotype", value.name = "Mean")
-
-levels(methyl.change.plt.df$Genotype) <- c("AA", "AB", "BB")
-
-methyl.change.plt.df %>%
-  ggplot(aes(y = Mean, x = Genotype, fill = treatment)) +
-    geom_boxplot(width = 0.2, color = "black") +
-    scale_fill_viridis(discrete = TRUE, alpha = 0.5) +
-    theme( panel.background = element_blank(),
-           plot.title = element_text(size = 10),
-           axis.title = element_text(size = 10),
-           axis.text.x = element_text(angle = 0, hjust = 0.5), 
-           legend.position = "bottom") +
-    labs(y = "Beta methylation, mean", title = paste0(snp, ", DNAm MAD <= ", mad.thr, " and MAF >= ", maf.thr))
-```
-
-
-```{r out.width = "95%", include = T, eval = T}
-snp  <- x.df$SNP[3]
-snp.df <-  methyl.change.df[methyl.change.df$SNP == snp]
-
-methyl.change.plt.df <- reshape2::melt(snp.df[, c("ref_mean", "heterozyg_mean", "non_ref_mean", "treatment")], id = "treatment", variable = "Genotype", value.name = "Mean")
-
-levels(methyl.change.plt.df$Genotype) <- c("AA", "AB", "BB")
-
-methyl.change.plt.df %>%
-  ggplot(aes(y = Mean, x = Genotype, fill = treatment)) +
-    geom_boxplot(width = 0.2, color = "black") +
-    scale_fill_viridis(discrete = TRUE, alpha = 0.5) +
-    theme( panel.background = element_blank(),
-           plot.title = element_text(size = 10),
-           axis.title = element_text(size = 10),
-           axis.text.x = element_text(angle = 0, hjust = 0.5), 
-           legend.position = "bottom") +
-    labs(y = "Beta methylation, mean", title = paste0(snp, ", DNAm MAD <= ", mad.thr, " and MAF >= ", maf.thr))
+plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " meQTLs.",
+                     "\nManual calculation. MAD >= ", mad.thr, "% and MAF >= ", maf.thr)
+GetScatterPlot3(methyl.change.df.plt.filt, plot.title = plot.title)
 ```

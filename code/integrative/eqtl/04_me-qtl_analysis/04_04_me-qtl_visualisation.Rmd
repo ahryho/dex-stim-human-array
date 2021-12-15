@@ -14,8 +14,8 @@ library(knitr)
 
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
-meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_fdr_005.csv")
-meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_fdr_005.csv")
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_with_delta_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_with_delta_fdr_005.csv")
 meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv")
 
 col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")

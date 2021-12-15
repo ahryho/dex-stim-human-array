@@ -73,13 +73,21 @@ treatment <- "dex"
 
 snp.dex.fn       <- paste0(out.dir.pre, treatment, "/me-qtl_cis_ind_", treatment, "_valid_snps.txt")
 snp.dex.lst      <- fread(snp.dex.fn, col.names = "SNP")
-ind.meqtl.dex.df <- left_join(snp.dex.lst, meqtl.dex.df)
+ind.meqtl.dex.df <- meqtl.dex.df[SNP %in% c(snp.dex.lst$SNP, snp.delta.lst$SNP)]
+
+fwrite(ind.meqtl.dex.df[, -7], 
+       "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/me-qtl_cis_indp_result_dex_with_delta_fdr_005.csv",
+       quote = F, row.names = F, sep = ";")
 
 treatment <- "veh"
 
 snp.veh.fn       <- paste0(out.dir.pre, treatment, "/me-qtl_cis_ind_", treatment, "_valid_snps.txt")
 snp.veh.lst      <- fread(snp.veh.fn, col.names = "SNP")
-ind.meqtl.veh.df <- left_join(snp.veh.lst, meqtl.veh.df)
+ind.meqtl.veh.df <- meqtl.veh.df[SNP %in% c(snp.veh.lst$SNP, snp.delta.lst$SNP)] # left_join(snp.veh.lst, meqtl.veh.df)
+
+fwrite(ind.meqtl.veh.df[, -7], 
+       "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/me-qtl_cis_indp_result_veh_with_delta_fdr_005.csv",
+       quote = F, row.names = F, sep = ";")
 ```
 
 ## Significant Hits, FDR < 0.05

@@ -10,7 +10,7 @@ LoadPackagesBio(biocmanager.pkg.list)
 # Set up params
 
 dmps.fn      <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/01_lmem_dnam/dnam_lmem_svs_pcs_rslt.txt'
-dmps.anno.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dmps_annotated.csv'
+dmps.anno.fn <- '~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated.csv'
  
 # Load data
 dmps.df <- fread(dmps.fn, sep = "\t")

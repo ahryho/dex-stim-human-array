@@ -84,6 +84,7 @@ library(reshape2)
 library(IRanges)
 library(ggplot2)
 library(biomaRt)
+library(data.table)
 
 require(foreign)
 
@@ -106,7 +107,11 @@ dmps.sign.anno.df <- fread(dmps.sign.anno.fn)
 colnames(dmps.sign.anno.df)[4] <- "PROBE_ID"
 
 chr.list <- dmps.anno.df$chr %>% unique()# %>% sub("chr", "", .)
-ensembl  <- useEnsembl('ensembl', dataset = 'hsapiens_gene_ensembl')
+ensembl.37  <- useEnsembl('ensembl', dataset = 'hsapiens_gene_ensembl', GRCh = 37)
+ensembl.38  <- useEnsembl('ensembl', dataset = 'hsapiens_gene_ensembl', GRCh = 38)
+
+saveRDS(ensembl.37,  "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/hsapiens_gene_ensembl_GRCh37.rds")
+saveRDS(ensembl.38,  "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/hsapiens_gene_ensembl_GRCh38.rds")
 
 # no.cores <- detectCores() - 1
 # registerDoSEQ()

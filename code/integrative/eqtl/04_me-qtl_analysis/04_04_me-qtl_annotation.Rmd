@@ -1,0 +1,269 @@
+***
+# __meQTL: CpG annotation__
+***
+## Delta model
+
+```{r, include = F, eval = T}
+source("~/bio/code/mpip/dex-stim-human-array/code/util.R", chdir = TRUE)
+
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(scales)
+library(factoextra)
+library(viridis)
+library(knitr)
+
+library(splitstackshape)
+library(reshape2)
+library(IRanges)
+library(ggplot2)
+library(biomaRt)
+
+require(foreign)
+library(parallel)
+library(foreach)
+library(doParallel)
+
+library(gUtils)
+
+library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+
+# meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_with_delta_fdr_005.csv")
+# meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_with_delta_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv")
+
+col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
+
+# ind.meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
+# ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
+ind.meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
+```
+
+```{r include = F, eval = T}
+anno.epic     <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
+```
+
+```{r include = F, eval = T}
+meqtls.cpg.lst     <- ind.meqtl.delta.df$CpG_ID %>% unique()
+meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% meqtls.cpg.lst, ]) %>% setDT()
+
+fwrite(meqtls.cpg.anno.df,
+       paste0(out.dir.pre, "meqtls_cpg_annotated_delta.csv"),
+       quote = F, row.names = F, sep   = "\t")
+```
+
+```{r}
+meqtls.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtls_cpg_annotated_delta.csv"), sep = "\t")
+
+# Prepare genes' ranges
+
+# Split gene names 
+tmp.df <- meqtls.cpg.anno.df[, .(Name, UCSC_RefGene_Name)]
+cpg.gene.df <- cSplit(indt = tmp.df, splitCols = 'UCSC_RefGene_Name', sep = ';', type.convert = F, drop = F) %>%
+    melt(id.vars = c("Name", "UCSC_RefGene_Name"), value.name = "GeneSymbol") %>%
+    dplyr::select(Name, GeneSymbol) 
+  
+# Split gene group column
+tmp.df <- meqtls.cpg.anno.df[, .(Name, UCSC_RefGene_Group)]
+cpg.gene.group.df <- cSplit(indt = tmp.df, splitCols = 'UCSC_RefGene_Group', sep = ';', type.convert = F, drop = F) %>%
+    melt(id.vars = c("Name", "UCSC_RefGene_Group"), value.name = "GeneGroup") %>%
+    dplyr::select(Name, GeneGroup) 
+  
+cpg.gene.df <- cbind(cpg.gene.df, cpg.gene.group.df[, "GeneGroup"]) %>% 
+    unique() # %>% na.omit()
+
+colnames(cpg.gene.df) <- c("CpG_ID", "GeneSymbol", "GeneGroup")
+
+chr.list <- meqtls.cpg.anno.df$chr %>% unique() %>% sub("chr", "", .)
+
+# Get Genes' coordinates and create IRanges
+gene.list <- unique(na.omit(cpg.gene.df$GeneSymbol))
+
+ensembl       <- biomaRt::useEnsembl('ensembl', dataset = 'hsapiens_gene_ensembl', GRCh = 37)
+gene.coord.df <- getBM(attributes = c('hgnc_symbol', 'chromosome_name', 'start_position', 'end_position'),
+                         filters = 'hgnc_symbol',
+                         values = gene.list,
+                         mart = ensembl) %>% unique()
+  
+gene.coord.df <- gene.coord.df[gene.coord.df$chromosome_name %in% chr.list,]
+colnames(gene.coord.df) <- c("GeneSymbol", "GeneChr", "GeneStartPos", "GeneEndPos")
+
+gene.coord.range <- makeGRangesFromDataFrame(gene.coord.df, 
+                                             start.field = "GeneStartPos", 
+                                             end.field = "GeneEndPos", 
+                                             seqnames.field = c("GeneChr"))
+names(gene.coord.range) <- gene.coord.df$GeneSymbol
+
+
+# Prepare methyl ranges
+
+cpg.coord.df    <- meqtls.cpg.anno.df[, .(Name, chr, pos)] %>% dplyr:: mutate(chr = sub("chr", "", chr))
+cpg.coord.range <- makeGRangesFromDataFrame(cpg.coord.df, 
+                                            start.field = "pos", 
+                                            end.field = "pos", 
+                                            seqnames.field = c("chr"))
+names(cpg.coord.range) <- cpg.coord.df$Name
+
+# Calculate distances
+
+chr.list     <- cpg.coord.df$chr %>% unique()
+registerDoParallel(cores = 50)
+
+distances <- foreach(chr = chr.list, .combine = rbind, .packages = c('gUtils', 'dplyr')) %dopar% {
+  
+  r1 <- cpg.coord.range[cpg.coord.range@seqnames == chr] # GRanges object with 740357 ranges and 0 metadata columns
+  r2 <- gene.coord.range[gene.coord.range@seqnames == chr] # GRanges object with 12841 ranges and 0 metadata columns
+  
+  dist.to.all <- gr.dist(r1, r2)
+  rownames(dist.to.all) <- names(r1)
+  colnames(dist.to.all) <- names(r2)
+  
+  dist.to.all.melt <- dist.to.all %>% 
+    reshape2::melt() %>% 
+    na.omit() %>% 
+    unique()
+  colnames(dist.to.all.melt) <- c("CpG_ID", "Gene_Symbol", "CpG_Gene_DIST")
+  
+  return(dist.to.all.melt)
+}
+
+stopImplicitCluster()
+
+colnames(distances) <- c("PROBE_ID", "ILMN_ID", "CG_GENE_DIST")
+
+cpg.gene.coord.df <- distances %>% setDT()
+
+cpg.gene.coord.df <- left_join(cpg.gene.coord.df, cpg.coord.df, by = "PROBE_ID")
+cpg.gene.coord.df <- left_join(cpg.gene.coord.df, unique(gene.coord.df), by = c("ILMN_ID" = "GeneSymbol"))
+cpg.gene.coord.df <- cpg.gene.coord.df %>% dplyr::select(PROBE_ID, CG_CHR = chr, CG_POS = pos,
+                                                  ILMN_ID, GENE_CHR = GeneChr, GENE_START_POS = GeneStartPos, GENE_END_POS = GeneEndPos,
+                                                  CG_GENE_DIST)
+
+  
+```
+
+```{r}
+GetDistances <- function(dmps.anno.df, ensembl){
+  
+  # Split Gene Name and Gene Group columns 
+  library(splitstackshape)
+  tmp.df <- dmps.anno.df[, .(PROBE_ID, UCSC_RefGene_Name)]
+  cpg.gene.df <- cSplit(indt = tmp.df, splitCols = 'UCSC_RefGene_Name', sep = ';', type.convert = F, drop = F) %>%
+    melt(id.vars = c("PROBE_ID", "UCSC_RefGene_Name"), value.name = "GeneSymbol") %>%
+    dplyr::select(PROBE_ID, GeneSymbol) 
+  
+  # Split gene group column
+  tmp.df <- dmps.anno.df[, .(PROBE_ID, UCSC_RefGene_Group)]
+  cpg.gene.group.df <- cSplit(indt = tmp.df, splitCols = 'UCSC_RefGene_Group', sep = ';', type.convert = F, drop = F) %>%
+    melt(id.vars = c("PROBE_ID", "UCSC_RefGene_Group"), value.name = "GeneGroup") %>%
+    dplyr::select(PROBE_ID, GeneGroup) 
+  
+  cpg.gene.df <- cbind(cpg.gene.df, cpg.gene.group.df[, "GeneGroup"]) %>% 
+    unique() # %>% na.omit()
+  colnames(cpg.gene.df) <- c("PROBE_ID", "GeneSymbol", "GeneGroup")
+
+
+  # Get Genes' coordinates and create IRanges
+  gene.list <- unique(na.omit(cpg.gene.df$GeneSymbol))
+  gene.coord.df <- getBM(attributes = c('hgnc_symbol', 'chromosome_name', 'start_position', 'end_position'),
+                         filters = 'hgnc_symbol',
+                         values = gene.list,
+                         mart = ensembl) %>%
+    unique()
+
+  chr.list <- dmps.anno.df$chr %>% unique() %>% sub("chr", "", .)
+  gene.coord.df <- gene.coord.df[gene.coord.df$chromosome_name %in% chr.list,]
+  colnames(gene.coord.df) <- c("GeneSymbol", "GeneChr", "GeneStartPos", "GeneEndPos")
+  
+  # CpG Gene Cord DF
+  cpg.coord.df <- dmps.anno.df[, .(PROBE_ID, chr, pos)] %>% dplyr:: mutate(chr = sub("chr", "", chr))
+  
+  cpg.gene.coord.df <- left_join(cpg.gene.df, cpg.coord.df, by = "PROBE_ID")
+ 
+    cpg.gene.coord.df <- left_join(cpg.gene.coord.df, gene.coord.df, by = "GeneSymbol")
+    cpg.gene.coord.df[["CG_GENE_DIST"]] <- ifelse(cpg.gene.coord.df$GeneStartPos > cpg.gene.coord.df$pos,
+                                                  cpg.gene.coord.df$GeneStartPos - cpg.gene.coord.df$pos,
+                                                  ifelse(cpg.gene.coord.df$pos > cpg.gene.coord.df$GeneEndPos,
+                                                       cpg.gene.coord.df$pos - cpg.gene.coord.df$GeneEndPos - 1,
+                                                       0))
+  
+  #   cpg.gene.coord.df[["CG_GENE_DIST"]] <- lapply(cpg.gene.coord.df, function(x)
+  #   #ifelse((x["pos"] > x["GeneStartPos"] ) & (x["pos"] < x["GeneEndPos"]),
+  #   #       0,
+  #          min(abs(x["pos"] - x["GeneStartPos"], abs(x["pos"] - x["GeneEndPos"])))
+  # )
+    
+    
+    # ifelse((cpg.gene.coord.df$pos > cpg.gene.coord.df$GeneStartPos ) &
+    #                                               (cpg.gene.coord.df$pos < cpg.gene.coord.df$GeneEndPos),
+    #                                             0,
+    #                                             min(abs(cpg.gene.coord.df$pos - cpg.gene.coord.df$GeneStartPos),
+    #                                                 abs(cpg.gene.coord.df$pos - cpg.gene.coord.df$GeneEndPos)))
+
+    cpg.gene.coord.df <- cpg.gene.coord.df %>% 
+      dplyr::select( PROBE_ID,  chr, pos, GeneSymbol, GeneChr, GeneStartPos, GeneEndPos, GeneGroup, CG_GENE_DIST)
+  
+    cpg.gene.coord.df <- cpg.gene.coord.df[!is.na(cpg.gene.coord.df$CG_GENE_DIST),] # %>% setDT()
+  
+  cpg.na.gene.df    <- tmp.df[UCSC_RefGene_Group == "", "PROBE_ID"] %>% unique()
+  
+  cpg.na.gene.df[["chr"]]   <- NA
+  cpg.na.gene.df[["pos"]]   <- NA
+  cpg.na.gene.df[["GeneSymbol"]]   <- NA
+  cpg.na.gene.df[["GeneChr"]]   <- NA
+  cpg.na.gene.df[["GeneStartPos"]]   <- NA
+  cpg.na.gene.df[["GeneEndPos"]]   <- NA
+  cpg.na.gene.df[["GeneGroup"]]    <- NA
+  cpg.na.gene.df[["CG_GENE_DIST"]] <- NA
+  
+  cpg.gene.coord.df <- rbind(cpg.gene.coord.df, cpg.na.gene.df)
+  
+  return(cpg.gene.coord.df)
+}
+
+meqtls.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtls_cpg_annotated_delta.csv"), sep = "\t")
+colnames(meqtls.cpg.anno.df)[4] <- "PROBE_ID"
+
+chr.list <- meqtls.cpg.anno.df$chr %>% unique()# %>% sub("chr", "", .)
+ensembl  <- biomaRt::useEnsembl('ensembl', dataset = 'hsapiens_gene_ensembl', GRCh = 37)
+
+registerDoParallel(cores = 50)
+
+# distances <- foreach(chrom = chr.list[1], .combine = rbind, .packages = c('dplyr', 'reshape2', 'biomaRt')) %dopar% {
+distances <- foreach(chrom = chr.list, .combine = rbind, .packages = c('dplyr', 'reshape2', 'biomaRt')) %dopar% {
+  df <- meqtls.cpg.anno.df[meqtls.cpg.anno.df$chr == chrom,]
+  GetDistances(df, ensembl)
+}
+
+stopImplicitCluster()
+
+cpg.gene.coord.df <- distances %>% setDT()
+
+cpg.gene.coord.df <- fread('~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated_genes_distances.csv')
+
+# write.csv2(cpg.gene.coord.df,
+#            '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated_genes_distances.csv',
+#            quote = F, row.names = F)
+
+
+cpg.na.gene.df   <- cpg.gene.coord.df[is.na(CG_GENE_DIST), .(PROBE_ID, GeneSymbol, GeneGroup, CG_GENE_DIST)]
+cpg.gene.dist.df <- cpg.gene.coord.df[, .(PROBE_ID, GeneSymbol, CG_GENE_DIST)]
+plt.df           <- cpg.gene.dist.df[ , .SD[which.min(CG_GENE_DIST)], by = PROBE_ID, ]
+
+# Check
+plt.df[PROBE_ID == "cg08975523"]
+cpg.gene.coord.df[PROBE_ID == "cg08975523"]
+
+plt.df[PROBE_ID == "cg06562291"]
+cpg.gene.coord.df[PROBE_ID == "cg06562291"]
+```
+
+```{r load-cpg-gene-distances, include = F, eval = T}
+# code: ../code/methylation/02_dma/01_dmp/03_get_cpg_gene_anno_dist
+cpg.closest.genes.dist.fn <-"~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated_closest_genes_distances.csv"
+cpg.closest.genes.dist.df <- fread(cpg.closest.genes.dist.fn)
+```

@@ -61,7 +61,19 @@ library(knitr)
 
 # __Introduction__
 ***
-To explore the cis regulatory effects of SNPs on DNA methylation, the meQTL analysis was performed using a linear regression implemented in the R package "MatrixEQTL".
+
+## Methodology
+
+To explore the cis regulatory effects of SNPs on DNA methylation, the meQTL analysis was performed using a linear regression (LM) implemented in the R package "MatrixEQTL":
+
+- uses the functions of the sample correlation as a test statistics; 
+
+- standardise variables of both gene expression and genotype matrices. By “standardisation”, the algorithm subtracts the mean from each observation and divides that by the standard deviation. The standardisation greatly simplifies the calculation of the sample correlation because the means of variables = 0,  standard deviations = 1, and also the intercept in a standardised regression is always 0. Therefore, the algorithm doesn’t perform unnecessary calculations and increases the performance time;
+
+- calculates the standardised slope coefficient, or standardised effect size, as correlation of standardised data;
+converts standardised coefficient back into metric coefficient via the formula: BETAunstand = BETAstand x SD(gene) / SD(snp).
+
+## Data overview
 
 In the meQTL study, the imputed QC __SNP data__ (no LD pruning, the MHC regions are included) were used.
 The data includes __3'957'338 SNPs__.
@@ -100,11 +112,11 @@ The MatrixEQTL meQTL analysis led to
 
 The false discovery rate (FDR) of 5% was chosen. 
 
+
 ```{sh, include = F, eval = F}
 meqtl_rslt_dir="~/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL"
 awk 'NR == 1 || $6 < 0.05' me-qtl_cis_result_delta.csv > me-qtl_cis_result_delta_fdr_005.csv
 ```
 
-```{r child = c('04_03_independent_meQTLs.Rmd', '04_04_me-qtl_visualisation.Rmd')}
-# child = c('04_01_me-qtl_analysis.Rmd', '04_03_independent_meQTLs.Rmd', '04_04_me-qtl_visualisation')
+```{r child = c('04_01_me-qtl_primary_results_analysis.Rmd', '04_02_me-qtl_independent_analysis.Rmd', '04_03_me-qtl_visualisation.Rmd')}
 ```

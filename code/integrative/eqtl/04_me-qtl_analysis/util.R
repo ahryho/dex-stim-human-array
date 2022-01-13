@@ -1,3 +1,6 @@
+Sys.setenv(BIOMART_CACHE="~/bio/caches/biomaRt")
+Sys.setenv(ANNOTATION_HUB_CACHE="~/bio/caches/AnnotationHub")
+
 GetFullmeQTLdf <- function(meqtl.df, fdr.thr = 0.05){
   colnames(meqtl.df) <- c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
   
@@ -55,3 +58,14 @@ GetScatterPlot3 <- function(df, selected.meqtl = NULL, fdr.thr = 0.05, plot.titl
 }
 
 # Function for Boxplot
+
+ToBed <- function(df, output.fn, is.save = T){
+  bed <- df %>% dplyr::select(chrom = chr, chromStart = pos, chromEnd = pos, name = PROBE_ID)
+  rownames(bed) <- bed$PROBE_ID
+  
+  if (is.save == T)
+    write.table(bed,
+                output.fn, 
+                sep = " ", quote = F, row.names = F, col.names = F)
+  bed
+}

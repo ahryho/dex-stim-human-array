@@ -124,7 +124,7 @@ dmps.sign.anno.df <- dmps.anno.df
 # distances <- foreach(chrom = chr.list[1], .combine = rbind, .packages = c('dplyr', 'reshape2', 'biomaRt')) %dopar% {
 distances <- foreach(chrom = chr.list, .combine = rbind, .packages = c('dplyr', 'reshape2', 'biomaRt')) %dopar% {
   df <- dmps.sign.anno.df[dmps.sign.anno.df$chr == chrom,]
-  GetDistances(df, ensembl)
+  GetDistances(df, ensembl.37)
 }
 
 stopImplicitCluster()
@@ -133,9 +133,9 @@ cpg.gene.coord.df <- distances %>% setDT()
 
 cpg.gene.coord.df <- fread('~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated_genes_distances.csv')
 
-# write.csv2(cpg.gene.coord.df,
-#            '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated_genes_distances.csv',
-#            quote = F, row.names = F)
+write.csv2(cpg.gene.coord.df,
+           '/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated_genes_distances.csv',
+           quote = F, row.names = F)
 
 
 cpg.na.gene.df   <- cpg.gene.coord.df[is.na(CG_GENE_DIST), .(PROBE_ID, GeneSymbol, GeneGroup, CG_GENE_DIST)]
@@ -175,8 +175,9 @@ plt.df2 <- rbind(plt.df2, cpg.na.gene.df)
 #            quote = F, row.names = F)
 
 plt.df2 <- fread('~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated_closest_genes_distances.csv')
+plt.df4 <- plt.df2[PROBE_ID %in% plt.df3$PROBE_ID]
 
-ggplot(plt.df2, aes(x = GeneGroup)) + 
+ggplot(plt.df3, aes(x = GeneGroup)) + 
   geom_bar(aes(y = (..count..)/sum(..count..), fill = GeneGroup), position = position_dodge()) + 
   geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)), 
             stat = "count", vjust = -.5,  position = position_dodge(1), size = 3) +

@@ -13,7 +13,7 @@ output:
     toc: TRUE
     toc_float: TRUE
     df_print: paged
-    css: style.css
+    css: ../style.css
     code_folding: hide
 editor_options: 
   chunk_output_type: console
@@ -77,33 +77,17 @@ library(doParallel)
 
 library(gUtils)
 
-library(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
-
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
 # meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_with_delta_fdr_005.csv")
-# meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_with_delta_fdr_005.csv")
-meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv")
+# meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_fdr_005.csv")
+# meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv")
 
-col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
+# col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
 
 # ind.meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
 # ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
-ind.meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
-```
-
-```{r include = F, eval = F}
-anno.epic     <- getAnnotation(IlluminaHumanMethylationEPICanno.ilm10b4.hg19)
-saveRDS(anno.epic, "~/bio/code/mpip/dex-stim-human-array/data/annotation/IlluminaHumanMethylationEPICanno-ilm10b4-hg19.rds")
-```
-
-```{r include = F, eval = F}
-meqtls.cpg.lst     <- ind.meqtl.delta.df$CpG_ID %>% unique()
-meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% meqtls.cpg.lst, ]) %>% setDT()
-
-fwrite(meqtls.cpg.anno.df,
-       paste0(out.dir.pre, "meqtls_cpg_annotated_delta.csv"),
-       quote = F, row.names = F, sep   = "\t")
+# ind.meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
 ```
 
 ```{r include = F, eval = F}
@@ -328,13 +312,12 @@ write.csv2(plt.df3,
 ```
 
 ```{r include = F, eval = T}
-delta.meqtl.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtls_cpg_annotated_delta.csv"), sep = "\t")
-  
 # code: ../code/methylation/02_dma/01_dmp/03_get_cpg_gene_anno_dist
 cpg.closest.genes.dist.fn <-"~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated_closest_genes_distances.csv"
 cpg.closest.genes.dist.df <- fread(cpg.closest.genes.dist.fn)
-delta.meqtl.cpg.closest.genes.dist.df <- cpg.closest.genes.dist.df[PROBE_ID %in% delta.meqtl.cpg.anno.df$Name]
 
+delta.meqtl.cpg.anno.df               <- fread(paste0(out.dir.pre, "meqtls_cpg_annotated_delta.csv"), sep = "\t")
+delta.meqtl.cpg.closest.genes.dist.df <- cpg.closest.genes.dist.df[PROBE_ID %in% delta.meqtl.cpg.anno.df$Name]
 
 # delta.meqtl.cpg.closest.genes.dist.fn <-"~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/ind_me-qtl_cis/delta/annotation/me-qtl_delta_cpgs_annotated_closest_genes_distances.csv"
 # delta.meqtl.cpg.closest.genes.dist.df <- fread(cpg.closest.genes.dist.fn)
@@ -391,15 +374,15 @@ cbPalette <- c(  "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9
 delta.meqtl.cpg.anno.df$Relation_to_Island <- factor(delta.meqtl.cpg.anno.df$Relation_to_Island, 
                                                               levels = c("N_Shelf", "N_Shore", "Island", "S_Shore", "S_Shelf", "OpenSea"))
 
-ggplot(delta.meqtl.cpg.anno.df, aes(x = Relation_to_Island)) + 
-  geom_bar(aes(y = (..count..)/sum(..count..), fill = Relation_to_Island), position = position_dodge()) + 
-  geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)), 
+ggplot(delta.meqtl.cpg.anno.df, aes(x = Relation_to_Island)) +
+  geom_bar(aes(y = (..count..)/sum(..count..), fill = Relation_to_Island), position = position_dodge()) +
+  geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)),
             stat = "count", vjust = -.5,  position = position_dodge(1), size = 3) +
   scale_y_continuous(labels = scales::percent) +
   labs(x = "Relation to Island",
-       y = "Frequency", 
+       y = "Frequency",
        title = "") +
-  theme(legend.title = element_blank(), 
+  theme(legend.title = element_blank(),
         legend.position = "none",
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
@@ -581,7 +564,7 @@ delta.meqtls.cpg.chromhmm.annotated <- annotate_regions(
 # plot_annotation(annotated_regions = delta.meqtls.cpg.chromhmm.annotated)
 ```
 
-```{r}
+```{r include = F, eval = T}
 cbPalette <- chromhmm.states$COLOR.NAME
 ```
 
@@ -648,338 +631,4 @@ delta.meqtls.cpg.chromhmm.annotated.df <- delta.meqtls.cpg.chromhmm.annotated.df
 plot.title <- "15 chromatin states from 10 brain types"
 
 GetChromHMMPlot(delta.meqtls.cpg.chromhmm.annotated.df, cbPalette, plot.title)
-```
-
-
-# __Enrichment Analysis__
-***
-
-```{r, include = F, eval = T}
-source("~/bio/code/mpip/dex-stim-human-array/code/util.R", chdir = TRUE)
-
-library(data.table)
-library(dplyr)
-library(ggplot2)
-library(ggrepel)
-library(scales)
-library(factoextra)
-library(viridis)
-library(knitr)
-
-# library(splitstackshape)
-# library(reshape2)
-# library(IRanges)
-# library(ggplot2)
-# library(biomaRt)
-# 
-# require(foreign)
-# library(parallel)
-# library(foreach)
-# library(doParallel)
-# 
-# library(gUtils)
-
-
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
-
-# meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_with_delta_fdr_005.csv")
-# meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_with_delta_fdr_005.csv")
-meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv")
-
-col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
-
-# ind.meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
-# ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
-ind.meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
-```
-
-```{r include = F, eval = T}
-delta.meqtl.cpg.anno.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls_cpg_annotated_delta.csv")
-
-cpg.closest.genes.dist.fn <-"~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated_closest_genes_distances.csv"
-cpg.closest.genes.dist.df <- fread(cpg.closest.genes.dist.fn)
-delta.meqtl.cpg.closest.genes.dist.df <- cpg.closest.genes.dist.df[PROBE_ID %in% delta.meqtl.cpg.anno.df$Name]
-
-```
-
-```{r include = F, eval = F}
-data(geneList, package="DOSE")
-gene <- names(geneList)[abs(geneList) > 2]
-```
-
-```{r include = F, eval = T}
-genes.bg     <- cpg.closest.genes.dist.df$GeneSymbol %>% unique()
-genes.target <- delta.meqtl.cpg.closest.genes.dist.df$GeneSymbol %>% unique()
-```
-
-## GO Enrichment Analysis
-
-```{r include = F, eval = T}
-library(clusterProfiler)
-library(org.Hs.eg.db)
-library(enrichplot)
-```
-
-```{r include = T, eval = F}
-ego <- enrichGO(gene          = genes.target,
-                universe      = genes.bg,   
-                OrgDb         = org.Hs.eg.db,
-                keyType       = 'SYMBOL',
-                ont           = "ALL",
-                pAdjustMethod = "BH",
-                minGSSize     = 2,
-                maxGSSize     = 500,
-                pvalueCutoff  = 0.03,
-                qvalueCutoff  = 0.05)
-  # head(ego, 20)
-saveRDS(object = ego, 
-        file = "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/clusterProfile_rslt/delta_meqtl_cpgs_enrichGO_rslt.rds")
-```
-
-```{r include = F, eval = T}
-ego <- readRDS("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/clusterProfile_rslt/delta_meqtl_cpgs_enrichGO_rslt.rds")
-# dim(ego@result)
-# table(ego@result$ONTOLOGY)
-```
-
-```{r include = F, eval = F}
-ego.df <- ego@result
-ego.df <- ego.df[order(ego.df$ONTOLOGY, ego.df$GeneRatio),]
-
-ggplot(ego.df, aes(reorder(Description, ONTOLOGY), GeneRatio, fill = ONTOLOGY)) +
-    geom_bar(stat = "identity", position = position_identity()) +
-    coord_flip() +
-    geom_text(
-        aes(label = Count),
-        color = "black",
-        # hjust = -0.1,
-        size = 2,
-        position = position_identity()
-    ) +
-    theme(
-        panel.background = element_blank(),
-        plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        legend.position = "bottom",
-        panel.grid = element_blank(),
-        axis.text.x = element_blank(),
-        axis.ticks = element_blank(),
-        axis.title.y = element_blank(),
-        strip.text.x = element_text(size = 8, face = "bold"),
-        strip.background = element_blank()
-    )
-
-```
-
-```{r out.width = "95%", fig.cap = "GO analysis. The distributions of the enriched GO terms", include = T, eval = T}
-bar.plt <- 
-  mutate(ego, p.adj = -log(p.adjust, base=10)) %>%
-      barplot(x = "p.adj",
-              font.size = 8,
-                   # split = "ONTOLOGY",
-                   showCategory = 30,
-              ) + 
-      # geom_text(
-      #   aes(label = Count),
-      #   color = "black",
-      #   hjust = -0.1,
-      #   size = 3,
-      #   position = position_identity()) +
-      theme(
-        panel.background = element_blank(),
-        panel.border = element_blank(),
-        plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        legend.position = "bottom",
-        axis.title.y = element_blank(),
-        strip.text.x = element_text(size = 8, face = "bold"),
-    )
-
-bar.plt
-```
-
-```{r include = F, eval = F}
-ego2 <- pairwise_termsim(ego)
-treeplot(ego2) +
-  theme(
-        panel.background = element_blank(),
-        plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        legend.position = "bottom")
-```
-
-```{r out.width = "95%", fig.cap = "GO analysis. Dot plot for the enriched terms", include = T, eval = T}
-dot.plt <- 
-      dotplot(ego, 
-              x = "GeneRatio",
-                   split = "ONTOLOGY",
-                   showCategory = 30,
-                   font.size = 8,
-              orderBy = "x") + 
-      geom_text(
-        aes(label = Count),
-        color = "black",
-        hjust = -0.2,
-        size = 3,
-        position = position_identity()) +
-      theme(
-        panel.background = element_blank(),
-        # strip.background = element_blank()
-        panel.border = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8),
-        legend.position = "bottom",
-        # panel.grid.minor = element_blank(),
-        # panel.grid = element_blank(),
-        # axis.text.x = element_blank(),
-        # axis.ticks = element_blank(),
-        axis.title.y = element_blank(),
-        strip.text.x = element_text(size = 8, face = "bold"),
-    )
-
-dot.plt
-```
-
-```{r eval = F, include = F}
-cpg.fdr.df <- ind.meqtl.delta.df[, .(CpG_ID, fdr)]
-cpg.fdr.df[, fdr := -log(fdr)]
-cpg.fdr.df <- cpg.fdr.df[ , head(.SD, 1), by = CpG_ID]
-cpg.fdr.df <- inner_join(cpg.fdr.df, unique(delta.meqtl.cpg.closest.genes.dist.df[, c("PROBE_ID", "GeneSymbol")]), 
-                        by = c("CpG_ID" = "PROBE_ID")) %>% na.omit()
-cpg.fdr.df <- cpg.fdr.df[ , head(.SD, 1), by = GeneSymbol]
-
-gene.list  <- cpg.fdr.df$fdr
-names(gene.list) <- cpg.fdr.df$GeneSymbol
-
-gse.go <- gseGO(gene          = gene.list,
-                OrgDb         = org.Hs.eg.db,
-                keyType       = 'SYMBOL',
-                ont           = "CC",
-                pAdjustMethod = "BH",
-                minGSSize     = 2,
-                pvalueCutoff  = 0.05)
-head(gse.go, 20)
-```
-
-## KEGG pathway enrichment analysis
-
-```{r include = F, eval = T}
-bg.ids     <- bitr(genes.bg, fromType = "SYMBOL", toType = c("ENTREZID", "UNIPROT", "ENSEMBL"), OrgDb = "org.Hs.eg.db")
-target.ids <- bitr(genes.target,  fromType = "SYMBOL", toType = c("ENTREZID", "UNIPROT", "ENSEMBL"), OrgDb = "org.Hs.eg.db")
-```
-
-```{r include = T, eval = F}
-ekegg <- enrichKEGG(gene          = target.ids$ENTREZID,
-                    universe      = bg.ids$ENTREZID,   
-                    organism      = 'hsa',
-                    keyType       = 'kegg',
-                    pAdjustMethod = "BH",
-                    minGSSize     = 2,
-                    maxGSSize     = 500,
-                    pvalueCutoff  = 0.5)
-
-saveRDS(object = ekegg, 
-        file = "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/clusterProfile_rslt/delta_meqtl_cpgs_enrichKEGG_rslt.rds")
-```
-
-```{r include = F, eval = T}
-ekegg <- readRDS("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/clusterProfile_rslt/delta_meqtl_cpgs_enrichKEGG_rslt.rds")
-```
-
-```{r out.width = "95%", fig.cap = "KEGG analysis. The distributions of the enriched KEGG terms", include = T, eval = T}
-dot.plt <- 
-      dotplot(ekegg, 
-              x = "GeneRatio",
-                   showCategory = 30,
-                   font.size = 8,
-              orderBy = "x") + 
-      geom_text(
-        aes(label = Count),
-        color = "black",
-        hjust = -0.2,
-        size = 3,
-        position = position_identity()) +
-      theme(
-        panel.background = element_blank(),
-        # strip.background = element_blank()
-        panel.border = element_blank(),
-        plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        legend.position = "right",
-        # panel.grid.minor = element_blank(),
-        # panel.grid = element_blank(),
-        # axis.text.x = element_blank(),
-        # axis.ticks = element_blank(),
-        axis.title.y = element_blank(),
-        strip.text.x = element_text(size = 8, face = "bold"),
-    )
-
-dot.plt
-```
-
-```{r out.width = "95%", fig.cap = "KEGG analysis. The heatmap plot the enriched KEGG terms", include = T, eval=F}
-ekeggx <- setReadable(ekegg, 'org.Hs.eg.db', 'ENTREZID')
-heat.plt <- heatplot(ekeggx, showCategory = 10)
-heat.plt
-
-# upsetplot(ego)
-```
-
-<!-- ## Reactome pathway enrichment analysis -->
-
-<!-- ```{r} -->
-<!-- library(ReactomePA) -->
-<!-- ``` -->
-
-## Disease enrichment analysis
-
-```{r include = T, eval = F}
-library(DOSE)
-edo <- enrichDO(gene          = target.ids$ENTREZID,
-                universe      = bg.ids$ENTREZID,
-                ont           = "DO",
-                pvalueCutoff  = 1,
-                pAdjustMethod = "BH",
-                minGSSize     = 2,
-                maxGSSize     = 500,
-                qvalueCutoff  = 1,
-                readable      = FALSE)
-
-saveRDS(object = edo, 
-        file = "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/clusterProfile_rslt/delta_meqtl_cpgs_enrichDO_rslt.rds")
-```
-
-```{r include = F, eval = T}
-edo <- readRDS("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/clusterProfile_rslt/delta_meqtl_cpgs_enrichDO_rslt.rds")
-```
-
-```{r out.width = "95%", fig.cap = "Disease enrichment analysis. The distributions of the enriched KEGG terms", include = T, eval = T}
-dot.plt <- 
-      dotplot(edo, 
-              x = "GeneRatio",
-                   showCategory = 30,
-                   font.size = 8,
-              orderBy = "x") + 
-      geom_text(
-        aes(label = Count),
-        color = "black",
-        hjust = -0.2,
-        size = 3,
-        position = position_identity()) +
-      theme(
-        panel.background = element_blank(),
-        # strip.background = element_blank()
-        panel.border = element_blank(),
-        plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        legend.position = "right",
-        # panel.grid.minor = element_blank(),
-        # panel.grid = element_blank(),
-        # axis.text.x = element_blank(),
-        # axis.ticks = element_blank(),
-        axis.title.y = element_blank(),
-        strip.text.x = element_text(size = 8, face = "bold"),
-    )
-
-dot.plt
 ```

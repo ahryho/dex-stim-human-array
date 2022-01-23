@@ -17,7 +17,7 @@ db_ilmn_gene <- fread("~/bio/datasets/kimono/mapping/mapping_ilmn_ensg_gene.csv"
 db_gene_snp <- fread("~/bio/datasets/kimono/mapping/mapping_snp_gene_distance.csv")
 
 snp.kimono.mtrx    <- fread("~/bio/datasets/kimono/input/snp.csv")
-snp.bim            <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/final_imputed_qc_snps/dex_geno_imputed_ld.bim")
+snp.bim            <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/final_imputed_qc_ld_snps/dex_geno_imputed_ld.bim")
 pheno              <- fread(pheno.fn, na.strings = c('#N/A', "NA"), dec = ",") %>% setDT()
 pheno              <- pheno[Include == 1]    
 methyl.mtrx        <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/methylation/dex_methyl_beta_combat_mtrx.rds")
@@ -25,6 +25,13 @@ methyl.mval.mtrx   <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/methyla
 gex.mtrx.veh       <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_veh.csv")
 gex.mtrx.dex       <- fread("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_dex.csv")
 
+# DNA_IDs to keep for further analysis
+
+sample.ids.df <- data.frame(unique(pheno$DNA_ID), unique(pheno$DNA_ID))
+
+fwrite(sample.ids.df, 
+       "~/bio/code/mpip/dex-stim-human-array/data/snps/dna_ids_to_keep_for_analysis.txt",
+       quote = F, row.names = F, col.names = F, sep = "\t")
 
 # Prepare and save the SNP matrix
 

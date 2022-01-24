@@ -22,7 +22,7 @@ GenerateGrangesObjecteQTL <- function(input, mdata, ofile){
                                      bin = input$bin)
   # remove duplicates
   input_gr <- input_gr[!duplicated(input_gr)] 
-  GenomeInfoDb::seqlevelsStyle(input_gr) <- "NCBI"
+  GenomeInfoDb::seqlevelsStyle(input_gr) <- "UCSC"
   # save GRanges object to an rds file
   saveRDS(input_gr, file =  ofile)
   # return finalized GRanges object
@@ -75,7 +75,7 @@ background.all.gr <- GenerateGrangesObjecteQTL(input = snps,
 ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
 ind.meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
 
-snps.bkgr <- snps[snps$SNP %in% ind.meqtl.dex.df$SNP,]
+snps.bkgr <- snps[snps$SNP %in% ind.meqtl.delta.df$SNP,]
 
 # Generate background SNP data as GRanges object
 background.gr <- GenerateGrangesObjecteQTL(input = snps.bkgr, 

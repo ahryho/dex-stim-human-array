@@ -51,6 +51,8 @@ delta.snp.coord.range <- GenomicRanges::GRanges(seqnames = paste0("chr", input$c
                                                                           end = as.numeric(as.character(input$pos))))
 names(delta.snp.coord.range) <- meqtls.snp.delta.coord.df$SNP
 
+makeGRangesFromDataFrame(input,start.field ="pos",end.field="pos",seqnames="chr",ignore.strand=T,keep.extra.columns=F)
+
 # Annotate
 
 # delta 
@@ -115,6 +117,7 @@ saveRDS(snp.anno,
 
 chromhmm.all.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_all_states.Rds")
 colnames(values(chromhmm.all.states))[1] <- "type"
+chromhmm.all.states <- subset(chromhmm.all.states, !(seqnames %in% c("chrM", "chrX", "chrY")))
 
 # Subset Blood and T-cells
 
@@ -125,9 +128,15 @@ chromhmm.blood.states <- chromhmm.all.states[(elementMetadata(chromhmm.all.state
 
 saveRDS(chromhmm.blood.states, "~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_blood_states.Rds")
 
+chromhmm.blood.states <- subset(chromhmm.blood.states, !(seqnames %in% c("chrM", "chrX", "chrY")))
 #
 
 AnnotateChromHMM <- function(snp.coord.range, chromhmm.all.states, out){
+  x <-distanceToNearest(own, chromhmm.blood.states)
+  sum(overlapsAny(delta.snp.coord.range, own))
+  sum(distanceToNearest(delta.snp.coord.range, chromhmm.blood.states)@elementMetadata@listData$distance == 0)
+  
+  table(x@elementMetadata@listData$distance == 0)
   meqtls.snp.chromhmm.annotated <- annotate_regions(
     regions = snp.coord.range,
     annotations = chromhmm.all.states,
@@ -170,7 +179,7 @@ AnnotatePublicData <- function(own, public, nperm, background){
   
   background_bins <- lapply(1:11, function(x) background[background$bin == x])  # get all background SNPs in MAF bin 1 to 11
   own_bin_lengths <- sapply(1:11, function(x) length(own[own$bin == x]))  # get length of all 11 MAF bins
-  
+   
   # resample nperm times
   resampling <- lapply(1:nperm, function(x){
     sample_overlap <- sum(sapply(1:11, function(y)
@@ -224,6 +233,8 @@ resampling <- lapply(1:nperm, function(x){
   c(p_value = fisher.test.rslt$p.value, fisher.test.rslt$estimate)
 }
 )
+
+p_value_emp <- (sum(unlist(resampling)[attr(unlist(resampling), "names") == "p_value"] <= p_value) + 1) / (nperm + 1)
 
 p_value <- unlist(resampling)[attr(unlist(resampling), "names") == "p_value"] %>% mean() 
 or <- unlist(resampling)[attr(unlist(resampling), "names") == "odds ratio"] %>% mean() 

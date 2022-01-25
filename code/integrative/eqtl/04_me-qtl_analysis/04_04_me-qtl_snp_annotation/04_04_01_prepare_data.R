@@ -129,7 +129,16 @@ chromhmm.blood.states <- chromhmm.all.states[(elementMetadata(chromhmm.all.state
 saveRDS(chromhmm.blood.states, "~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_blood_states.Rds")
 
 chromhmm.blood.states <- subset(chromhmm.blood.states, !(seqnames %in% c("chrM", "chrX", "chrY")))
-#
+
+# Subset Brain 
+
+chromhmm.brain.eids   <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Brain", "EID"]
+chromhmm.brain.states <- chromhmm.all.states[(elementMetadata(chromhmm.all.states)[, "code"] %in% chromhmm.brain.eids)]
+
+saveRDS(chromhmm.brain.states, "~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_brain_states.Rds")
+
+
+####
 
 AnnotateChromHMM <- function(snp.coord.range, chromhmm.all.states, out){
   x <-distanceToNearest(own, chromhmm.blood.states)
@@ -206,38 +215,5 @@ AnnotatePublicData <- function(own, public, nperm, background){
 
 n.delta.snps <- delta.meqtls.snp.chromhmm.annotated.df$SNP %>% unique() %>% length()
 n.veh.snps   <- veh.meqtls.snp.chromhmm.annotated.df$SNP %>% unique() %>% length()
-
-own.chromhmm <- delta.meqtls.snp.chromhmm.annotated.df[annot.type == "1_TssA", ] 
-overlap      <- own.chromhmm$SNP %>% unique() %>% length()
-non_overlap  <- n.delta.snps - own.chromhmm$SNP %>% unique() %>% length()
-
-background.chromhmm   <- veh.meqtls.snp.chromhmm.annotated.df[annot.type == "1_TssA", ] 
-
-background_bins <- lapply(chromhmm.epigenomes$EID, function(x) background.chromhmm[background.chromhmm$annot.code == x])  # get all background SNPs in MAF bin 1 to 11
-own_bin_lengths <- sapply(chromhmm.epigenomes$EID, function(x) nrow(own.chromhmm[own.chromhmm$annot.code == x]))  # get length of all 11 MAF bins
-
-nperm <- 10
-resampling <- lapply(1:nperm, function(x){
-  sample_overlap <- sum(sapply(1:127, function(y)
-    # check that the background maf bin is not empty (happens sometimes, if the overlap is empty)
-    ifelse(nrow(background_bins[[y]]) != 0, 
-           # take n random samples of the background (n = own bin length except background bin length is smaller, than take all background genes of this MAF bin) 
-           sample_n(background_bins[[y]], 
-                    ifelse(nrow(background_bins[[y]]) >= own_bin_lengths[y], own_bin_lengths[y], nrow(background_bins[[y]]))) %>% nrow, 
-           0)
-  )
-  )
-  sample_non_overlap <- n.veh.snps - sample_overlap
-  conf_mtrx <- matrix(c(overlap, sample_overlap, non_overlap, sample_non_overlap), 2, 2, byrow = TRUE)
-  fisher.test.rslt <- fisher.test(conf_mtrx)
-  c(p_value = fisher.test.rslt$p.value, fisher.test.rslt$estimate)
-}
-)
-
-p_value_emp <- (sum(unlist(resampling)[attr(unlist(resampling), "names") == "p_value"] <= p_value) + 1) / (nperm + 1)
-
-p_value <- unlist(resampling)[attr(unlist(resampling), "names") == "p_value"] %>% mean() 
-or <- unlist(resampling)[attr(unlist(resampling), "names") == "odds ratio"] %>% mean() 
-c(p_value, or)
 
 # public       <- chromhmm.all.states[(elementMetadata(chromhmm.all.states)[, "code"] %in% "E033")]

@@ -66,17 +66,57 @@ chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst),
   public <- chromhmm.blood.states[(elementMetadata(chromhmm.blood.states)[, "type"]) == state, ] 
   # rslt <- data.frame()
   # rslt[c("n_snps_overlap", "or", "or_perm", "p_val", "p_val_perm", "p_val_emp"), ] <- 
-  rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
-                                    background = meqtl.veh.snp.gr, 
-                                    public = public, 
-                                    nperm = nperm) %>% as.data.frame()
+  EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
+                            background = meqtl.veh.snp.gr, 
+                            public = public, 
+                            nperm = nperm) 
 }
 
 stopImplicitCluster()
-chromhmm.enrich.perm.rslt
 
-chromhmm.enrich.perm.rslt <- states.lst
+chromhmm.enrich.perm.rslt <- cbind(chromhmm.enrich.perm.rslt %>% data.frame(row.names = NULL), 
+                                   state = states.lst)
+
 chromhmm.enrich.perm.rslt[["data"]] <- "Blood_and_T-cells"
 chromhmm.enrich.perm.rslt[["n_perm"]] <- nperm
 
 chromhmm.enrich.perm.rslt
+
+write.csv2(chromhmm.enrich.perm.rslt, 
+           file = paste0(out.dir.pre, "/05_me-qtl_enrichment/meqtl_snps_chromHMM_blood_enrichment_perm_", nperm, ".csv"), 
+           row.names = F, quote = F)
+
+# chromHMM Brain
+
+no.cores <- detectCores() - 3
+cl <- makeCluster(no.cores)
+registerDoParallel(cl)
+
+nperm <- 1
+
+chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
+                                     .combine = rbind, 
+                                     .packages =  c("GenomicRanges", "dplyr")) %dopar% {
+                                       state <- states.lst[i]                                     
+                                       public <- chromhmm.brain.states[(elementMetadata(chromhmm.brain.states)[, "name"]) == state, ] 
+                                       # rslt <- data.frame()
+                                       # rslt[c("n_snps_overlap", "or", "or_perm", "p_val", "p_val_perm", "p_val_emp"), ] <- 
+                                       EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
+                                                                 background = meqtl.veh.snp.gr, 
+                                                                 public = public, 
+                                                                 nperm = nperm) 
+                                     }
+
+stopImplicitCluster()
+
+chromhmm.enrich.perm.rslt <- cbind(chromhmm.enrich.perm.rslt %>% data.frame(row.names = NULL), 
+                                   state = states.lst)
+
+chromhmm.enrich.perm.rslt[["data"]] <- "Brain"
+chromhmm.enrich.perm.rslt[["n_perm"]] <- nperm
+
+chromhmm.enrich.perm.rslt
+
+write.csv2(chromhmm.enrich.perm.rslt, 
+           file = paste0(out.dir.pre, "/05_me-qtl_enrichment/meqtl_snps_chromHMM_brain_enrichment_perm_", nperm, ".csv"), 
+           row.names = F, quote = F)

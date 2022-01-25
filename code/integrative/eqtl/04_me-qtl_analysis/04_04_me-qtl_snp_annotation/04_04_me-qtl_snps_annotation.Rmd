@@ -49,7 +49,7 @@ knit_print.data.frame <- function(x, ...) {
 registerS3method("knit_print", "data.frame", knit_print.data.frame)
 ```
 
-# __Functional CpG annotation__
+# __Functional SNP annotation__
 ***
 
 ```{r, include = F, eval = T}
@@ -111,7 +111,7 @@ dex.meqtl.snp.anno.rds                <- readRDS(paste0(out.dir.pre, "meqtls_snp
 
 <!-- #### Full anno -->
 
-```{r include = T, eval = T, fig.cap = "Annotation with ChIPseeker, delta}
+```{r include = T, eval = T, fig.cap = "Annotation with ChIPseeker, delta"}
 delta.meqtl.snp.anno.df <- as.data.frame(delta.meqtl.snp.anno.rds@anno, row.names = names(delta.meqtl.snp.anno.rds@anno))
 # delta.meqtl.snp.anno.df$Relation_to_Island <- factor(delta.meqtl.cpg.anno.df$Relation_to_Island, 
 #                                                      levels = c("N_Shelf", "N_Shore", "Island", "S_Shore", "S_Shelf", "OpenSea"))
@@ -187,7 +187,7 @@ ggplot(meqtl.snp.anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
    scale_fill_manual("Feature", values = cbPalette)
 ```
 
-```{r include = F, eval = T}
+```{r include = F, eval = F}
 # Prepare methyl ranges
 
 cpg.coord.df    <- delta.meqtl.cpg.anno.df[, .(Name, chr, pos)]# %>% dplyr:: mutate(chr = sub("chr", "", chr))
@@ -295,20 +295,18 @@ GetChromHMMPlotAll <- function(df, cbPalette = NULL, plot.title = NULL){
     # coord_flip() +
     # scale_y_reverse() +
     geom_text(
-      aes(by = Model), # label = scales::percent(..count../tapply(..count.., ..x.., sum), accuracy = 0.1)),
+      aes(by = Model), 
       stat = "prop", 
       position = position_fill(vjust = .5), size = 3) +
     labs(x = "",
        y = "Percentage of SNPs", 
        title = plot.title) +
-    theme(legend.position = "right", # "bottom",
+    theme(legend.position = "right", 
           panel.grid.major = element_blank(),
           panel.background = element_blank(),
           plot.title = element_text(size = 8),
           axis.title = element_text(size = 8)) +
-          # axis.text.x = element_text(angle = 0, hjust = 0.5)) +
     scale_fill_manual("", values = cbPalette) 
-    # guides(fill = guide_legend(nrow = 2, byrow = TRUE))
 }
 ```
 
@@ -347,27 +345,73 @@ plot.title <- "15 chromatin states from 127 cell types"
 GetChromHMMPlotAll(df, cbPalette, plot.title)
 ```
 
-### Blood and T-cell
+<!-- ### Blood and T-cell -->
 
-```{r out.width = "90%", fig.cap = "The distribution of CpGs in 15 chromatin states from 14 blood and T-cell types", include = T, eval = T}
+<!-- ```{r out.width = "90%", fig.cap = "The distribution of CpGs in 15 chromatin states from 14 blood and T-cell types", include = T, eval = T} -->
+<!-- chromhmm.blood.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Blood & T-cell", "EID"] -->
 
-chromhmm.blood.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Blood & T-cell", "EID"]
+<!-- df <- meqtls.snp.chromhmm.annotated.plt.df[annot.code %in% chromhmm.blood.eids, .(SNP, annot.type, Model)] %>% unique() -->
 
-df <- meqtls.cpg.chromhmm.annotated.plt.df[annot.code %in% chromhmm.blood.eids, .(CpG_ID, annot.type, Model)] %>% unique()
+<!-- plot.title <- "15 chromatin states from 14 blood and T-cell types" -->
 
-plot.title <- "15 chromatin states from 14 blood and T-cell types"
 
-GetChromHMMPlotAll(df, cbPalette, plot.title)
+<!-- GetChromHMMPlotAll(df, cbPalette, plot.title) -->
+<!-- ``` -->
+
+<!-- ### Brain -->
+
+<!-- ```{r out.width = "90%", fig.cap = "The distribution of CpGs in 15 chromatin states from 10 brain types", include = T, eval = T} -->
+<!-- chromhmm.brain.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Brain", "EID"] -->
+
+<!-- df <- meqtls.snp.chromhmm.annotated.plt.df[annot.code %in% chromhmm.brain.eids, .(SNP, annot.type, Model)] %>% unique() -->
+
+<!-- plot.title <- "15 chromatin states from 10 brain types" -->
+
+<!-- GetChromHMMPlotAll(df, cbPalette, plot.title) -->
+<!-- ``` -->
+
+# __Functional SNP enrichment__
+***
+
+## Chromatin States
+
+```{r eval = T, include = F}
+chromhmm.blood.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_blood_states.Rds") 
+chromhmm.brain.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_brain_states.Rds") 
+
+states.lst <- elementMetadata(chromhmm.blood.states)[, "type"] %>% unique() %>% sort()
+
+length(chromhmm.blood.states)
+length(chromhmm.brain.states)
 ```
 
-### Brain
+```{r eval = T, include = F}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+chromhmm.blood.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "/05_me-qtl_enrichment/meqtl_snps_chromHMM_blood_enrichment_perm_100.csv"))
+chromhmm.brain.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "/05_me-qtl_enrichment/meqtl_snps_chromHMM_brain_enrichment_perm_100.csv"))
+```
 
-```{r out.width = "90%", fig.cap = "The distribution of CpGs in 15 chromatin states from 10 brain types", include = T, eval = T}
-chromhmm.brain.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Brain", "EID"]
+```{r eval = F, include = F}
+chromhmm.blood.enrich.perm.rslt["is_sign"] <- ifelse(chromhmm.blood.enrich.perm.rslt$p_val_emp < 0.05, "Significant", "Non-significant")
+ggplot(chromhmm.blood.enrich.perm.rslt, aes(x = state, y = odds.ratio, fill = is_sign)) + 
+  geom_bar( stat = "identity", position = position_dodge()) +
+  geom_hline(yintercept = 1, color = "red") + 
+  labs(x = "",
+       y = "Odds ratio", 
+       title = "") +
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 90, hjust = 0.5)) +
+   scale_fill_manual("", values = c( "#999999", "#009E73")) 
+```
 
-df <- meqtls.cpg.chromhmm.annotated.plt.df[annot.code %in% chromhmm.brain.eids, .(CpG_ID, annot.type, Model)] %>% unique()
 
-plot.title <- "15 chromatin states from 10 brain types"
+## GWAS Enrichment
 
-GetChromHMMPlotAll(df, cbPalette, plot.title)
+```{r eval = T, include = F}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+gwas.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "/05_me-qtl_enrichment/meqtl_snps_GWAS_CD_2019_enrichment_perm_1000.csv"))
 ```

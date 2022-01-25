@@ -345,35 +345,72 @@ plot.title <- "15 chromatin states from 127 cell types"
 GetChromHMMPlotAll(df, cbPalette, plot.title)
 ```
 
-<!-- ### Blood and T-cell -->
+### Blood and T-cell
 
-<!-- ```{r out.width = "90%", fig.cap = "The distribution of CpGs in 15 chromatin states from 14 blood and T-cell types", include = T, eval = T} -->
-<!-- chromhmm.blood.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Blood & T-cell", "EID"] -->
+```{r out.width = "90%", fig.cap = "The distribution of CpGs in 15 chromatin states from 14 blood and T-cell types", include = T, eval = T}
+chromhmm.blood.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Blood & T-cell", "EID"]
 
-<!-- df <- meqtls.snp.chromhmm.annotated.plt.df[annot.code %in% chromhmm.blood.eids, .(SNP, annot.type, Model)] %>% unique() -->
+df <- meqtls.snp.chromhmm.annotated.plt.df[annot.code %in% chromhmm.blood.eids, .(SNP, annot.type, Model)] %>% unique()
 
-<!-- plot.title <- "15 chromatin states from 14 blood and T-cell types" -->
+plot.title <- "15 chromatin states from 14 blood and T-cell types"
 
 
-<!-- GetChromHMMPlotAll(df, cbPalette, plot.title) -->
-<!-- ``` -->
+ df$annot.type <- factor(df$annot.type, levels = chromhmm.states$STATE)
+ df$Model      <- factor(df$Model, levels = c("Delta", "Baseline", "Dex"))
+   
+  ggplot(df, aes(x = Model, fill = annot.type)) + 
+    geom_bar( position = "fill") + 
+    geom_text(
+      aes(by = Model), 
+      stat = "prop") +
+    labs(x = "",
+       y = "Percentage of SNPs", 
+       title = plot.title) +
+    theme(legend.position = "right", 
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 8),
+          axis.title = element_text(size = 8)) +
+    scale_fill_manual("", values = cbPalette) 
 
-<!-- ### Brain -->
+# GetChromHMMPlotAll(df, cbPalette, plot.title)
+```
 
-<!-- ```{r out.width = "90%", fig.cap = "The distribution of CpGs in 15 chromatin states from 10 brain types", include = T, eval = T} -->
-<!-- chromhmm.brain.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Brain", "EID"] -->
+### Brain
 
-<!-- df <- meqtls.snp.chromhmm.annotated.plt.df[annot.code %in% chromhmm.brain.eids, .(SNP, annot.type, Model)] %>% unique() -->
+```{r out.width = "90%", fig.cap = "The distribution of CpGs in 15 chromatin states from 10 brain types", include = T, eval = T}
+chromhmm.brain.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Brain", "EID"]
 
-<!-- plot.title <- "15 chromatin states from 10 brain types" -->
+df <- meqtls.snp.chromhmm.annotated.plt.df[annot.code %in% chromhmm.brain.eids, .(SNP, annot.type, Model)] %>% unique()
 
-<!-- GetChromHMMPlotAll(df, cbPalette, plot.title) -->
-<!-- ``` -->
+plot.title <- "15 chromatin states from 10 brain types"
+
+ df$annot.type <- factor(df$annot.type, levels = chromhmm.states$STATE)
+ df$Model      <- factor(df$Model, levels = c("Delta", "Baseline", "Dex"))
+
+ggplot(df, aes(x = Model, fill = annot.type)) + 
+    geom_bar( position = "fill") + 
+    geom_text(
+        aes(by = Model), 
+        stat = "prop") +
+    labs(x = "",
+       y = "Percentage of SNPs", 
+       title = plot.title) +
+    theme(legend.position = "right", 
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 8),
+          axis.title = element_text(size = 8)) +
+    scale_fill_manual("", values = cbPalette) 
+
+# GetChromHMMPlotAll(df, cbPalette, plot.title)
+```
 
 # __Functional SNP enrichment__
 ***
 
 ## Chromatin States
+<!-- {.tabset .tabset-fade .tabset-pills} -->
 
 ```{r eval = T, include = F}
 chromhmm.blood.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_blood_states.Rds") 
@@ -381,25 +418,38 @@ chromhmm.brain.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/anno
 
 states.lst <- elementMetadata(chromhmm.blood.states)[, "type"] %>% unique() %>% sort()
 
-length(chromhmm.blood.states)
-length(chromhmm.brain.states)
+# length(chromhmm.blood.states)
+# length(chromhmm.brain.states)
 ```
 
 ```{r eval = T, include = F}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 chromhmm.blood.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "/05_me-qtl_enrichment/meqtl_snps_chromHMM_blood_enrichment_perm_100.csv"))
 chromhmm.brain.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "/05_me-qtl_enrichment/meqtl_snps_chromHMM_brain_enrichment_perm_100.csv"))
+
+chromhmm.blood.enrich.perm.rslt$state <- factor(chromhmm.blood.enrich.perm.rslt$state, levels = chromhmm.states$STATE)
+chromhmm.brain.enrich.perm.rslt$state <- factor(chromhmm.brain.enrich.perm.rslt$state, levels = chromhmm.states$STATE)
 ```
 
-```{r eval = F, include = F}
+### Permutation results
+
+```{r eval = T, include = T}
+rbind(chromhmm.blood.enrich.perm.rslt, chromhmm.brain.enrich.perm.rslt)
+```
+
+### Blood
+
+```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs.  The Y-axis denotes the fold enrichment/depletion as compared to baseline meSNPs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permuation Fisher-tests emperical P <= 0.05. ", eval = T, include = T}
+
 chromhmm.blood.enrich.perm.rslt["is_sign"] <- ifelse(chromhmm.blood.enrich.perm.rslt$p_val_emp < 0.05, "Significant", "Non-significant")
+
 ggplot(chromhmm.blood.enrich.perm.rslt, aes(x = state, y = odds.ratio, fill = is_sign)) + 
   geom_bar( stat = "identity", position = position_dodge()) +
   geom_hline(yintercept = 1, color = "red") + 
   labs(x = "",
        y = "Odds ratio", 
        title = "") +
-  theme(legend.position = "right",
+  theme(legend.position = "bottom",
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
@@ -409,9 +459,114 @@ ggplot(chromhmm.blood.enrich.perm.rslt, aes(x = state, y = odds.ratio, fill = is
 ```
 
 
+```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs. The Y-axis denotes the proportion of overlaps between meSNPs and blood cell type states.", eval = T, include = T}
+
+chromhmm.blood.enrich.perm.rslt["prop"] <-  chromhmm.blood.enrich.perm.rslt$n_snps_overlap / delta.meqtl.snp.anno.rds@peakNum
+
+ggplot(chromhmm.blood.enrich.perm.rslt, aes(x = state, y = prop)) + 
+  geom_bar( stat = "identity", position = position_dodge()) +
+  geom_text(aes(label = n_snps_overlap), position=position_dodge(width=0.9), vjust=-0.25) + 
+  labs(x = "",
+       y = "Overlaps", 
+       title = "") +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 90, hjust = 0.5)) +
+   scale_fill_manual("", values = c( "#009E73")) 
+```
+
+### Brain
+
+```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs.  The Y-axis denotes the fold enrichment/depletion as compared to baseline meSNPs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permuation Fisher-tests emperical P <= 0.05.", eval = T, include = T}
+
+chromhmm.brain.enrich.perm.rslt["is_sign"] <- ifelse(chromhmm.brain.enrich.perm.rslt$p_val_emp < 0.05, "Significant", "Non-significant")
+
+ggplot(chromhmm.brain.enrich.perm.rslt, aes(x = state, y = odds.ratio, fill = is_sign)) + 
+  geom_bar( stat = "identity", position = position_dodge()) +
+  geom_hline(yintercept = 1, color = "red") + 
+  labs(x = "",
+       y = "Odds ratio", 
+       title = "") +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 90, hjust = 0.5)) +
+   scale_fill_manual("", values = c( "#999999", "#009E73")) 
+```
+
+```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs. The Y-axis denotes the proportion of overlaps between meSNPs and brain cell type states.", eval = T, include = T}
+
+chromhmm.brain.enrich.perm.rslt["prop"] <-  chromhmm.brain.enrich.perm.rslt$n_snps_overlap / delta.meqtl.snp.anno.rds@peakNum
+
+ggplot(chromhmm.brain.enrich.perm.rslt, aes(x = state, y = prop)) + 
+  geom_bar( stat = "identity", position = position_dodge()) +
+  geom_text(aes(label = n_snps_overlap), position=position_dodge(width=0.9), vjust=-0.25) + 
+  labs(x = "",
+       y = "Overlaps", 
+       title = "") +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 90, hjust = 0.5)) +
+   scale_fill_manual("", values = c( "#009E73")) 
+```
+
+
 ## GWAS Enrichment
 
 ```{r eval = T, include = F}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 gwas.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "/05_me-qtl_enrichment/meqtl_snps_GWAS_CD_2019_enrichment_perm_1000.csv"))
+
+gwas.enrich.perm.rslt ["data"] <- c("Nominal: p <= 0.05", "Genome-wide: p <= 5e-8")
+
+gwas.enrich.perm.rslt$odds.ratio <- as.numeric(gwas.enrich.perm.rslt$odds.ratio)
+gwas.enrich.perm.rslt$p_val <- as.numeric(gwas.enrich.perm.rslt$p_val)
+gwas.enrich.perm.rslt$p_val_emp <- as.numeric(gwas.enrich.perm.rslt$p_val_emp)
+```
+
+
+```{r out.width = "90%", fig.cap = "Enrichment for nominal and genome-wide significant GWAS associations for the delta meSNPs for CrossDisorder GWAS. The Y-axis denotes the fold enrichment with regard to baseline meSNPs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permuation Fisher-tests emperical P <= 0.05.", eval = T, include = T}
+
+gwas.enrich.perm.rslt["is_sign"] <- ifelse(gwas.enrich.perm.rslt$p_val_emp < 0.05, "Significant", "Non-significant")
+
+ggplot(gwas.enrich.perm.rslt, aes(x = data, y = odds.ratio, fill = is_sign)) + 
+  geom_bar( stat = "identity", position = position_dodge()) +
+  geom_hline(yintercept = 1, color = "red") + 
+  labs(x = "",
+       y = "Odds ratio", 
+       title = "") +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+   scale_fill_manual("", values = c( "#999999", "#009E73")) 
+```
+
+```{r out.width = "90%", fig.cap = "Enrichment of the the delta meSNPs for CrossDisorder GWAS. The Y-axis denotes the proportion of overlaps between meSNPs and GWAS SNPs.", eval = T, include = T}
+
+gwas.enrich.perm.rslt["prop"] <-  gwas.enrich.perm.rslt$n_snps_overlap / delta.meqtl.snp.anno.rds@peakNum
+
+ggplot(gwas.enrich.perm.rslt, aes(x = data, y = prop)) + 
+  geom_bar( stat = "identity", position = position_dodge()) +
+  geom_text(aes(label = n_snps_overlap), position=position_dodge(width=0.9), vjust=-0.25) + 
+  labs(x = "",
+       y = "Overlaps", 
+       title = "") +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+   scale_fill_manual("", values = c( "#009E73")) 
 ```

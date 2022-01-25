@@ -17,7 +17,7 @@ meqtl.delta.snp.gr <- readRDS(paste0(out.dir.pre, "meqtl_delta_snps_with_maf_gr.
 gwas.gr    <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_no23andMe_oct2019_v2_GR_p005.rds")
 gwas.gw.gr <- gwas.gr[elementMetadata(gwas.gr)[, "p_value"] <= 5e-8, ] 
 
-nperm <- 100
+nperm <- 1000
 
 gwas.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
                                                    background = meqtl.veh.snp.gr, 
@@ -25,6 +25,7 @@ gwas.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr,
                                                    nperm = nperm)
 gwas.enrich.perm.rslt[["data"]] <- "GWAS_CD_2019_p0_05"
 gwas.enrich.perm.rslt[["n_perm"]] <- nperm
+gwas.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gr)
 
 # filter GWAS datasets for genome-wide (gw) hits (p-value <= 5e-8) 
 
@@ -35,6 +36,7 @@ gwas.gw.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr,
 
 gwas.gw.enrich.perm.rslt[["data"]] <- "GWAS_CD_2019_gw_p_5e-08"
 gwas.gw.enrich.perm.rslt[["n_perm"]] <- nperm
+gwas.gw.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gw.gr)
 
 (rslt <- rbind(gwas.enrich.perm.rslt, gwas.gw.enrich.perm.rslt))
 
@@ -53,11 +55,11 @@ states.lst <- elementMetadata(chromhmm.blood.states)[, "type"] %>% unique() %>% 
 
 # chromHMM Blood
 
-no.cores <- detectCores() - 3
+no.cores <- detectCores() - 2
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-nperm <- 1
+nperm <- 1000
 
 chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
                                      .combine = rbind, 
@@ -92,7 +94,7 @@ no.cores <- detectCores() - 3
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-nperm <- 1
+nperm <- 100
 
 chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
                                      .combine = rbind, 

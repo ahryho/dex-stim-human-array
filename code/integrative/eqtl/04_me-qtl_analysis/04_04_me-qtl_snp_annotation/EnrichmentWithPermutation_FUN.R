@@ -16,8 +16,8 @@
 
 EnrichmentWithPermutation <- function(own, background, public, nperm){
   
-  # own <- meqtl.delta.snp.gr
-  # public <- gwas.gr # chromhmm.blood.states[(elementMetadata(chromhmm.blood.states)[, "type"]) == "1_TssA", ] 
+  own <- meqtl.delta.snp.gr
+  public <-  chromhmm.blood.states[(elementMetadata(chromhmm.blood.states)[, "type"]) == "15_Quies", ] # chromhmm.all.states 
   # background <- background.gr
   
   GenomeInfoDb::seqlevelsStyle(own) <- "UCSC"
@@ -25,6 +25,7 @@ EnrichmentWithPermutation <- function(own, background, public, nperm){
   GenomeInfoDb::seqlevelsStyle(background) <- "UCSC"
   
   overlap     <- sum(overlapsAny(own, public))  # number of overlaps between the delta snps and public data (chromHMM_state or GWAS)
+  # sum(distanceToNearest(own, public)@elementMetadata@listData$distance == 0)
   non_overlap <- length(own) - overlap
   
   overlap_bkgr      <- sum(overlapsAny(background, public))  # number of overlaps between baseline snps and public data (chromHMM_state or GWAS)

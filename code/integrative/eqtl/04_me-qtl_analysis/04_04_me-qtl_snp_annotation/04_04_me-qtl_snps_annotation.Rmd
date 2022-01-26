@@ -354,15 +354,19 @@ df <- meqtls.snp.chromhmm.annotated.plt.df[annot.code %in% chromhmm.blood.eids, 
 
 plot.title <- "15 chromatin states from 14 blood and T-cell types"
 
+df$annot.type <- factor(df$annot.type, levels = chromhmm.states$STATE)
+df$Model      <- factor(df$Model, levels = c("Delta", "Baseline", "Dex"))
 
- df$annot.type <- factor(df$annot.type, levels = chromhmm.states$STATE)
- df$Model      <- factor(df$Model, levels = c("Delta", "Baseline", "Dex"))
-   
-  ggplot(df, aes(x = Model, fill = annot.type)) + 
-    geom_bar( position = "fill") + 
-    geom_text(
-      aes(by = Model), 
-      stat = "prop") +
+df.plt <- melt(table(df[, .(annot.type, Model)])) %>% 
+   group_by(annot.type, Model, value) %>%
+   group_by(Model) %>%
+   mutate(Prop = round(value / sum(value) * 100, 2))
+ 
+ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.type )) + 
+    geom_bar( position = "fill",  stat = "identity") + 
+    geom_text(data = subset(df.plt, Prop > 1.5),
+        aes(label = Prop),
+        position = position_fill(vjust = .5), size = 3) +
     labs(x = "",
        y = "Percentage of SNPs", 
        title = plot.title) +
@@ -388,11 +392,16 @@ plot.title <- "15 chromatin states from 10 brain types"
  df$annot.type <- factor(df$annot.type, levels = chromhmm.states$STATE)
  df$Model      <- factor(df$Model, levels = c("Delta", "Baseline", "Dex"))
 
-ggplot(df, aes(x = Model, fill = annot.type)) + 
-    geom_bar( position = "fill") + 
-    geom_text(
-        aes(by = Model), 
-        stat = "prop") +
+ df.plt <- melt(table(df[, .(annot.type, Model)])) %>% 
+   group_by(annot.type, Model, value) %>%
+   group_by(Model) %>%
+   mutate(Prop = round(value / sum(value) * 100, 1.5))
+ 
+ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.type )) + 
+    geom_bar( position = "fill",  stat = "identity") + 
+    geom_text(data = subset(df.plt, Prop > 1),
+        aes(label = Prop),
+        position = position_fill(vjust = .5), size = 3) +
     labs(x = "",
        y = "Percentage of SNPs", 
        title = plot.title) +

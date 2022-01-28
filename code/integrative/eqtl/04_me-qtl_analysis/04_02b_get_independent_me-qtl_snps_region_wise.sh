@@ -13,6 +13,7 @@ head -n 10 list_${treatment}_cpgs_for_clumping.csv
 wc -l list_${treatment}_cpgs_for_clumping.csv 
 
 snp_dir=~/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/
+# snp_dir=/binder/mgp/datasets/2020_DexStim_Array_Human/snps
 
 echo "CpG_ID SNP" > me-qtl_cis_${treatment}_ind_cpg_snp_associations.txt
 

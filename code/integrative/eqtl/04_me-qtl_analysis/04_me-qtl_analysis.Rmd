@@ -118,5 +118,5 @@ meqtl_rslt_dir="~/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrativ
 awk 'NR == 1 || $6 < 0.05' me-qtl_cis_result_delta.csv > me-qtl_cis_result_delta_fdr_005.csv
 ```
 
-```{r child = c('04_01_me-qtl_primary_results_analysis.Rmd', '04_02_me-qtl_independent_analysis.Rmd', '04_03_me-qtl_visualisation.Rmd')}
+```{r child = c('04_01_me-qtl_primary_results_analysis.Rmd', '04_02a_me-qtl_independent_analysis_global.Rmd', '04_03_me-qtl_visualisation.Rmd')}
 ```

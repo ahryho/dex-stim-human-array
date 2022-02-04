@@ -75,6 +75,7 @@ The number of independent SNPs per cis-region was identified by LD pruning and c
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
 meqtl.dex.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_delta_ind_cpg_snp_associations.txt")
+
 meqtl.dex.cpg.snp.ass.lst <- fread(meqtl.dex.cpg.snp.ass) 
 
 # meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_fdr_005.csv")

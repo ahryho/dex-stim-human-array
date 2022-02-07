@@ -59,7 +59,7 @@ cbPalette <- c("#CC79A7", "#009E73", "#56B4E9", "#0072B2",  "#E69F00", "#F0E442"
 ```
 
 ***
-# __Identification of independent meQTLs: region-wise vs. global__
+# __Identification of independent delta meQTLs: region-wise vs. global__
 ***
 
 ## Methodology
@@ -74,29 +74,15 @@ The number of independent SNPs per cis-region was identified by LD pruning and c
 ```{r, include = F, eval = T}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
-meqtl.dex.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_delta_ind_cpg_snp_associations.txt")
-
-meqtl.dex.cpg.snp.ass.lst <- fread(meqtl.dex.cpg.snp.ass) 
-
-# meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_fdr_005.csv")
-# meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_fdr_005.csv")
-meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_result_delta_fdr_005.csv")
-
-col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
-
-# ind.meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
-# ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
-meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
-
 meqtl.delta.ind.global.df <- fread(paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv"))
+meqtl.delta.ind.rw.df     <- fread(paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_indp_rw_delta_fdr_005.csv"))
 ```
 
 ```{r include = F, eval = F}
 summary(meqtl.delta.ind.global.df)
 ```
 
-```{r include = F, eval = T}
-meqtl.delta.ind.rw.df <- left_join(meqtl.dex.cpg.snp.ass.lst, meqtl.delta.df)
+```{r include = F, eval = F}
 summary(meqtl.delta.ind.rw.df)
 ```
 

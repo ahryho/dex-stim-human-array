@@ -1,12 +1,10 @@
 ***
-# __Identification of independent meQTLs__
+# __Identification of independent meQTLs: Global approach__
 ***
 
 ## Methodology
 
-The number of independent SNPs per cis-region was identified by LD pruning and clumping the SNPs using the “clump” command in PLINK (using distance < __200 kb__ and __r2 > 0.2__ as setting). Each SNP forms a SNP bin, by aggregating all other SNPs into bins by the tag SNP at r2 > 0.2 and distance < 200 kb, such that all SNPs within a given bin were correlated to the current SNP, but to any other SNP. 
-
-__Q:__ _Check the numbers and overlaps for all 3 runs (dex, veh, delta)_
+The number of independent SNPs was identified for the entire set of meQTLs obtained from the R package "MatrixEQTL" and which passed nominal significance threshold _p < 0.05_ by LD pruning and clumping the SNPs using the “clump” command in PLINK (using distance < __200 kb__ and __r2 > 0.2__ as setting). Each SNP forms a SNP bin, by aggregating all other SNPs into bins by the tag SNP at r2 > 0.2 and distance < 200 kb, such that all SNPs within a given bin were correlated to the current SNP, but to any other SNP. 
 
 ```{sh include = F, eval = F}
 snp_dir=/binder/mgp/datasets/2020_DexStim_Array_Human/snps

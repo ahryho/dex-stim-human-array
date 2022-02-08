@@ -45,7 +45,7 @@ GenerateGrangesObject <- function(input, ofile){
                                      p_value = input$P)  # generate GRanges object only with chr, position, rs SNP ID and p-value
   # remove duplicates
   input_gr <- input_gr[!duplicated(input_gr)] 
-  GenomeInfoDb::seqlevelsStyle(input_gr) <- "NCBI"
+  GenomeInfoDb::seqlevelsStyle(input_gr) <- "UCSC"
   print(length(input_gr)) # print length
   # save GRanges object to an rds file
   saveRDS(input_gr, file = ofile)
@@ -106,11 +106,15 @@ meqtl.dex.snp.gr   <- GenerateGrangesObjecteQTL(input = ind.meqtl.dex.df,
                                                 ofile = paste0(out.dir.pre, "meqtl_dex_snps_with_maf_gr.rds"))
 # GWAS Summary Statistics
 
+gwas.cluster.out.dir <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/"
+
 # gwas.cross.dis <- read.table(text = gsub(" ", "\t", readLines("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_10k_oct2019_v2.txt.daner.txt")), header = T)
 # gwas.cross.dis.10k <- fread("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_10k_oct2019_v2.txt.daner.txt", 
 #                             header = T, stringsAsFactors = F, 
 #                             select = c("CHROM", "POS", "ID", "PVAL"))
 # colnames(gwas.cross.dis.10k) <- c("CHR", "POS", "SNP", "P")
+
+# Cross Disorders
 
 gwas.cross.dis <- fread("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_no23andMe_oct2019_v2.txt.daner.txt", 
                         header = T, stringsAsFactors = F, 
@@ -120,3 +124,90 @@ colnames(gwas.cross.dis) <- c("CHR", "POS", "SNP", "P")
 gwas.gr <- GenerateGrangesObject(gwas.cross.dis, 
                                  ofile = "~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_no23andMe_oct2019_v2_GR_p005.rds")
 
+# SCZ 
+
+fn <- "/binder/common/public_data/PGC/SCZ_2018/CLOZUK_PGC2noclo.METAL.assoc.dosage.fix"
+
+gwas <- fread(fn, header = T, stringsAsFactors = F, select = c("SNP", "CHR", "BP", "P"))
+colnames(gwas) <- c("SNP", "CHR", "POS", "P")
+
+gwas.gr <- GenerateGrangesObject(gwas, 
+                                 ofile = paste0(gwas.cluster.out.dir, "pgc_SCZ_2018_GR_p005.rds"))
+
+# ADHD
+ 
+fn <- "/binder/common/public_data/PGC/ADHD/Demontis_2019/daner_meta_filtered_NA_iPSYCH23_PGC11_sigPCs_woSEX_2ell6sd_EUR_Neff_70.meta"
+
+gwas <- fread(fn, header = T, stringsAsFactors = F, select = c("SNP", "CHR", "BP", "P"))
+colnames(gwas) <- c("SNP", "CHR", "POS", "P")
+
+gwas.gr <- GenerateGrangesObject(gwas, 
+                                 ofile = paste0(gwas.cluster.out.dir, "pgc_ADHD_Demontis_2019_GR_p005.rds"))
+
+# ASD
+
+fn <- "/binder/common/public_data/PGC/ASD/Grove_2019/iPSYCHPGC_ASD_Nov2017"
+
+gwas <- fread(fn, header = T, stringsAsFactors = F, select = c("SNP", "CHR", "BP", "P"))
+colnames(gwas) <- c("SNP", "CHR", "POS", "P")
+
+gwas.gr <- GenerateGrangesObject(gwas, 
+                                 ofile = paste0(gwas.cluster.out.dir, "pgc_ASD_Grove_2019_GR_p005.rds"))
+
+# BP
+
+fn <- "/binder/common/public_data/PGC/BP_2018/BDvsCONT.sumstats"
+
+gwas <- fread(fn, header = T, stringsAsFactors = F, select = c("SNP", "CHR", "BP", "P"))
+colnames(gwas) <- c("SNP", "CHR", "POS", "P")
+
+gwas.gr <- GenerateGrangesObject(gwas, 
+                                 ofile = paste0(gwas.cluster.out.dir, "pgc_BPD_GR_p005.rds"))
+
+# MDD
+
+fn <- "/binder/common/public_data/PGC/MDD_2019/PGC_UKB_depression_genome-wide_ACGT.txt"
+
+gwas <- fread(fn, header = T, stringsAsFactors = F, select = c("MarkerName", "P"))
+colnames(gwas) <- c("SNP", "CHR", "POS", "P")
+
+gwas.gr <- GenerateGrangesObject(gwas, 
+                                 ofile = paste0(gwas.cluster.out.dir, "pgc_MDD_GR_p005.rds"))
+
+# IBD
+
+fn <- "/binder/common/public_data/IBD/EUR.IBD.gwas_info03_filtered.assoc"
+
+gwas <- fread(fn, header = T, stringsAsFactors = F, select = c("SNP", "CHR", "BP", "P"))
+colnames(gwas) <- c("SNP", "CHR", "POS", "P")
+
+gwas.gr <- GenerateGrangesObject(gwas, 
+                                 ofile = paste0(gwas.cluster.out.dir, "IBD_GR_p005.rds"))
+
+# PD
+
+fn <- "/binder/common/public_data/PD/daner_panic_3GDES_col1_12"
+
+gwas <- fread(fn, header = T, stringsAsFactors = F, select = c("SNP", "CHR", "BP", "P"))
+colnames(gwas) <- c("SNP", "CHR", "POS", "P")
+
+gwas.gr <- GenerateGrangesObject(gwas, 
+                                 ofile = paste0(gwas.cluster.out.dir, "PD_GR_p005.rds"))
+
+# BMI
+
+fn <- "/binder/common/public_data/BMI/Locke_et_al/SNP_gwas_mc_merge_nogc.tbl.uniq"
+
+gwas.locke <- fread(fn, header = T, stringsAsFactors = F, select = c("SNP", "p"))
+
+fn <- "/binder/common/public_data/BMI/ENGAGE/ENGAGE1000G_BMI.txt"
+
+gwas <- fread(fn) #, header = T, stringsAsFactors = F, select = c("SNP", "chromosome", "position"))
+gwas <- gwas %>% dplyr::select(SNP, CHR = chromosome, POS = position)
+
+gwas.merged <- dplyr::left_join(gwas.locke, gwas)
+
+colnames(gwas.merged) <- c("SNP", "P", "CHR", "POS")
+
+gwas.gr <- GenerateGrangesObject(gwas.merged, 
+                                 ofile = paste0(gwas.cluster.out.dir, "BMI_GR_p005.rds"))

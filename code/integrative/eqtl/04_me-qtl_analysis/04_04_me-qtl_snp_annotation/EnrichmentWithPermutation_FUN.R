@@ -16,8 +16,8 @@
 
 EnrichmentWithPermutation <- function(own, background, public, nperm){
   
-  own <- meqtl.delta.snp.gr
-  public <-  chromhmm.blood.states[(elementMetadata(chromhmm.blood.states)[, "type"]) == "15_Quies", ] # chromhmm.all.states 
+  # own <- meqtl.delta.snp.gr
+  #  public <-  chromhmm.blood.states[(elementMetadata(chromhmm.blood.states)[, "type"]) == "15_Quies", ] # chromhmm.all.states 
   # background <- background.gr
   
   GenomeInfoDb::seqlevelsStyle(own) <- "UCSC"

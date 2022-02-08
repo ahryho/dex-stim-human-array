@@ -543,7 +543,7 @@ ggplot(chromhmm.brain.enrich.perm.rslt, aes(x = state, y = prop)) +
 
 ```{r eval = T, include = F}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/"
-gwas.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_GWAS_CD_2019_enrichment_perm_100.csv"))
+gwas.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_GWAS_enrichment_perm_100.csv"))
 
 gwas.enrich.perm.rslt ["data"] <- c("Nominal: p <= 0.05", "Genome-wide: p <= 5e-8")
 
@@ -568,7 +568,7 @@ ggplot(gwas.enrich.perm.rslt, aes(x = data, y = odds.ratio, fill = is_sign)) +
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
    scale_fill_manual("", values = c( "#999999", "#009E73")) 
 ```
 
@@ -587,6 +587,6 @@ ggplot(gwas.enrich.perm.rslt, aes(x = data, y = prop)) +
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
    scale_fill_manual("", values = c( "#009E73")) 
 ```

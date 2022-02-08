@@ -17,7 +17,7 @@ meqtl.delta.snp.gr <- readRDS(paste0(out.dir.pre, "meqtl_delta_snps_with_maf_gr.
 
 # GWAS CD2
 gwas.gr    <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_no23andMe_oct2019_v2_GR_p005.rds")
-gwas.gw.gr <- gwas.gr[elementMetadata(gwas.gr)[, "p_value"] <= 5e-8, ] 
+# gwas.gw.gr <- gwas.gr[elementMetadata(gwas.gr)[, "p_value"] <= 5e-8, ] 
 
 nperm <- 100
 
@@ -167,7 +167,7 @@ gwas.pd <- gwas.enrich.perm.rslt
 # /05_me-qtl_enrichment/region_wise_independent_snps/
 # 
 write.csv2(rslt, 
-           file = paste0(out.dir.pre, "meqtl_snps_GWAS_CD_2019_enrichment_perm_", nperm, ".csv"), 
+           file = paste0(out.dir.pre, "meqtl_snps_GWAS_enrichment_perm_", nperm, ".csv"), 
            row.names = F, quote = F)
 
 # rslt <- read.csv2(file = paste0(out.dir.pre, "/05_me-qtl_enrichment/meqtl_snps_GWAS_CD_2019_enrichment_perm_", nperm, ".csv"))

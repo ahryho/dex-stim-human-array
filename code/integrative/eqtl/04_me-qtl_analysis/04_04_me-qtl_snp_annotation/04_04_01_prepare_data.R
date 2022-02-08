@@ -10,17 +10,17 @@ library(org.Hs.eg.db)
 
 library(annotatr)
 
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/region_wise_independent_snps/"
 
 system(paste0("ls -lha ", out.dir.pre))
 
 # 1. Load data
 
-meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_fdr_005.csv")
-meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_fdr_005.csv")
-meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv")
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_dex_with_delta_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_veh_with_delta_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_delta_fdr_005.csv")
 
-col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
+col.names <-  c("CpG_ID", "SNP", "beta", "t-stat", "p-value", "fdr")
 
 ind.meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
 ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
@@ -51,7 +51,11 @@ delta.snp.coord.range <- GenomicRanges::GRanges(seqnames = paste0("chr", input$c
                                                                           end = as.numeric(as.character(input$pos))))
 names(delta.snp.coord.range) <- meqtls.snp.delta.coord.df$SNP
 
-makeGRangesFromDataFrame(input,start.field ="pos",end.field="pos",seqnames="chr",ignore.strand=T,keep.extra.columns=F)
+# makeGRangesFromDataFrame(input,
+#                          start.field = "pos",
+#                          end.field = "pos",
+#                          seqnames = "chr",
+#                          ignore.strand = T, keep.extra.columns = F)
 
 # Annotate
 
@@ -74,6 +78,16 @@ veh.snp.coord.range <- GenomicRanges::GRanges(seqnames = paste0("chr", input$chr
                                                 ranges = IRanges::IRanges(start = as.numeric(as.character(input$pos)),
                                                                           end = as.numeric(as.character(input$pos))))
 names(veh.snp.coord.range) <- meqtls.snp.veh.coord.df$SNP
+
+# Annotate
+
+veh.snp.anno <- annotatePeak(unique(veh.snp.coord.range), 
+                             TxDb = TxDb.Hsapiens.UCSC.hg19.knownGene, 
+                             annoDb = "org.Hs.eg.db")
+
+saveRDS(veh.snp.anno,
+        paste0(out.dir.pre, "meqtls_snp_annotated_withChIPseeker_veh.rds"))
+
 
 # dex
 
@@ -141,11 +155,12 @@ saveRDS(chromhmm.brain.states, "~/bio/code/mpip/dex-stim-human-array/data/annota
 ####
 
 AnnotateChromHMM <- function(snp.coord.range, chromhmm.all.states, out){
-  x <-distanceToNearest(own, chromhmm.blood.states)
-  sum(overlapsAny(delta.snp.coord.range, own))
-  sum(distanceToNearest(delta.snp.coord.range, chromhmm.blood.states)@elementMetadata@listData$distance == 0)
   
-  table(x@elementMetadata@listData$distance == 0)
+  # x <-distanceToNearest(own, chromhmm.blood.states)
+  # sum(overlapsAny(delta.snp.coord.range, own))
+  # sum(distanceToNearest(delta.snp.coord.range, chromhmm.blood.states)@elementMetadata@listData$distance == 0)
+  # table(x@elementMetadata@listData$distance == 0)
+  
   meqtls.snp.chromhmm.annotated <- annotate_regions(
     regions = snp.coord.range,
     annotations = chromhmm.all.states,
@@ -179,41 +194,40 @@ out.fn <- paste0(out.dir.pre, "meqtls_snp_chromhmm_annotated_veh.csv")
 veh.meqtls.snp.chromhmm.annotated.df <- AnnotateChromHMM(veh.snp.coord.range, chromhmm.all.states, out.fn)
 
 
-# Calculate odds ratio
-
-AnnotatePublicData <- function(own, public, nperm, background){
-  #print(paste0("Number of overlapping background SNPs: ", length(background@ranges)))  # print number of overlapping background SNPs
-  overlap     <- sum(overlapsAny(own, public))  # number of overlaps between the two datasets
-  non_overlap <- length(own) - overlap
-  
-  background_bins <- lapply(1:11, function(x) background[background$bin == x])  # get all background SNPs in MAF bin 1 to 11
-  own_bin_lengths <- sapply(1:11, function(x) length(own[own$bin == x]))  # get length of all 11 MAF bins
-   
-  # resample nperm times
-  resampling <- lapply(1:nperm, function(x){
-    sample_overlap <- sum(sapply(1:11, function(y)
-      # check that the background maf bin is not empty (happens sometimes, if the overlap is empty)
-      ifelse(length(background_bins[[y]]) != 0, 
-             # take n random samples of the background (n = own bin length except background bin length is smaller, than take all background genes of this MAF bin) 
-             sum(IRanges::overlapsAny(sample(background_bins[[y]], 
-                                             ifelse(length(background_bins[[y]]) >= own_bin_lengths[y], own_bin_lengths[y], length(background_bins[[y]]))), 
-                                      public)), 
-             0)
-    )
-    )
-    sample_non_overlap <- length(own) - sample_overlap
-    conf_mtrx <- matrix(c(overlap, sample_overlap, non_overlap, sample_non_overlap), 2, 2, byrow = TRUE)
-    fisher.test.rslt <- fisher.test(conf_mtrx)
-    c(p_value = fisher.test.rslt$p.value, fisher.test.rslt$estimate)
-  }
-  )
-  # IF 0 => actually smaller than 1e^(-5/6)
-  p_value <- unlist(resampling)[attr(unlist(resampling), "names") == "p_value"] %>% mean() 
-  or <- unlist(resampling)[attr(unlist(resampling), "names") == "odds ratio"] %>% mean() 
-  return(c(p_value, or)) # return the resampling p-value
-}
-
-n.delta.snps <- delta.meqtls.snp.chromhmm.annotated.df$SNP %>% unique() %>% length()
-n.veh.snps   <- veh.meqtls.snp.chromhmm.annotated.df$SNP %>% unique() %>% length()
-
-# public       <- chromhmm.all.states[(elementMetadata(chromhmm.all.states)[, "code"] %in% "E033")]
+# 
+# AnnotatePublicData <- function(own, public, nperm, background){
+#   #print(paste0("Number of overlapping background SNPs: ", length(background@ranges)))  # print number of overlapping background SNPs
+#   overlap     <- sum(overlapsAny(own, public))  # number of overlaps between the two datasets
+#   non_overlap <- length(own) - overlap
+#   
+#   background_bins <- lapply(1:11, function(x) background[background$bin == x])  # get all background SNPs in MAF bin 1 to 11
+#   own_bin_lengths <- sapply(1:11, function(x) length(own[own$bin == x]))  # get length of all 11 MAF bins
+#    
+#   # resample nperm times
+#   resampling <- lapply(1:nperm, function(x){
+#     sample_overlap <- sum(sapply(1:11, function(y)
+#       # check that the background maf bin is not empty (happens sometimes, if the overlap is empty)
+#       ifelse(length(background_bins[[y]]) != 0, 
+#              # take n random samples of the background (n = own bin length except background bin length is smaller, than take all background genes of this MAF bin) 
+#              sum(IRanges::overlapsAny(sample(background_bins[[y]], 
+#                                              ifelse(length(background_bins[[y]]) >= own_bin_lengths[y], own_bin_lengths[y], length(background_bins[[y]]))), 
+#                                       public)), 
+#              0)
+#     )
+#     )
+#     sample_non_overlap <- length(own) - sample_overlap
+#     conf_mtrx <- matrix(c(overlap, sample_overlap, non_overlap, sample_non_overlap), 2, 2, byrow = TRUE)
+#     fisher.test.rslt <- fisher.test(conf_mtrx)
+#     c(p_value = fisher.test.rslt$p.value, fisher.test.rslt$estimate)
+#   }
+#   )
+#   # IF 0 => actually smaller than 1e^(-5/6)
+#   p_value <- unlist(resampling)[attr(unlist(resampling), "names") == "p_value"] %>% mean() 
+#   or <- unlist(resampling)[attr(unlist(resampling), "names") == "odds ratio"] %>% mean() 
+#   return(c(p_value, or)) # return the resampling p-value
+# }
+# 
+# n.delta.snps <- delta.meqtls.snp.chromhmm.annotated.df$SNP %>% unique() %>% length()
+# n.veh.snps   <- veh.meqtls.snp.chromhmm.annotated.df$SNP %>% unique() %>% length()
+# 
+# # public       <- chromhmm.all.states[(elementMetadata(chromhmm.all.states)[, "code"] %in% "E033")]

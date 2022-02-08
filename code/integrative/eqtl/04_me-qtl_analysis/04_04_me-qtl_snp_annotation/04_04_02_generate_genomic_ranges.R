@@ -53,12 +53,12 @@ GenerateGrangesObject <- function(input, ofile){
 }
 
 
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/region_wise_independent_snps/`"
 
 # background snps (baseline + delta )
 # Read MAF values for each SNP
 snps.dir <- "~/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/"
-mafs <- fread(paste0(snps.dir, "dex_geno_maf_for_filtered_samples.afreq"), data.table = F)
+mafs     <- fread(paste0(snps.dir, "dex_geno_maf_for_filtered_samples.afreq"), data.table = F)
 colnames(mafs) <- c("CHR", "SNP", "REF", "ALT", "MAF", "OBS_CT")
 
 # generate bins of MAF in 0.05 steps
@@ -70,45 +70,53 @@ snps <- fread(paste0(snps.dir, "Dex_genoData_SNPs.bim"), data.table = F, select 
 
 background.all.gr <- GenerateGrangesObjecteQTL(input = snps, 
                                            mdata = mafs, 
-                                           ofile = paste0(out.dir.pre, "dex_geno_snps_with_maf_bins_gr.rds"))
+                                           ofile = paste0(snps.dir, "dex_geno_snps_with_maf_bins_gr.rds"))
+
+#############
+
+background.all.gr <- readRDS( paste0(snps.dir, "dex_geno_snps_with_maf_bins_gr.rds"))
 
 ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
 ind.meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
-
-snps.bkgr <- snps[snps$SNP %in% ind.meqtl.delta.df$SNP,]
-
-# Generate background SNP data as GRanges object
-background.gr <- GenerateGrangesObjecteQTL(input = snps.bkgr, 
-                                           mdata = mafs, 
-                                           ofile = paste0(out.dir.pre, "meqtl_dex_snps_with_maf_gr.rds"))
-table(seqnames(background.gr))  # no chr X/Y/M (remove in dataset if included there)
-length(background.gr$snp_id) 
-
-# Generate merging file for eQTL data from background SNPs 
-background <- as.data.frame(background.gr)[, c("seqnames", "start", "snp_id", "bin")]
-colnames(background) <- c("CHR", "POS", "SNP", "bin")
-
-
-# ind.meqtl.delta.gr <- readRDS(paste0(out.dir.pre, "meqtls_snp_annotated_withChIPseeker_delta.rds"))
-# ind.meqtl.delta.df <- as.data.frame(ind.meqtl.delta.gr@anno)[, c("seqnames", "start")] %>% mutate(seqnames = sub("chr", "", seqnames))
-# ind.meqtl.delta.df["SNP"] <- rownames(ind.meqtl.delta.df)
-# colnames(ind.meqtl.delta.df) <- c("CHR", "POS", "SNP")
-
-
-meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv")
 ind.meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
 
-meqtl.delta.snp.gr <- GenerateGrangesObjecteQTL(input = ind.meqtl.delta.df,
-                                       mdata = background,
-                                       ofile = paste0(out.dir.pre, "meqtl_delta_snps_with_maf_gr.rds"))
+# snps.bkgr <- snps[snps$SNP %in% ind.meqtl.delta.df$SNP,]
+# 
+# # Generate background SNP data as GRanges object
+# background.gr <- GenerateGrangesObjecteQTL(input = snps.bkgr, 
+#                                            mdata = mafs, 
+#                                            ofile = paste0(out.dir.pre, "meqtl_delta_snps_with_maf_gr.rds"))
+# table(seqnames(background.gr))  # no chr X/Y/M (remove in dataset if included there)
+# length(background.gr$snp_id) 
 
+# Generate merging file for eQTL data from background SNPs 
+background <- as.data.frame(background.all.gr)[, c("seqnames", "start", "snp_id", "bin")]
+colnames(background) <- c("CHR", "POS", "SNP", "bin")
+
+meqtl.delta.snp.gr <- GenerateGrangesObjecteQTL(input = ind.meqtl.delta.df,
+                                                mdata = background,
+                                                ofile = paste0(out.dir.pre, "meqtl_delta_snps_with_maf_gr.rds"))
+
+meqtl.veh.snp.gr   <- GenerateGrangesObjecteQTL(input = ind.meqtl.veh.df,
+                                                mdata = background,
+                                                ofile = paste0(out.dir.pre, "meqtl_veh_snps_with_maf_gr.rds"))
+
+meqtl.dex.snp.gr   <- GenerateGrangesObjecteQTL(input = ind.meqtl.dex.df,
+                                                mdata = background,
+                                                ofile = paste0(out.dir.pre, "meqtl_dex_snps_with_maf_gr.rds"))
 # GWAS Summary Statistics
 
 # gwas.cross.dis <- read.table(text = gsub(" ", "\t", readLines("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_10k_oct2019_v2.txt.daner.txt")), header = T)
-gwas.cross.dis <- fread("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_no23andMe_oct2019_v2.txt.daner.txt", header = T, stringsAsFactors = F, select = c("CHROM", "POS", "ID", "PVAL"))
-colnames(gwas.cross.dis) <- c("CHR", "POS", "SNP", "P")
-gwas.cross.dis.10k <- fread("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_10k_oct2019_v2.txt.daner.txt", header = T, stringsAsFactors = F, select = c("CHROM", "POS", "ID", "PVAL"))
-colnames(gwas.cross.dis.10k) <- c("CHR", "POS", "SNP", "P")
+# gwas.cross.dis.10k <- fread("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_10k_oct2019_v2.txt.daner.txt", 
+#                             header = T, stringsAsFactors = F, 
+#                             select = c("CHROM", "POS", "ID", "PVAL"))
+# colnames(gwas.cross.dis.10k) <- c("CHR", "POS", "SNP", "P")
 
-gwas.gr <- GenerateGrangesObject(gwas.cross.dis, ofile = "~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_no23andMe_oct2019_v2_GR_p005.rds")
+gwas.cross.dis <- fread("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_no23andMe_oct2019_v2.txt.daner.txt", 
+                        header = T, stringsAsFactors = F, 
+                        select = c("CHROM", "POS", "ID", "PVAL"))
+colnames(gwas.cross.dis) <- c("CHR", "POS", "SNP", "P")
+
+gwas.gr <- GenerateGrangesObject(gwas.cross.dis, 
+                                 ofile = "~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_no23andMe_oct2019_v2_GR_p005.rds")
 

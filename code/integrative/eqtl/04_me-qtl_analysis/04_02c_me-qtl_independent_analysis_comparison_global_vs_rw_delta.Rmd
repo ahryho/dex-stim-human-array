@@ -1,63 +1,3 @@
----
-title: "cis-meQTLs Analysis"
-subtitle: "Dexamethasone-Stimulated Human Array Project"
-author: 
-  - name: Anastasiia Hryhorzhevska
-    email: anastasiia_hry@psych.mpg.de
-    url: https://github.com/ahryho
-    affiliation: Max Planck Institute of Psychiatry
-    affiliation_url: https://www.psych.mpg.de/2664393/medizinische-genomforschung
-date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
-output:
-  html_document:
-    toc: TRUE
-    toc_float: TRUE
-    df_print: paged
-    css: style.css
-    code_folding: hide
-editor_options: 
-  chunk_output_type: console
----
-
-```{r, include=FALSE}
-options(digits = 4, width = 100, stringsAsFactors = T)
-knitr::opts_chunk$set(echo = TRUE,
-                      tidy.opts = list(width.cutoff = 100),
-                      tidy=TRUE,
-                      fig.pos = "H",
-                      dpi = 200,
-                      warning = FALSE, 
-                      message = FALSE, 
-                      cache = TRUE, 
-                      cache.lazy = FALSE)
-
-# define DT as the standard printing method for data.frame
-library(knitr)
-library(DT)
-knit_print.data.frame <- function(x, ...) {
-  knit_print(DT::datatable(x,
-                           filter="top",
-                           rownames = FALSE,
-                           extensions = "FixedColumns",
-                           options = list(
-                             scrollX = TRUE,
-                             pageLength = 5
-                             
-                           )), ...)
-}
-
-registerS3method("knit_print", "data.frame", knit_print.data.frame)
-
-library(data.table)
-library(dplyr)
-
-library(ggplot2)
-library(ggrepel)
-library(scales)
-cbPalette <- c("#CC79A7", "#009E73", "#56B4E9", "#0072B2",  "#E69F00", "#F0E442", "#D55E00", "#999999")
-
-```
-
 ***
 # __Identification of independent delta meQTLs: region-wise vs. global__
 ***
@@ -76,6 +16,8 @@ out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/ma
 
 meqtl.delta.ind.global.df <- fread(paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv"))
 meqtl.delta.ind.rw.df     <- fread(paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_indp_rw_delta_fdr_005.csv"))
+
+cbPalette <- c("#CC79A7", "#009E73", "#56B4E9", "#0072B2",  "#E69F00", "#F0E442", "#D55E00", "#999999")
 ```
 
 ```{r include = F, eval = F}

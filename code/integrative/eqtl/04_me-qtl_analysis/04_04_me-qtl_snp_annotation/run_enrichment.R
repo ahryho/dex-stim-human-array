@@ -10,6 +10,7 @@ library(doParallel)
 
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
+out.dir.pre <- paste0(out.dir.pre, "global_independent_snps/")
 out.dir.pre <- paste0(out.dir.pre, "region_wise_independent_snps/")
 
 meqtl.veh.snp.gr   <- readRDS(paste0(out.dir.pre, "meqtl_veh_snps_with_maf_gr.rds"))

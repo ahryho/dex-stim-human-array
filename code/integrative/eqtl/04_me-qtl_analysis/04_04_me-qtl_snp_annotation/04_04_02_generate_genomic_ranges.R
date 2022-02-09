@@ -166,13 +166,35 @@ gwas.gr <- GenerateGrangesObject(gwas,
 
 # MDD
 
+library(biomaRt)
+ensembl <- useEnsembl("snp", dataset = "hsapiens_snp", GRCh = "37")
+
 fn <- "/binder/common/public_data/PGC/MDD_2019/PGC_UKB_depression_genome-wide_ACGT.txt"
 
 gwas <- fread(fn, header = T, stringsAsFactors = F, select = c("MarkerName", "P"))
+gwas <- gwas[P <= 0.05]
+
+gwas.mdd.biomart <- getBM(attributes = c("refsnp_id",
+                             "chr_name",
+                             "chrom_start",
+                             "chrom_end"),
+              filters = "snp_filter", values = gwas$MarkerName, mart = ensembl, uniqueRows = TRUE)
+
+gwas <- left_join(gwas, gwas.mdd.biomart, by = c("MarkerName" = "SNP")) %>% 
+  dplyr::select(SNP, CHR, POS, P)
+
 colnames(gwas) <- c("SNP", "CHR", "POS", "P")
 
-gwas.gr <- GenerateGrangesObject(gwas, 
-                                 ofile = paste0(gwas.cluster.out.dir, "pgc_MDD_GR_p005.rds"))
+gwas.gr <- GenomicRanges::GRanges(seqnames = gwas$CHR,
+                                  ranges = IRanges::IRanges(start = as.numeric(as.character(gwas$POS)),
+                                                            end = as.numeric(as.character(gwas$POS))),
+                                  snp_id = gwas$SNP,
+                                  p_value = gwas$P)  
+
+gwas.gr <- gwas.gr[!duplicated(gwas.gr)] 
+GenomeInfoDb::seqlevelsStyle(gwas.gr) <- "UCSC"
+
+saveRDS(gwas.gr, file =  paste0(gwas.cluster.out.dir, "pgc_MDD_GR_p005.rds"))
 
 # IBD
 

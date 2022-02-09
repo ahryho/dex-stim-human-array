@@ -69,3 +69,87 @@ ToBed <- function(df, output.fn, is.save = T){
                 sep = " ", quote = F, row.names = F, col.names = F)
   bed
 }
+
+## Scatter plot and Boxplots for significant meQTLs -->
+  
+# func-getbetavalues
+GetBetValuesDF <- function(methyl.beta.df, snp.df, selected.qtl, treatment){
+  beta.values.df    <- methyl.beta.df[CpG_ID %in% selected.qtl$CpG_ID, -1]
+  beta.values.df    <- rbind(beta.values.df, snp.df[SNP %in% selected.qtl$SNP, -1])
+  beta.values.df    <- data.frame(t(beta.values.df)) %>% setDT()
+  colnames(beta.values.df) <- c("CpG", "SNP")
+  beta.values.df$SNP <- as.factor(beta.values.df$SNP)
+  beta.values.df[SNP == 0, SNP := "AA"]; beta.values.df[SNP == 1, SNP := "AB"]; beta.values.df[SNP == 2, SNP := "BB"] 
+  
+  beta.values.df$treatment <- treatment
+  beta.values.df
+}
+
+# Scatter Plot
+GetScatterPlot <- function(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05, plot.title = NULL){
+  
+  cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+  
+  ggplot(meqtl.all.full.df, aes(x = beta, y = -log10(fdr), shape = treatment, color = treatment)) +
+    geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
+    geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
+    geom_point(alpha = 1.5, size = 1.2) +
+    geom_label_repel(data = selected.meqtl,
+                     aes(x = beta,
+                         y = -log10(fdr),
+                         label = meQTL_ID),
+                     fontface = 'bold',
+                     box.padding = unit(0.35, "lines"),
+                     point.padding = unit(0.5, "lines"),
+                     segment.color = 'grey50',
+                     nudge_x = 0.05, nudge_y = 10, 
+                     size = 3) +
+    scale_x_continuous(labels = scientific) +
+    # scale_y_continuous(trans = trans_reverser('log10')) +
+    # labs(title = " ", y = "", x = " ") + 
+    theme(legend.position = "bottom", 
+          legend.title = element_blank(),
+          #  panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 10),
+          axis.title = element_text(size = 8)) +
+    labs( x = "Effect size (FC), MatrixEQTL", 
+          title = plot.title) +
+    scale_colour_manual(values = cbPalette)
+}
+
+# BoxPlot
+GetBoxPlot <- function(beta.values.df, selected.meqtl, fdr.thr = 0.05, plot.labels = c("AA", "AB", "BB"), plot.title = NULL){
+  
+  cbPalette <- c(  "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+  
+  beta.values.df %>%
+    ggplot(aes(y = CpG, x = SNP, fill = treatment)) +
+    geom_boxplot(width = 0.2, color = "black") +
+    # scale_fill_viridis(discrete = TRUE, alpha = 0.5) +
+    scale_x_discrete(labels = plot.labels) +
+    theme( panel.background = element_blank(),
+           plot.title = element_text(size = 10),
+           axis.title = element_text(size = 10),
+           axis.text.x = element_text(angle = 0, hjust = 0.5), 
+           legend.position = "bottom", 
+           legend.title = element_blank()) +
+    labs(y = paste0(selected.meqtl$CpG_ID, "\nDNAm beta value"), 
+         x = selected.meqtl$SNP,
+         title = plot.title) +
+    scale_fill_manual(values = cbPalette)
+}
+
+# BoxPlot main
+ProcessGetBoxPlot <- function(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, 
+                              fdr.thr = 0.05, plot.title = NULL){
+  
+  beta.values.dex.df <- GetBetValuesDF(methyl.beta.dex.df, snp.df, selected.meqtl, "dex")
+  beta.values.veh.df <- GetBetValuesDF(methyl.beta.veh.df, snp.df, selected.meqtl, "veh")
+  beta.values.df     <- rbind(beta.values.dex.df, beta.values.veh.df)
+  
+  snp.ind.cnt.df <- beta.values.dex.df %>% count(SNP) # beta.values.df[ , .(count = count(SNP)), by = .(SNP, treatment)]
+  snp.ind.cnt.df[, label := paste0(SNP, " (n = ", n, ")")]
+  
+  GetBoxPlot(beta.values.df, selected.meqtl, snp.ind.cnt.df$label, fdr.thr = 0.05, plot.title)
+}

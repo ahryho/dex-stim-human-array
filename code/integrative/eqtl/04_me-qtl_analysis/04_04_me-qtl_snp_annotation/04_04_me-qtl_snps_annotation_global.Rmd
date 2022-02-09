@@ -1,5 +1,5 @@
 ---
-title: "cis-meQTLs Analysis"
+title: "cis-meQTLs Analysis.  meSNP Enrichment Analysis"
 subtitle: "Dexamethasone-Stimulated Human Array Project"
 author: 
   - name: Anastasiia Hryhorzhevska
@@ -77,7 +77,7 @@ library(doParallel)
 
 library(gUtils)
 
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/global_independent_snps/"
 
 # meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_with_delta_fdr_005.csv")
 # meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_fdr_005.csv")
@@ -311,19 +311,19 @@ GetChromHMMPlotAll <- function(df, cbPalette = NULL, plot.title = NULL){
 ```
 
 ```{r read-chromhmm-anno-delta, eval = T, include = F}
-delta.meqtls.snp.chromhmm.annotated.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls_snp_chromhmm_annotated_delta.csv")
+delta.meqtls.snp.chromhmm.annotated.df <- fread(paste0(out.dir.pre, "meqtls_snp_chromhmm_annotated_delta.csv"))
 
 delta.meqtls.snp.chromhmm.annotated.df[, Model := "Delta"]
 ```
 
 ```{r read-chromhmm-anno-veh, eval = T, include = F}
-veh.meqtls.snp.chromhmm.annotated.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls_snp_chromhmm_annotated_veh.csv")
+veh.meqtls.snp.chromhmm.annotated.df <-  fread(paste0(out.dir.pre, "meqtls_snp_chromhmm_annotated_veh.csv"))
 
 veh.meqtls.snp.chromhmm.annotated.df[, Model := "Baseline"]
 ```
 
 ```{r read-chromhmm-anno-dex, eval = T, include = F}
-dex.meqtls.snp.chromhmm.annotated.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls_snp_chromhmm_annotated_dex.csv")
+dex.meqtls.snp.chromhmm.annotated.df <-  fread(paste0(out.dir.pre, "meqtls_snp_chromhmm_annotated_dex.csv"))
 
 dex.meqtls.snp.chromhmm.annotated.df[, Model := "Dex"]
 ```
@@ -342,7 +342,30 @@ df <- meqtls.snp.chromhmm.annotated.plt.df[, .(SNP, annot.type, Model)] %>% uniq
 
 plot.title <- "15 chromatin states from 127 cell types"
 
-GetChromHMMPlotAll(df, cbPalette, plot.title)
+# GetChromHMMPlotAll(df, cbPalette, plot.title)
+
+df$annot.type <- factor(df$annot.type, levels = chromhmm.states$STATE)
+df$Model      <- factor(df$Model, levels = c("Delta", "Baseline", "Dex"))
+
+df.plt <- melt(table(df[, .(annot.type, Model)])) %>% 
+   group_by(annot.type, Model, value) %>%
+   group_by(Model) %>%
+   mutate(Prop = round(value / sum(value) * 100, 2))
+ 
+ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.type )) + 
+    geom_bar( position = "fill",  stat = "identity") + 
+    geom_text(data = subset(df.plt, Prop > 1.5),
+        aes(label = Prop),
+        position = position_fill(vjust = .5), size = 3) +
+    labs(x = "",
+       y = "Percentage of SNPs", 
+       title = plot.title) +
+    theme(legend.position = "right", 
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 8),
+          axis.title = element_text(size = 8)) +
+    scale_fill_manual("", values = cbPalette) 
 ```
 
 ### Blood and T-cell
@@ -531,14 +554,17 @@ ggplot(chromhmm.brain.enrich.perm.rslt, aes(x = state, y = prop)) +
 ## GWAS Enrichment
 
 ```{r eval = T, include = F}
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
-gwas.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "/05_me-qtl_enrichment/meqtl_snps_GWAS_CD_2019_enrichment_perm_1000.csv"))
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL//05_me-qtl_enrichment/global_independent_snps/"
+gwas.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_GWAS_enrichment_perm_100.csv"))
 
-gwas.enrich.perm.rslt ["data"] <- c("Nominal: p <= 0.05", "Genome-wide: p <= 5e-8")
+# gwas.enrich.perm.rslt ["data"] <- c("Nominal: p <= 0.05", "Genome-wide: p <= 5e-8")
 
 gwas.enrich.perm.rslt$odds.ratio <- as.numeric(gwas.enrich.perm.rslt$odds.ratio)
-gwas.enrich.perm.rslt$p_val <- as.numeric(gwas.enrich.perm.rslt$p_val)
-gwas.enrich.perm.rslt$p_val_emp <- as.numeric(gwas.enrich.perm.rslt$p_val_emp)
+gwas.enrich.perm.rslt$p_val      <- as.numeric(gwas.enrich.perm.rslt$p_val)
+gwas.enrich.perm.rslt$p_val_emp  <- as.numeric(gwas.enrich.perm.rslt$p_val_emp)
+
+gwas.enrich.perm.rslt$data   <- factor(gwas.enrich.perm.rslt$data)
+levels(gwas.enrich.perm.rslt$data) <- c("Cross Disorders", "ADHD", "ASD", "BP", "MDD", "IBD", "BMI", "SCZ", "Panic Disorders")
 ```
 
 

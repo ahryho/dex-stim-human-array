@@ -1,5 +1,5 @@
 ---
-title: "cis-meQTLs Analysis"
+title: "cis-meQTLs Analysis. meSNP Enrichment Analysis"
 subtitle: "Dexamethasone-Stimulated Human Array Project"
 author: 
   - name: Anastasiia Hryhorzhevska
@@ -341,7 +341,7 @@ meqtls.snp.chromhmm.annotated.plt.df <- rbind(delta.meqtls.snp.chromhmm.annotate
 # meqtls.cpg.chromhmm.annotated.df <- data.frame(meqtls.cpg.chromhmm.annotated) %>% setDT()
 # meqtls.cpg.chromhmm.annotated.df[["CpG_ID"]] <- names(meqtls.cpg.chromhmm.annotated)
 
-head(meqtls.cpg.chromhmm.annotated.df %>% dplyr::select(CpG_ID, everything()), 100) 
+head(meqtls.snp.chromhmm.annotated.plt.df %>% dplyr::select(SNP, everything()), 100) 
 # plot_annotation(annotated_regions = delta.meqtls.cpg.chromhmm.annotated)
 ```
 
@@ -353,7 +353,30 @@ df <- meqtls.snp.chromhmm.annotated.plt.df[, .(SNP, annot.type, Model)] %>% uniq
 
 plot.title <- "15 chromatin states from 127 cell types"
 
-GetChromHMMPlotAll(df, cbPalette, plot.title)
+# GetChromHMMPlotAll(df, cbPalette, plot.title)
+# 
+df$annot.type <- factor(df$annot.type, levels = chromhmm.states$STATE)
+df$Model      <- factor(df$Model, levels = c("Delta", "Baseline", "Dex"))
+
+df.plt <- melt(table(df[, .(annot.type, Model)])) %>% 
+   group_by(annot.type, Model, value) %>%
+   group_by(Model) %>%
+   mutate(Prop = round(value / sum(value) * 100, 2))
+ 
+ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.type )) + 
+    geom_bar( position = "fill",  stat = "identity") + 
+    geom_text(data = subset(df.plt, Prop > 1.5),
+        aes(label = Prop),
+        position = position_fill(vjust = .5), size = 3) +
+    labs(x = "",
+       y = "Percentage of SNPs", 
+       title = plot.title) +
+    theme(legend.position = "right", 
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 8),
+          axis.title = element_text(size = 8)) +
+    scale_fill_manual("", values = cbPalette) 
 ```
 
 ### Blood and T-cell
@@ -445,7 +468,7 @@ states.lst <- elementMetadata(chromhmm.blood.states)[, "type"] %>% unique() %>% 
 ```{r eval = T, include = F}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/"
 chromhmm.blood.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_blood_enrichment_perm_20.csv"))
-chromhmm.brain.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_brain_enrichment_perm_100.csv"))
+chromhmm.brain.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_brain_enrichment_perm_20.csv"))
 
 chromhmm.blood.enrich.perm.rslt$state <- factor(chromhmm.blood.enrich.perm.rslt$state, levels = chromhmm.states$STATE)
 chromhmm.brain.enrich.perm.rslt$state <- factor(chromhmm.brain.enrich.perm.rslt$state, levels = chromhmm.states$STATE)
@@ -545,11 +568,14 @@ ggplot(chromhmm.brain.enrich.perm.rslt, aes(x = state, y = prop)) +
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/"
 gwas.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_GWAS_enrichment_perm_100.csv"))
 
-gwas.enrich.perm.rslt ["data"] <- c("Nominal: p <= 0.05", "Genome-wide: p <= 5e-8")
+# gwas.enrich.perm.rslt ["data"] <- c("Nominal: p <= 0.05", "Genome-wide: p <= 5e-8")
 
 gwas.enrich.perm.rslt$odds.ratio <- as.numeric(gwas.enrich.perm.rslt$odds.ratio)
-gwas.enrich.perm.rslt$p_val <- as.numeric(gwas.enrich.perm.rslt$p_val)
-gwas.enrich.perm.rslt$p_val_emp <- as.numeric(gwas.enrich.perm.rslt$p_val_emp)
+gwas.enrich.perm.rslt$p_val      <- as.numeric(gwas.enrich.perm.rslt$p_val)
+gwas.enrich.perm.rslt$p_val_emp  <- as.numeric(gwas.enrich.perm.rslt$p_val_emp)
+
+gwas.enrich.perm.rslt$data   <- factor(gwas.enrich.perm.rslt$data)
+levels(gwas.enrich.perm.rslt$data) <- c("Cross Disorders", "ADHD", "ASD", "BP", "MDD", "IBD", "BMI", "SCZ", "Panic Disorders")
 ```
 
 
@@ -568,7 +594,7 @@ ggplot(gwas.enrich.perm.rslt, aes(x = data, y = odds.ratio, fill = is_sign)) +
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 45, hjust = 1)) +
+        axis.text.x = element_text(angle = 0, hjust = .5)) +
    scale_fill_manual("", values = c( "#999999", "#009E73")) 
 ```
 

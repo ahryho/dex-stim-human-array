@@ -181,7 +181,7 @@ AnnotateChromHMM <- function(snp.coord.range, chromhmm.all.states, out){
 # dex
 
 out.fn <- paste0(out.dir.pre, "meqtls_snp_chromhmm_annotated_dex.csv")
-dex.meqtls.snp.chromhmm.annotated.df <- AnnotateChromHMM(delta.snp.coord.range, chromhmm.all.states, out.fn)
+dex.meqtls.snp.chromhmm.annotated.df <- AnnotateChromHMM(dex.snp.coord.range, chromhmm.all.states, out.fn)
 
 # delta
 

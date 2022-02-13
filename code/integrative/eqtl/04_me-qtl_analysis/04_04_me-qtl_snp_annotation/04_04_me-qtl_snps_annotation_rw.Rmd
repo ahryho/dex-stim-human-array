@@ -471,7 +471,10 @@ chromhmm.blood.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chr
 chromhmm.brain.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_brain_enrichment_perm_20.csv"))
 
 chromhmm.blood.enrich.perm.rslt$state <- factor(chromhmm.blood.enrich.perm.rslt$state, levels = chromhmm.states$STATE)
+levels( chromhmm.blood.enrich.perm.rslt$state) <- chromhmm.states$DESCRIPTION
+
 chromhmm.brain.enrich.perm.rslt$state <- factor(chromhmm.brain.enrich.perm.rslt$state, levels = chromhmm.states$STATE)
+levels(chromhmm.brain.enrich.perm.rslt$state) <- chromhmm.states$DESCRIPTION
 ```
 
 ### Permutation results
@@ -482,7 +485,7 @@ rbind(chromhmm.blood.enrich.perm.rslt, chromhmm.brain.enrich.perm.rslt)
 
 ### Blood
 
-```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs.  The Y-axis denotes the fold enrichment/depletion as compared to baseline meSNPs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permuation Fisher-tests emperical P <= 0.05. ", eval = T, include = T}
+```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs.  The Y-axis denotes the fold enrichment/depletion as compared to baseline meSNPs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permutation Fisher-tests empirical P <= 0.05. ", eval = T, include = T}
 
 chromhmm.blood.enrich.perm.rslt["is_sign"] <- ifelse(chromhmm.blood.enrich.perm.rslt$p_val_emp < 0.05, "Significant", "Non-significant")
 
@@ -497,27 +500,28 @@ ggplot(chromhmm.blood.enrich.perm.rslt, aes(x = state, y = odds.ratio, fill = is
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 90, hjust = 0.5)) +
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
    scale_fill_manual("", values = c( "#999999", "#009E73")) 
 ```
 
 
 ```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs. The Y-axis denotes the proportion of overlaps between meSNPs and blood cell type states.", eval = T, include = T}
 
-chromhmm.blood.enrich.perm.rslt["prop"] <-  chromhmm.blood.enrich.perm.rslt$n_snps_overlap / delta.meqtl.snp.anno.rds@peakNum
+chromhmm.blood.enrich.perm.rslt["prop"] <-  signif(chromhmm.blood.enrich.perm.rslt$n_snps_overlap / delta.meqtl.snp.anno.rds@peakNum * 100, 2)
 
 ggplot(chromhmm.blood.enrich.perm.rslt, aes(x = state, y = prop)) + 
   geom_bar( stat = "identity", position = position_dodge()) +
-  geom_text(aes(label = n_snps_overlap), position=position_dodge(width=0.9), vjust=-0.25) + 
+  # geom_text(aes(label = paste0(n_snps_overlap, " \n(", prop, "%)")), position = position_dodge(width = 0.9), vjust = -0.25, cex = 2) + 
+  geom_text(aes(label = n_snps_overlap), position = position_dodge(width = 0.9), vjust = -0.25, cex = 3) + 
   labs(x = "",
-       y = "Overlaps", 
+       y = "Overlaps, %", 
        title = "") +
   theme(legend.position = "bottom",
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 90, hjust = 0.5)) +
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
    scale_fill_manual("", values = c( "#009E73")) 
 ```
 
@@ -538,26 +542,27 @@ ggplot(chromhmm.brain.enrich.perm.rslt, aes(x = state, y = odds.ratio, fill = is
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 90, hjust = 0.5)) +
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
    scale_fill_manual("", values = c( "#999999", "#009E73")) 
 ```
 
 ```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs. The Y-axis denotes the proportion of overlaps between meSNPs and brain cell type states.", eval = T, include = T}
 
-chromhmm.brain.enrich.perm.rslt["prop"] <-  chromhmm.brain.enrich.perm.rslt$n_snps_overlap / delta.meqtl.snp.anno.rds@peakNum
+chromhmm.brain.enrich.perm.rslt["prop"] <- signif(chromhmm.brain.enrich.perm.rslt$n_snps_overlap / delta.meqtl.snp.anno.rds@peakNum * 100, 2)
 
 ggplot(chromhmm.brain.enrich.perm.rslt, aes(x = state, y = prop)) + 
   geom_bar( stat = "identity", position = position_dodge()) +
-  geom_text(aes(label = n_snps_overlap), position=position_dodge(width=0.9), vjust=-0.25) + 
+# geom_text(aes(label = paste0(n_snps_overlap, " (", prop, "%)")), position = position_dodge(width = 0.9), vjust = -0.25, cex = 3) + 
+  geom_text(aes(label = n_snps_overlap), position = position_dodge(width = 0.9), vjust = -0.25, cex = 3) + 
   labs(x = "",
-       y = "Overlaps", 
+       y = "Overlaps, %", 
        title = "") +
   theme(legend.position = "bottom",
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 90, hjust = 0.5)) +
+        axis.text.x = element_text(angle = 90, hjust = 1)) +
    scale_fill_manual("", values = c( "#009E73")) 
 ```
 
@@ -575,11 +580,11 @@ gwas.enrich.perm.rslt$p_val      <- as.numeric(gwas.enrich.perm.rslt$p_val)
 gwas.enrich.perm.rslt$p_val_emp  <- as.numeric(gwas.enrich.perm.rslt$p_val_emp)
 
 gwas.enrich.perm.rslt$data   <- factor(gwas.enrich.perm.rslt$data)
-levels(gwas.enrich.perm.rslt$data) <- c("Cross Disorders", "ADHD", "ASD", "BP", "MDD", "IBD", "BMI", "SCZ", "Panic Disorders")
+levels(gwas.enrich.perm.rslt$data) <- c("ADHD", "ASD", "BMI", "BP", "Cross Disorders", "IBD", "MDD", "Panic Disorders", "SCZ")
 ```
 
 
-```{r out.width = "90%", fig.cap = "Enrichment for nominal and genome-wide significant GWAS associations for the delta meSNPs for CrossDisorder GWAS. The Y-axis denotes the fold enrichment with regard to baseline meSNPs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permuation Fisher-tests emperical P <= 0.05.", eval = T, include = T}
+```{r out.width = "90%", fig.cap = "Enrichment for nominal and genome-wide significant GWAS associations for the delta meSNPs for CrossDisorder GWAS. The Y-axis denotes the fold enrichment with regard to baseline meSNPs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permutation Fisher-tests empirical P <= 0.05.", eval = T, include = T}
 
 gwas.enrich.perm.rslt["is_sign"] <- ifelse(gwas.enrich.perm.rslt$p_val_emp < 0.05, "Significant", "Non-significant")
 
@@ -594,19 +599,20 @@ ggplot(gwas.enrich.perm.rslt, aes(x = data, y = odds.ratio, fill = is_sign)) +
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 0, hjust = .5)) +
+        axis.text.x = element_text(angle = 45, hjust = 1)) +
    scale_fill_manual("", values = c( "#999999", "#009E73")) 
 ```
 
-```{r out.width = "90%", fig.cap = "Enrichment of the the delta meSNPs for CrossDisorder GWAS. The Y-axis denotes the proportion of overlaps between meSNPs and GWAS SNPs.", eval = T, include = T}
+```{r out.width = "90%", fig.cap = "Enrichment of the delta meSNPs for different GWAS. The Y-axis denotes the proportion of overlaps between meSNPs and GWAS SNPs.", eval = T, include = T}
 
-gwas.enrich.perm.rslt["prop"] <-  gwas.enrich.perm.rslt$n_snps_overlap / delta.meqtl.snp.anno.rds@peakNum
+gwas.enrich.perm.rslt["prop"] <-  signif(gwas.enrich.perm.rslt$n_snps_overlap / delta.meqtl.snp.anno.rds@peakNum * 100, 2)
 
 ggplot(gwas.enrich.perm.rslt, aes(x = data, y = prop)) + 
   geom_bar( stat = "identity", position = position_dodge()) +
-  geom_text(aes(label = n_snps_overlap), position=position_dodge(width=0.9), vjust=-0.25) + 
+# geom_text(aes(label = paste0(n_snps_overlap, "\n(", prop, "%)")), position = position_dodge(width = 0.9), vjust = -0.25, cex = 3) + 
+  geom_text(aes(label = n_snps_overlap), position = position_dodge(width = 0.9), vjust = -0.25, cex = 3) + 
   labs(x = "",
-       y = "Overlaps", 
+       y = "Overlaps, %", 
        title = "") +
   theme(legend.position = "bottom",
         panel.grid.major = element_blank(),

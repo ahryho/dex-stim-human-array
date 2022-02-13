@@ -42,9 +42,14 @@ plot(meqtl.rds)
 ```{r, include = F, eval = T}
 fdr.thr <- 1
 
-meqtl.delta.no.fdr.df <- GetFullmeQTLdf(meqtl.delta.df, fdr.thr = fdr.thr)
-meqtl.dex.no.fdr.df   <- GetFullmeQTLdf(meqtl.dex.df, fdr.thr = fdr.thr)
-meqtl.veh.no.fdr.df   <- GetFullmeQTLdf(meqtl.veh.df, fdr.thr = fdr.thr)
+# meqtl.delta.no.fdr.df <- GetFullmeQTLdf(meqtl.delta.df, fdr.thr = fdr.thr)
+# meqtl.dex.no.fdr.df   <- GetFullmeQTLdf(meqtl.dex.df, fdr.thr = fdr.thr)
+# meqtl.veh.no.fdr.df   <- GetFullmeQTLdf(meqtl.veh.df, fdr.thr = fdr.thr)
+# 
+
+meqtl.delta.no.fdr.df <- meqtl.delta.df
+meqtl.dex.no.fdr.df   <- meqtl.dex.df
+meqtl.veh.no.fdr.df   <- meqtl.veh.df
 ```
 
 ```{r, include = F, eval = T}

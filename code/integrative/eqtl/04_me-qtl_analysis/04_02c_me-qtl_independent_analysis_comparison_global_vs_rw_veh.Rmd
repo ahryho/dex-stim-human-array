@@ -16,7 +16,7 @@ out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/ma
 
 cbPalette <- c("#CC79A7", "#009E73", "#56B4E9", "#0072B2",  "#E69F00", "#F0E442", "#D55E00", "#999999")
 
-meqtl.ind.global.df <- fread(paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_fdr_005.csv"))
+meqtl.ind.global.df <- fread(paste0(out.dir.pre, "global_independent_snps/me-qtl_cis_indp_result_veh_fdr_005.csv"))
 meqtl.ind.rw.df     <- fread(paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_indp_rw_veh_fdr_005.csv"))
 ```
 

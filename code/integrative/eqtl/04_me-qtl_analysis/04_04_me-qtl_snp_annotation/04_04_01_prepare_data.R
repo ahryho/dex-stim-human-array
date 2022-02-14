@@ -16,8 +16,8 @@ system(paste0("ls -lha ", out.dir.pre))
 
 # 1. Load data
 
-meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_dex_with_delta_fdr_005.csv")
-meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_veh_with_delta_fdr_005.csv")
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_dex_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_veh_fdr_005.csv")
 meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_delta_fdr_005.csv")
 
 col.names <-  c("CpG_ID", "SNP", "beta", "t-stat", "p-value", "fdr")

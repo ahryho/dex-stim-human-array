@@ -33,10 +33,11 @@ meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
 meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
 
 meqtl.delta.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_delta_ind_cpg_snp_associations.txt")
-meqtl.delta.cpg.snp.ass.lst <- fread(meqtl.cpg.snp.ass) 
+meqtl.delta.cpg.snp.ass.lst <- fread(meqtl.delta.cpg.snp.ass) 
 
-meqtl.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_veh_ind_cpg_snp_associations_v03.txt")
-meqtl.cpg.snp.ass.lst <- fread(meqtl.cpg.snp.ass) 
+meqtl.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_veh_ind_cpg_snp_associations.txt")
+meqtl.cpg.snp.ass.lst <- fread(meqtl.cpg.snp.ass, fill = T, header = F, col.names = c("CpG_ID", "SNP")) 
+meqtl.cpg.snp.ass.lst <- meqtl.cpg.snp.ass.lst[ SNP != ""]
 meqtl.cpg.snp.ass.lst <- rbind(meqtl.cpg.snp.ass.lst, meqtl.delta.cpg.snp.ass.lst) %>% unique()
 meqtl.veh.ind.rw.df   <- left_join(meqtl.cpg.snp.ass.lst, meqtl.veh.df)
 
@@ -45,8 +46,8 @@ fwrite(meqtl.veh.ind.rw.df,
        quote = F, row.names = F, sep = ";")
 
 meqtl.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_dex_ind_cpg_snp_associations.txt")
-meqtl.cpg.snp.ass.lst <- fread(meqtl.cpg.snp.ass) 
-colnames(meqtl.cpg.snp.ass.lst) <- c("CpG_ID", "SNP")
+meqtl.cpg.snp.ass.lst <- fread(meqtl.cpg.snp.ass, header = F, col.names = c("CpG_ID", "SNP")) 
+meqtl.cpg.snp.ass.lst <- meqtl.cpg.snp.ass.lst[ SNP != ""]
 meqtl.cpg.snp.ass.lst <- rbind(meqtl.cpg.snp.ass.lst, meqtl.delta.cpg.snp.ass.lst) %>% unique()
 meqtl.dex.ind.rw.df <- left_join(meqtl.cpg.snp.ass.lst, meqtl.dex.df)
 
@@ -58,9 +59,9 @@ fwrite(meqtl.dex.ind.rw.df,
 ```{r include = F, eval = T}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/region_wise_independent_snps/"
 
-# meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_with_delta_fdr_005.csv")
-# meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_with_delta_fdr_005.csv")
-# meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_result_delta_fdr_005.csv")
+# meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_dex_fdr_005.csv")
+# meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_veh_fdr_005.csv")
+# meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_delta_fdr_005.csv")
 
 meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_dex_with_delta_fdr_005.csv")
 meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_veh_with_delta_fdr_005.csv")
@@ -68,9 +69,9 @@ meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_delta_fdr_005.csv")
 
 col.names <-  c("CpG_ID", "SNP", "beta", "t-stat", "p-value", "fdr")
 
-ind.meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
+ind.meqtl.dex.df   <- fread(meqtl.dex.fn)
 ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
-ind.meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
+ind.meqtl.delta.df <- fread(meqtl.delta.fn) #, col.names = col.names)
 ```
 
 ```{r, include = F, eval = T}
@@ -80,6 +81,8 @@ meqtl.all.full.df <- rbind(ind.meqtl.dex.df[, treatment := "dex"],
 
 meqtl.all.full.df <- meqtl.all.full.df[!is.na(meqtl.all.full.df$fdr),]
 meqtl.all.full.df[["meQTL_ID"]] <- paste(meqtl.all.full.df$SNP, meqtl.all.full.df$CpG_ID, sep = "-")
+
+
 ```
 
 ```{r, include=F, eval=T}
@@ -104,7 +107,7 @@ all(colnames(snp.df)[-1] == colnames(methyl.beta.veh.df)[-1])
 ```{r include = T, eval = T}
 # paste0("Scatter plot for the independent significant at FDR <= ", fdr.thr, " meQTLs")
 meqtl.id       <- meqtl.all.full.df[treatment == "delta"][fdr == min(fdr), meQTL_ID]
-selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id] # beta == max(beta)
+selected.meqtl <- meqtl.all.full.df[meQTL_ID %in% meqtl.id] # beta == max(beta)
 
 kable(selected.meqtl %>% 
         dplyr::select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
@@ -120,7 +123,7 @@ GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
                plot.title = plot.title)
 ```
 ```{r out.width = "95%", include = T, eval = T}
-ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl[1], fdr.thr = 0.05, 
                   plot.title = plot.title)
 ```
 
@@ -145,7 +148,7 @@ GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
                plot.title = plot.title)
 ```
 ```{r out.width = "95%", include = T, eval = T}
-ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl[1], fdr.thr = 0.05, 
                   plot.title = plot.title)
 ```
 

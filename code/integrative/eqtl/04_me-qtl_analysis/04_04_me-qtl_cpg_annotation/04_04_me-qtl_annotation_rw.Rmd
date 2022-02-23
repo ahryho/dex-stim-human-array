@@ -203,6 +203,75 @@ ggplot(meqtl.cpg.anno.df, aes(x = Model, fill = Relation_to_Island)) +
    scale_fill_manual("Feature", values = cbPalette)
 ```
 
+```{r}
+
+delta <- setdiff(setdiff(meqtls.cpgs$delta, meqtls.cpgs$dex), meqtls.cpgs$veh)
+veh <- setdiff(setdiff(meqtls.cpgs$veh, meqtls.cpgs$dex), meqtls.cpgs$delta)
+dex <- setdiff(setdiff(meqtls.cpgs$dex, meqtls.cpgs$veh), meqtls.cpgs$delta)
+
+meqtl.unique.cpg.anno.df <- rbind(  
+  delta.meqtl.cpg.anno.df[Name %in% delta,],
+  veh.meqtl.cpg.anno.df[Name %in% veh,],
+  dex.meqtl.cpg.anno.df[Name %in% dex,]
+)
+```
+
+
+```{r out.width = "90%", fig.cap = "Distribution of locations of the CpGs in different genomic regions based on Illumina EPIC annotation", include = T, eval = T}
+cbPalette <- c( "#CC6677", "#DDCC77", "#117733", "#AA4499", "#44AA99", "#888888")
+
+ggplot(meqtl.unique.cpg.anno.df, aes(x = Model, fill = Relation_to_Island)) + 
+  geom_bar( position = "fill") + 
+  geom_text(aes(by = Model, # scales::percent(..count../tapply(..count.., ..x.., sum), accuracy = 0.1), 
+                y = (..count..)/sum(..count..)), 
+            stat = "prop", 
+            position = position_fill(vjust = .5), size = 3) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "",
+       y = "Percentage of CpGs", 
+       title = "Unique meCpGs") +
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+   scale_fill_manual("Feature", values = cbPalette)
+```
+
+```{r}
+
+intersected <- intersect(intersect(meqtls.cpgs$delta, meqtls.cpgs$dex), meqtls.cpgs$veh)
+
+meqtl.intersected.cpg.anno.df <- rbind(  
+  delta.meqtl.cpg.anno.df[Name %in% intersected,],
+  veh.meqtl.cpg.anno.df[Name %in% intersected,],
+  dex.meqtl.cpg.anno.df[Name %in% intersected,]
+)
+```
+
+```{r out.width = "90%", fig.cap = "Distribution of locations of the CpGs in different genomic regions based on Illumina EPIC annotation", include = T, eval = T}
+cbPalette <- c( "#CC6677", "#DDCC77", "#117733", "#AA4499", "#44AA99", "#888888")
+
+ggplot(meqtl.intersected.cpg.anno.df, aes(x = Model, fill = Relation_to_Island)) + 
+  geom_bar( position = "fill") + 
+  geom_text(aes(by = Model, # scales::percent(..count../tapply(..count.., ..x.., sum), accuracy = 0.1), 
+                y = (..count..)/sum(..count..)), 
+            stat = "prop", 
+            position = position_fill(vjust = .5), size = 3) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "",
+       y = "Percentage of CpGs", 
+       title = "Intersected meCpGs") +
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 12),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+   scale_fill_manual("Feature", values = cbPalette)
+```
+
 ### Gene regions
 
 ```{r include = F, eval = T}

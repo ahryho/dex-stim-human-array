@@ -57,13 +57,13 @@ source("~/bio/code/mpip/dex-stim-human-array/code/util.R", chdir = TRUE)
 
 library(data.table)
 library(dplyr)
+
 library(ggplot2)
 library(ggrepel)
 library(scales)
 library(GGally)
 library(factoextra)
 library(viridis)
-library(knitr)
 
 library(splitstackshape)
 library(reshape2)
@@ -116,7 +116,7 @@ dex.meqtl.snp.anno.rds                <- readRDS(paste0(out.dir.pre, "meqtls_snp
 delta.meqtl.snp.anno.df <- as.data.frame(delta.meqtl.snp.anno.rds@anno, row.names = names(delta.meqtl.snp.anno.rds@anno))
 # delta.meqtl.snp.anno.df$Relation_to_Island <- factor(delta.meqtl.cpg.anno.df$Relation_to_Island, 
 #                                                      levels = c("N_Shelf", "N_Shore", "Island", "S_Shore", "S_Shelf", "OpenSea"))
-head(delta.meqtl.snp.anno.df, 100)
+head(delta.meqtl.snp.anno.df, 10)
 ```
 
 <!-- #### Closest genes -->

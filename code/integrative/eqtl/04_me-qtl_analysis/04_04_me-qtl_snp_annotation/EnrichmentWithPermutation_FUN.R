@@ -1,8 +1,8 @@
-# boundaries <- c(0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 1.0) # 11 MAF bins
+# boundaries <- c(0, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5) # 10 MAF bins
 # mafs$bin <- arules::discretize(mafs$ALT_FREQS, 
 #                                method = "fixed", 
 #                                breaks = boundaries, 
-#                                labels = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11))
+#                                labels = c(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
 # 
 # 
 # df <- merge(data, mafs, by = "SNP")

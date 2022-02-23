@@ -6,9 +6,11 @@ GetFullmeQTLdf <- function(meqtl.df, fdr.thr = 0.05){
   
   meqtl.fltr.df <- meqtl.df[fdr < fdr.thr, ] %>% unique()
   
-  meqtl.full.df <- left_join(meqtl.fltr.df, snp.bim) %>% mutate(pos_snp = pos) %>% select(-c(pos, pos_morgans))
+  meqtl.full.df <- left_join(meqtl.fltr.df, snp.bim) %>% mutate(pos_snp = pos) %>% 
+    dplyr::select(-c(pos, pos_morgans))
   meqtl.full.df <- left_join(meqtl.full.df, cpg.loc[, .(CpG_ID, chr, pos)]) %>% 
-    mutate(pos_cpg = pos) %>% select(-pos)
+    mutate(pos_cpg = pos) %>% 
+    dplyr::select(-pos)
   meqtl.full.df <- meqtl.full.df[, dist := pos_snp - pos_cpg]  
   meqtl.full.df <- meqtl.full.df[, strand := ifelse(dist < 0, "-", "+")]
   meqtl.full.df <- meqtl.full.df[, dist := abs(dist)]
@@ -152,4 +154,72 @@ ProcessGetBoxPlot <- function(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, se
   snp.ind.cnt.df[, label := paste0(SNP, " (n = ", n, ")")]
   
   GetBoxPlot(beta.values.df, selected.meqtl, snp.ind.cnt.df$label, fdr.thr = 0.05, plot.title)
+}
+
+GetManhattanPlot <- function(df, fdr.thr, ylims, plot.title){
+  
+  new.df <- df %>% 
+    # Compute chromosome size
+    group_by(CHR) %>% 
+    summarise(CHR_LEN = max(BP)) %>% 
+    # Calculate cumulative position of each chromosome
+    mutate(CHR_CUM_POS = cumsum(as.numeric(CHR_LEN)) - CHR_LEN) %>%
+    dplyr::select(-CHR_LEN) %>%
+    # Add this info to the initial dataset
+    left_join(df, ., by = c("CHR" = "CHR")) %>%
+    # Add a cumulative position of each SNP
+    arrange(CHR, BP) %>%
+    mutate(BP_CUM_POS = BP + CHR_CUM_POS)
+  
+  axis.df <- new.df %>% 
+    group_by(CHR) %>% 
+    summarize(center = (max(BP_CUM_POS) + min(BP_CUM_POS)) / 2)
+  
+  
+  cbPalette <- c( "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
+  ggplot(new.df, aes(x = BP_CUM_POS, y = -log10(P))) +
+    geom_point(aes(color = as.factor(CHR)), alpha = 0.8, size = 2) +
+    scale_color_manual(values = rep(cbPalette, 2)) + 
+    scale_x_continuous(label = axis.df$CHR, breaks = axis.df$center, expand = c(0, 0)) +
+    scale_y_continuous(limits = ylims, expand = c(0, 0)) + 
+    labs( x = "Chromosome",
+          y = "-log10(P)",
+          title = plot.title) +
+    theme( panel.background = element_blank(),
+           # plot.margin = margin(4, 2, 1, 1, unit = "mm"),
+           plot.title = element_text(size = 10),
+           axis.line.x = element_blank(),
+           axis.line.y = element_blank(),
+           panel.border = element_blank(),
+           panel.grid.major.x = element_blank(),
+           panel.grid.minor.x = element_blank(),
+           axis.title = element_text(size = 10),
+           axis.text.x = element_text(angle = 0, hjust = 0.5), 
+           legend.position = "none", 
+           legend.title = element_blank()) 
+}
+
+# Take overlaps / non-overlaps
+
+get_all_overlaps <- function(delta_df, dex_df, veh_df){
+  intersect(intersect(veh_df, delta_df), dex_df)
+}
+
+get_veh_delta_overlaps <- function(delta_df, dex_df, veh_df){
+  intersect(intersect(veh_df, delta_df), dex_df)
+}
+
+annotate_with_chipseeker <- function(df, chr, pos_start, pos_end, term = "SNP"){
+  
+  gr   <- GenomicRanges::GRanges(seqnames = paste0("chr", df[[chr]]),
+                                 ranges = IRanges::IRanges(start = as.numeric(as.character(df[[pos_start]])),
+                                                           end = as.numeric(as.character(df[[pos_end]]))))
+  names(gr) <- df[[term]]
+  GenomeInfoDb::seqlevelsStyle(gr) <- "UCSC"
+  
+  gr <- unique(gr)
+  
+  gr.anno <- annotatePeak(unique(gr), 
+                          TxDb = TxDb.Hsapiens.UCSC.hg19.knownGene, 
+                          annoDb = "org.Hs.eg.db")
 }

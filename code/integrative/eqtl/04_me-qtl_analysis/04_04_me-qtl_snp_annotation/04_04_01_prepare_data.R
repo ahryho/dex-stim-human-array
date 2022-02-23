@@ -10,7 +10,7 @@ library(org.Hs.eg.db)
 
 library(annotatr)
 
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/region_wise_independent_snps/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/" #region_wise_independent_snps/"
 
 system(paste0("ls -lha ", out.dir.pre))
 

@@ -9,7 +9,6 @@ cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7"
 
 ```{r, include = F, eval = T}
 src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-# out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/geno_imputed_qc_ld/"
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
 cpg.loc.fn  <- paste0(src.dir.pre, "cpg_locations.csv")
@@ -18,16 +17,17 @@ ensg.loc.fn <- paste0(src.dir.pre, "ensg_locations.csv")
 
 cpg.loc  <- fread(cpg.loc.fn)
 snp.loc  <- fread(snp.loc.fn)
-# ensg.loc <- fread(ensg.loc.fn)
 
 # snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/final_imputed_qc_snps/mtrx/dex_geno_imputed_ld.bim")
 snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/Dex_genoData_SNPs.bim")
 colnames(snp.bim) <- c("chr", "SNP", "pos_morgans", "pos", "snp_allele1", "snp_allele2")
 
-meqtl.dex.fn   <- paste0(out.dir.pre, "me-eqtl_cis_results_06122021/me-qtl_cis_result_dex.csv")  # "me-qtl_cis_result_dex_fdr_005.csv")
-meqtl.veh.fn   <- paste0(out.dir.pre, "me-eqtl_cis_results_06122021/me-qtl_cis_result_veh.csv") # "me-qtl_cis_result_veh_fdr_005.csv")
-meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_result_delta_beta.csv")# "me-qtl_cis_result_delta_fdr_005.csv")
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-eqtl_cis_results_06122021/me-qtl_cis_result_dex_fdr_005.csv")  # "me-qtl_cis_result_dex_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-eqtl_cis_results_06122021/me-qtl_cis_result_veh_fdr_005.csv") # "me-qtl_cis_result_veh_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_result_delta_fdr_005.csv") # "me-qtl_cis_result_delta_beta.csv")# 
 # meqtl.delta.fn <- paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/geno_imputed_qc_ld/", "me-qtl_cis_result_delta.csv")
+
+col.names <- c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "FDR")
 
 meqtl.dex.df   <- fread(meqtl.dex.fn)
 meqtl.veh.df   <- fread(meqtl.veh.fn)
@@ -39,18 +39,6 @@ meqtl.rds <- readRDS("~/bio/code/mpip/dex-stim-human-array/output/data/integrati
 plot(meqtl.rds)
 ```
 
-```{r, include = F, eval = T}
-fdr.thr <- 1
-
-# meqtl.delta.no.fdr.df <- GetFullmeQTLdf(meqtl.delta.df, fdr.thr = fdr.thr)
-# meqtl.dex.no.fdr.df   <- GetFullmeQTLdf(meqtl.dex.df, fdr.thr = fdr.thr)
-# meqtl.veh.no.fdr.df   <- GetFullmeQTLdf(meqtl.veh.df, fdr.thr = fdr.thr)
-# 
-
-meqtl.delta.no.fdr.df <- meqtl.delta.df
-meqtl.dex.no.fdr.df   <- meqtl.dex.df
-meqtl.veh.no.fdr.df   <- meqtl.veh.df
-```
 
 ```{r, include = F, eval = T}
 # head(meqtl.df)
@@ -95,53 +83,9 @@ EWAS_plots(meqtl.delta.no.fdr.df,
            )
 ```
 
-## Hits
+## Significant Hits, FDR < 0.05
 
 Check the number of found eQTLs, unique CpGs and SNPs in all datasets.
-
-<!-- ## Before filtering -->
-
-```{r, include = F, eval = T}
-hits.df <- data.table(c(meqtl.delta.no.fdr.df$fdr  %>% length(), 
-                        meqtl.delta.no.fdr.df$CpG_ID %>% unique() %>% length(),
-                        meqtl.delta.no.fdr.df$SNP %>% unique() %>% length()),
-                           c(meqtl.dex.no.fdr.df$fdr  %>% length(), 
-                             meqtl.dex.no.fdr.df$CpG_ID %>% unique() %>% length(),
-                             meqtl.dex.no.fdr.df$SNP %>% unique() %>% length()),
-                           c(meqtl.veh.no.fdr.df$fdr  %>% length(), 
-                             meqtl.veh.no.fdr.df$CpG_ID %>% unique() %>% length(),
-                             meqtl.veh.no.fdr.df$SNP %>% unique() %>% length()))
-
-hits.df <- as.data.frame(hits.df)
-rownames(hits.df) <- c("cis-meQTLs", "CpG", "SNP")
-colnames(hits.df) <- c("delta", "dex", "veh")
-```
-
-```{r out.width = "95%", include = T, eval = T}
-
-cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
-
-hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment"), value.name = "cnt") %>%
-  ggplot(aes(y = cnt, x = Var2, fill = as.factor(as.numeric(Var2)))) +
-    geom_col() +
-    geom_text(aes(label = comma(cnt, accuracy = 1L), y = cnt), 
-                  stat = "identity", 
-                  vjust = -0.2, size = 2.5) + 
-    scale_y_continuous(labels = scientific) +
-    # scale_fill_viridis(discrete = TRUE, alpha = 0.9, option = "C") +
-    labs(title = " ", y = "Count", x = " ") + 
-    facet_wrap(~ Var1, ncol = 3) +
-    theme(legend.position = "none", 
-          legend.title = element_blank(),
-          panel.grid.major = element_blank(),
-          panel.background = element_blank(),
-          plot.title = element_text(size = 10),
-          axis.title = element_text(size = 8),
-          axis.title.x = element_blank()) +
-  scale_fill_manual(values = cbPalette)
-```
-
-### Significant Hits, FDR < 0.05
 
 ```{r, include = F, eval = T}
 sign.hits.df <- data.table(c(meqtl.delta.full.df$fdr  %>% length(), 
@@ -203,6 +147,13 @@ upset(fromList(meqtls.meqtls),
       keep.order = T,
       sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
       order.by = "freq")
+```
+
+```{r include = F, eval = F}
+grp.overlaps.all       <- intersect(intersect(meqtls.meqtls$veh, meqtls.meqtls$delta), meqtls.meqtls$dex)
+grp.overlaps.delta.veh <- setdiff(intersect(meqtls.meqtls$veh, meqtls.meqtls$delta), meqtls.meqtls$dex)
+grp.overlaps.delta.dex <- setdiff(intersect(meqtls.meqtls$dex, meqtls.meqtls$delta), meqtls.meqtls$veh)
+grp.only.delta         <- setdiff(setdiff(meqtls.meqtls$delta, meqtls.meqtls$dex), meqtls.meqtls$veh)
 ```
 
 ### SNP level
@@ -332,7 +283,7 @@ ggplot(plt.df, aes(x = Frequency)) +
 
 ### dex
 
-```{r out.width = "100%", include = T, eval = T}
+```{r out.width = "100%", include = F, eval = F}
 plt.df <- data.frame(cbind(Frequency = plyr::count(meqtl.dex.full.df$SNP)$freq, treatment = "dex"))
 plt.df$Frequency <- as.numeric(plt.df$Frequency)
 
@@ -360,7 +311,7 @@ ggplot(plt.df, aes(x = Frequency)) +
 
 ### veh
 
-```{r out.width = "100%", include = T, eval = T}
+```{r out.width = "100%", include = F, eval = F}
 plt.df <- data.frame(cbind(Frequency = plyr::count(meqtl.veh.full.df$SNP)$freq, treatment = "veh"))
 plt.df$Frequency <- as.numeric(plt.df$Frequency)
 

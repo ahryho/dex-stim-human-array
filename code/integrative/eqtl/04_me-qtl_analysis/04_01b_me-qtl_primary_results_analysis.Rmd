@@ -353,7 +353,7 @@ saveRDS(meqtl.only.snp.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meq
 
 ```{r}
 overlaps.all       <- intersect(intersect(meqtls.meqtls$veh, meqtls.meqtls$delta), meqtls.meqtls$dex)
-df <- meqtl.all.full.df[meQTL_ID %in% overlaps.all]
+df <- meqtl.all.full.df[meQTL_ID %in% overlaps.all][treatment == "delta"]
 df <- df[, .(SNP, chr, pos_snp, fdr)]
 colnames(df) <- c("SNP", "CHR", "BP", "P")
 
@@ -364,7 +364,7 @@ GetManhattanPlot(df, ylims = c(-log10(fdr.thr), -log10(min(df$P)) + 1), plot.tit
 
 ```{r}
 overlaps.delta.dex <- setdiff(intersect(meqtls.meqtls$dex, meqtls.meqtls$delta), meqtls.meqtls$veh)
-df <- meqtl.all.full.df[meQTL_ID %in% overlaps.delta.dex]
+df <- meqtl.all.full.df[meQTL_ID %in% overlaps.delta.dex][treatment == "delta"]
 df <- df[, .(SNP, chr, pos_snp, fdr)]
 colnames(df) <- c("SNP", "CHR", "BP", "P")
 
@@ -375,7 +375,7 @@ GetManhattanPlot(df, ylims = c(-log10(fdr.thr), -log10(min(df$P)) + 1), plot.tit
 
 ```{r}
 overlaps.delta.veh <- setdiff(intersect(meqtls.meqtls$veh, meqtls.meqtls$delta), meqtls.meqtls$dex)
-df <- meqtl.all.full.df[meQTL_ID %in% overlaps.delta.veh]
+df <- meqtl.all.full.df[meQTL_ID %in% overlaps.delta.veh][treatment == "delta"]
 df <- df[, .(SNP, chr, pos_snp, fdr)]
 colnames(df) <- c("SNP", "CHR", "BP", "P")
 
@@ -754,7 +754,29 @@ library(TxDb.Hsapiens.UCSC.hg19.knownGene)
 library(ChIPseeker)
 library(org.Hs.eg.db)
 
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
+out.dir.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
+
+anno.epic   <- readRDS( "~/bio/code/mpip/dex-stim-human-array/data/annotation/IlluminaHumanMethylationEPICanno-ilm10b4-hg19.rds")
+
+meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% overlaps.all, ]) %>% setDT()
+fwrite(meqtls.cpg.anno.df,
+       paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex_veh.csv"),
+       quote = F, row.names = F, sep   = "\t")
+
+meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% overlaps.delta.veh, ]) %>% setDT()
+fwrite(meqtls.cpg.anno.df,
+       paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_veh.csv"),
+       quote = F, row.names = F, sep   = "\t")
+
+meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% overlaps.delta.dex, ]) %>% setDT()
+fwrite(meqtls.cpg.anno.df,
+       paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex.csv"),
+       quote = F, row.names = F, sep   = "\t")
+
+meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% only.delta, ]) %>% setDT()
+fwrite(meqtls.cpg.anno.df,
+       paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_only_delta.csv"),
+       quote = F, row.names = F, sep   = "\t")
 
 meqtl.overlap.all.df <- meqtl.all.full.df[CpG_ID %in% overlaps.all]
 meqtl.overlap.all.gr <- annotate_with_chipseeker(meqtl.overlap.all.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
@@ -772,6 +794,8 @@ meqtl.only.delta.df <- meqtl.all.full.df[CpG_ID %in% only.delta]
 meqtl.only.delta.gr <- annotate_with_chipseeker(meqtl.only.delta.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
 saveRDS(meqtl.only.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_only_delta_gr.rds"))
 ```
+
+### Generic annotation
 
 ```{r eval = T, include = F}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
@@ -825,3 +849,50 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
    scale_fill_manual("", values = cbPalette)
 ```
 
+### Genomic annotation
+
+### Genomic regions
+
+```{r include = F, eval = T}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
+
+ovarlap.all.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex_veh.csv"), sep = "\t")
+ovarlap.delta.dex.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex.csv"), sep = "\t")
+ovarlap.delta.veh.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_veh.csv"), sep = "\t")
+only.delta.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_only_delta.csv"), sep = "\t")
+```
+
+```{r include = F, eval = T}
+ovarlap.all.cpg.anno.df[["Model"]] <- paste0("intersect \n (delta, veh, dex)\nN = ", nrow(ovarlap.all.cpg.anno.df)) 
+ovarlap.delta.dex.cpg.anno.df[["Model"]] <- paste0("intersect \n (delta, dex)\nN=", nrow(ovarlap.delta.dex.cpg.anno.df)) 
+ovarlap.delta.veh.cpg.anno.df[["Model"]] <- paste0("intersect \n (delta, veh)\nN=", nrow(ovarlap.delta.veh.cpg.anno.df)) 
+only.delta.cpg.anno.df[["Model"]] <- paste0("only delta\nN", nrow(only.delta.cpg.anno.df)) 
+
+meqtl.cpg.anno.df <- rbind(ovarlap.all.cpg.anno.df, ovarlap.delta.dex.cpg.anno.df, ovarlap.delta.veh.cpg.anno.df, only.delta.cpg.anno.df)
+
+meqtl.cpg.anno.df$Model <- as.factor(meqtl.cpg.anno.df$Model)
+meqtl.cpg.anno.df$Relation_to_Island <- factor(meqtl.cpg.anno.df$Relation_to_Island,
+                                                   levels = c("N_Shelf", "N_Shore", "Island", "S_Shore", "S_Shelf", "OpenSea"))
+```
+
+```{r out.width = "90%", fig.cap = "Distribution of locations of the CpGs in different genomic regions based on Illumina EPIC annotation", include = T, eval = T}
+cbPalette <- c( "#CC6677", "#DDCC77", "#117733", "#AA4499", "#44AA99", "#888888")
+
+ggplot(meqtl.cpg.anno.df, aes(x = Model, fill = Relation_to_Island)) + 
+  geom_bar( position = "fill") + 
+  geom_text(aes(by = Model, 
+                y = (..count..)/sum(..count..)), 
+            stat = "prop", 
+            position = position_fill(vjust = .5), size = 3) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = "",
+       y = "Percentage of CpGs", 
+       title = "") +
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+   scale_fill_manual("", values = cbPalette)
+```

@@ -175,13 +175,12 @@ GetManhattanPlot <- function(df, fdr.thr, ylims, plot.title){
     group_by(CHR) %>% 
     summarize(center = (max(BP_CUM_POS) + min(BP_CUM_POS)) / 2)
   
-  
   cbPalette <- c( "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
   ggplot(new.df, aes(x = BP_CUM_POS, y = -log10(P))) +
     geom_point(aes(color = as.factor(CHR)), alpha = 0.8, size = 2) +
     scale_color_manual(values = rep(cbPalette, 2)) + 
     scale_x_continuous(label = axis.df$CHR, breaks = axis.df$center, expand = c(0, 0)) +
-    scale_y_continuous(limits = ylims, expand = c(0, 0)) + 
+    scale_y_continuous(expand = c(0, 0)) + 
     labs( x = "Chromosome",
           y = "-log10(P)",
           title = plot.title) +
@@ -193,7 +192,7 @@ GetManhattanPlot <- function(df, fdr.thr, ylims, plot.title){
            panel.border = element_blank(),
            panel.grid.major.x = element_blank(),
            panel.grid.minor.x = element_blank(),
-           axis.title = element_text(size = 10),
+           axis.title = element_text(size = 8),
            axis.text.x = element_text(angle = 0, hjust = 0.5), 
            legend.position = "none", 
            legend.title = element_blank()) 

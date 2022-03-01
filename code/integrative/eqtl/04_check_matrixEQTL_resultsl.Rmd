@@ -1,0 +1,220 @@
+---
+title: "Check matrixEQTL results: veh vs. unique dex"
+output: html_notebook
+---
+
+```{r eval = F}
+library(data.table)
+library(dplyr)
+
+library(ggplot2)
+```
+
+### Set up parameters
+
+```{r, eval = F}
+out.dir.pre       <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+
+col.names         <- c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "FDR")
+
+meqtl.veh.full.fn   <- paste0(out.dir.pre, "me-eqtl_cis_results_06122021/me-qtl_cis_result_veh.csv") 
+meqtl.dex.full.fn   <- paste0(out.dir.pre, "me-eqtl_cis_results_06122021/me-qtl_cis_result_dex.csv") 
+meqtl.delta.full.fn <- paste0(out.dir.pre, "me-qtl_cis_result_delta_beta.csv") 
+meqtl.veh.fn        <- paste0(out.dir.pre, "me-eqtl_cis_results_06122021/me-qtl_cis_result_veh_fdr_005.csv")
+meqtl.dex.fn        <- paste0(out.dir.pre, "me-eqtl_cis_results_06122021/me-qtl_cis_result_dex_fdr_005.csv")  
+meqtl.delta.fn      <- paste0(out.dir.pre, "me-qtl_cis_result_delta_fdr_005.csv")
+```
+
+### Load data
+
+__meqtl.veh.full.df__ : MatrixEQTL for baseline before filtering for FDR, p-value <= 0.05
+
+__meqtl.dex.full.df__ : MatrixEQTL for dex before filtering for FDR, p-value <= 0.05
+
+__meqtl.veh.df__: MatrixEQTL results for baseline for FDR <= 0.05
+
+__meqtl.dex.df__: MatrixEQTL results for dex for FDR <= 0.05
+
+__meqtl.delta.df__: MatrixEQTL results for delta for FDR <= 0.05
+
+```{r eval = F}
+meqtl.veh.full.df   <- fread(meqtl.veh.full.fn, col.names = col.names) 
+meqtl.dex.full.df   <- fread(meqtl.dex.full.fn, col.names = col.names) 
+meqtl.delta.full.df <- fread(meqtl.delta.full.fn, col.names = col.names) 
+meqtl.veh.df        <- fread(meqtl.veh.fn, col.names = col.names)
+meqtl.dex.df        <- fread(meqtl.dex.fn, col.names = col.names)
+meqtl.delta.df      <- fread(meqtl.delta.fn, col.names = col.names)
+```
+
+###  Create an meQTL IDs
+```{r eval = F}
+# meqtl.veh.full.df[["meQTL_ID"]] <- paste(meqtl.veh.full.df$SNP, meqtl.veh.full.df$CpG_ID, sep = "-")
+meqtl.veh.df[["meQTL_ID"]]      <- paste(meqtl.veh.df$SNP, meqtl.veh.df$CpG_ID, sep = "-")
+meqtl.dex.df[["meQTL_ID"]]      <- paste(meqtl.dex.df$SNP, meqtl.dex.df$CpG_ID, sep = "-")
+meqtl.delta.df[["meQTL_ID"]]    <- paste(meqtl.delta.df$SNP, meqtl.delta.df$CpG_ID, sep = "-")
+```
+
+### Get DF with unique dex meQTLs
+
+```{r, eval = F}
+unique.dex.meqtls   <- setdiff(setdiff(meqtl.dex.df$meQTL_ID, meqtl.veh.df$meQTL_ID), meqtl.delta.df$meQTL_ID)
+unique.dex.meqtl.df <- meqtl.dex.df[meQTL_ID %in% unique.dex.meqtls]
+
+colnames(unique.dex.meqtl.df) <- c("SNP", "CpG_ID", "beta_dex", "t-stat_dex", "p-value_dex", "fdr_dex", "meQTL_ID")
+```
+
+###  Merge the DF with unique dex meQTLs with nominal significant (p-value <= 0.05) veh meQTLs
+
+```{r, eval = F}
+joined.unique.dex.meqtl.df <- dplyr::left_join(unique.dex.meqtl.df, meqtl.veh.full.df) 
+```
+
+### Remove meQTLs for which veh FDR is NA
+
+```{r, eval = F}
+joined.unique.dex.meqtl.df <- joined.unique.dex.meqtl.df[!is.na(FDR)][,.(meQTL_ID, SNP, CpG_ID, `p-value_dex`, `p-value`, fdr_dex, FDR, beta_dex, beta)]
+colnames(joined.unique.dex.meqtl.df) <- c("meQTL_ID", "SNP", "CpG_ID", "pval_dex", "pval_veh", "fdr_dex", "fdr_veh", "beta_dex", "beta_veh")
+```
+
+### Save the merged DF
+
+```{r, eval = F}
+fwrite(joined.unique.dex.meqtl.df,
+       paste0(out.dir.pre, "unique_dex_meqtl_with_veh_primary_meqtls_pval_comparison.csv"),
+       quote = F, row.names = F, sep   = "\t")
+```
+
+### Read in merged DF
+
+```{r, eval = T}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+
+joined.unique.dex.meqtl.df <- 
+  fread(paste0(out.dir.pre, "unique_dex_meqtl_with_veh_primary_meqtls_pval_comparison.csv"))
+```
+
+### DF summary
+
+```{r, eval = T}
+summary(joined.unique.dex.meqtl.df[, .(pval_dex, pval_veh, fdr_dex, fdr_veh, beta_dex, beta_veh)]) %>%
+  unclass() %>% data.frame(row.names = NULL , check.names = F)
+```
+
+### First 1000 meQTLs
+
+```{r, eval = T}
+head(joined.unique.dex.meqtl.df, 1000)
+```
+
+```{r, include=F, eval=T}
+eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+
+snp.df.fn <- paste0(eqtm.in.pre, "snp_mtrx.csv")
+snp.df    <- fread(snp.df.fn)
+
+methyl.beta.df.fn   <- paste0(eqtm.in.pre, "methyl_beta_mtrx_dex.csv")
+methyl.beta.dex.df  <- fread(methyl.beta.df.fn) 
+
+methyl.beta.df.fn   <- paste0(eqtm.in.pre, "methyl_beta_mtrx_veh.csv")
+methyl.beta.veh.df  <- fread(methyl.beta.df.fn) 
+
+all(colnames(snp.df)[-1] == colnames(methyl.beta.dex.df)[-1])
+all(colnames(snp.df)[-1] == colnames(methyl.beta.veh.df)[-1])
+```
+
+```{r}
+source("~/bio/code/mpip/dex-stim-human-array/code/integrative/eqtl/04_me-qtl_analysis/util.R")
+```
+
+### Visualisation
+
+#### meQTL with min pvalues across dex
+```{r}
+selected.meqtl <- joined.unique.dex.meqtl.df[pval_dex == min(pval_dex)]
+selected.meqtl
+```
+
+##### Delta meQTL 
+
+```{r}
+meqtl.delta.full.df[CpG_ID %in% selected.meqtl$CpG_ID][SNP %in% selected.meqtl$SNP]
+```
+
+```{r warning = F}
+plot.title <- paste0("meQTLs with min DEX pvalue: ",
+                     "pval_veh = ", signif(selected.meqtl$pval_veh, 2), " and pval_dex = ", signif(selected.meqtl$pval_dex, 2))
+
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl[1], fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+#### meQTL with max pvalues across veh
+
+```{r}
+selected.meqtl <- joined.unique.dex.meqtl.df[pval_veh == max(pval_veh)]
+selected.meqtl
+```
+
+##### Delta meQTL 
+
+```{r}
+meqtl.delta.full.df[CpG_ID %in% selected.meqtl$CpG_ID][SNP %in% selected.meqtl$SNP]
+```
+
+```{r warning = F}
+plot.title <- paste0("meQTLs with max VEH pvalue: ",
+                     "pval_veh = ", signif(selected.meqtl$pval_veh, 2), " and pval_dex = ", signif(selected.meqtl$pval_dex, 2))
+
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl[1], fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+### Unique Delta meQTLs
+
+
+```{r, eval = F}
+unique.delta.meqtls   <- setdiff(setdiff(meqtl.delta.df$meQTL_ID, meqtl.veh.df$meQTL_ID), meqtl.dex.df$meQTL_ID)
+unique.delta.meqtl.df <- meqtl.delta.df[meQTL_ID %in% unique.delta.meqtls]
+
+colnames(unique.delta.meqtl.df) <- c("SNP", "CpG_ID", "beta_delta", "t-stat_delta", "p-value_delta", "fdr_delta", "meQTL_ID")
+```
+
+#### Merge DF
+
+```{r}
+
+colnames(meqtl.dex.full.df)   <-  c("SNP", "CpG_ID", "beta_dex", "t-stat_dex", "pval_dex", "fdr_dex")
+colnames(meqtl.veh.full.df)   <-  c("SNP", "CpG_ID", "beta_veh", "t-stat_veh", "pval_veh", "fdr_veh")
+colnames(meqtl.delta.full.df) <-  c("SNP", "CpG_ID", "beta_delta", "t-stat_delta", "pval_delta", "fdr_delta")
+
+joined.unique.delta.meqtl.df <- dplyr::left_join(dplyr::left_join(unique.delta.meqtl.df, meqtl.dex.full.df), meqtl.veh.full.df)
+joined.unique.delta.meqtl.df <- joined.unique.delta.meqtl.df %>% dplyr::select(meQTL_ID, everything())
+joined.unique.delta.meqtl.df
+```
+
+#### meQTL with max veh p-values across unique delta meQTLs
+
+```{r}
+joined.unique.delta.meqtl.df[!is.na(pval_veh)][pval_veh == max(pval_veh)][,.(meQTL_ID, SNP, CpG_ID, `p-value_delta`, pval_dex, pval_veh,
+                                                                             fdr_delta, fdr_dex, fdr_veh)]
+```
+
+#### meQTL with max dex p-values across unique delta meQTLs
+
+```{r}
+joined.unique.delta.meqtl.df[!is.na(pval_dex)][pval_dex == max(pval_dex)][,.(meQTL_ID, SNP, CpG_ID, `p-value_delta`, pval_dex, pval_veh,
+                                                                             fdr_delta, fdr_dex, fdr_veh)]
+```
+
+#### meQTL with min pvalues across delta
+
+```{r}
+selected.meqtl <- joined.unique.delta.meqtl.df[`p-value_delta` == min(`p-value_delta`)]
+selected.meqtl
+```
+
+```{r warning = F}
+plot.title <- paste0("meQTLs with min DELTA pvalue: ",
+                     "pval_delta = ", signif(selected.meqtl$`p-value_delta`, 2))
+
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl[1], fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```

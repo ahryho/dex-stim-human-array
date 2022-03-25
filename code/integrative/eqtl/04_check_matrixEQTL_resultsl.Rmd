@@ -12,7 +12,7 @@ library(ggplot2)
 
 ### Set up parameters
 
-```{r, eval = F}
+```{r, eval = F, warnings = F}
 out.dir.pre       <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
 col.names         <- c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "FDR")
@@ -86,7 +86,7 @@ fwrite(joined.unique.dex.meqtl.df,
 
 ### Read in merged DF
 
-```{r, eval = T}
+```{r, eval = T, warning = F}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
 joined.unique.dex.meqtl.df <- 
@@ -104,6 +104,93 @@ summary(joined.unique.dex.meqtl.df[, .(pval_dex, pval_veh, fdr_dex, fdr_veh, bet
 
 ```{r, eval = T}
 head(joined.unique.dex.meqtl.df, 1000)
+```
+### meQTLs with opposite betas for dex and baseline
+
+```{r}
+# selected.meqtls.df <- joined.unique.dex.meqtl.df[meQTL_ID %in% unique.dex.meqtls][beta_dex * beta_veh < 0]
+selected.meqtls.df <- joined.unique.dex.meqtl.df[beta_dex * beta_veh < 0]
+print(paste0("Number of meQTLs with opposite betas for dex and baseline: ", nrow(selected.meqtls.df), " out of ", nrow(joined.unique.dex.meqtl.df)))
+```
+
+
+```{r}
+summary(selected.meqtls.df[, .(pval_dex, pval_veh, fdr_dex, fdr_veh, beta_dex, beta_veh)]) %>%
+  unclass() %>% data.frame(row.names = NULL , check.names = F)
+```
+
+```{r}
+fwrite(selected.meqtls.df,
+       paste0(out.dir.pre, "dex_veh_meqtl_opposite_beta_9K.csv"),
+       quote = F, row.names = F, sep   = "\t")
+```
+
+```{r include = F, eval = F}
+meqtls.meqtls <- list(delta = meqtl.all.full.df[treatment == "delta", meQTL_ID], 
+                      dex = meqtl.all.full.df[treatment == "dex", meQTL_ID], 
+                      veh = meqtl.all.full.df[treatment == "veh", meQTL_ID])
+
+meqtl.grp.overlaps.all       <- intersect(intersect(meqtls.meqtls$veh, meqtls.meqtls$delta), meqtls.meqtls$dex)
+meqtl.grp.overlaps.delta.veh <- setdiff(intersect(meqtls.meqtls$veh, meqtls.meqtls$delta), meqtls.meqtls$dex)
+meqtl.grp.overlaps.delta.dex <- setdiff(intersect(meqtls.meqtls$dex, meqtls.meqtls$delta), meqtls.meqtls$veh)
+meqtl.grp.only.delta         <- setdiff(setdiff(meqtls.meqtls$delta, meqtls.meqtls$dex), meqtls.meqtls$veh)
+```
+
+```{r eval = F}
+meqtls.grp.with.delta <- c(meqtl.grp.overlaps.all, meqtl.grp.overlaps.delta.veh, meqtl.grp.overlaps.delta.dex, meqtl.grp.only.delta)
+
+joined.grp.with.delta <- rbind(meqtl.dex.df[meQTL_ID %in% c(meqtl.grp.overlaps.all, meqtl.grp.overlaps.delta.dex)],
+                               meqtl.delta.df[meQTL_ID %in% c(meqtl.grp.overlaps.delta.veh, meqtl.grp.only.delta)])
+
+colnames(joined.grp.with.delta) <- c("SNP", "CpG_ID", "beta_dex", "t-stat_dex", "p-value_dex", "fdr_dex", "meQTL_ID")                            
+```
+
+```{r, eval = F}
+joined.grp.with.delta <- dplyr::left_join(joined.grp.with.delta, meqtl.veh.full.df) 
+```
+
+### Remove meQTLs for which veh FDR is NA
+
+```{r, eval = F}
+joined.grp.with.delta <- joined.grp.with.delta[!is.na(FDR)][,.(meQTL_ID, SNP, CpG_ID, `p-value_dex`, `p-value`, fdr_dex, FDR, beta_dex, beta)]
+colnames(joined.grp.with.delta) <- c("meQTL_ID", "SNP", "CpG_ID", "pval_dex", "pval_veh", "fdr_dex", "fdr_veh", "beta_dex", "beta_veh")
+```
+
+### Save the merged DF
+
+```{r, eval = F}
+fwrite(joined.grp.with.delta,
+       paste0(out.dir.pre, "dex_meqtl_with_veh_primary_group_with_delta.csv"),
+       quote = F, row.names = F, sep   = "\t")
+```
+
+### Read in merged DF
+
+```{r, eval = T, warning = F}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+
+joined.grp.with.delta <- 
+  fread(paste0(out.dir.pre, "dex_meqtl_with_veh_primary_group_with_delta.csv"))
+```
+
+### meQTLs with opposite betas for dex/delta and baseline
+
+```{r}
+# selected.meqtls.df <- joined.unique.dex.meqtl.df[meQTL_ID %in% unique.dex.meqtls][beta_dex * beta_veh < 0]
+selected.meqtls.df <- joined.grp.with.delta[beta_dex * beta_veh < 0]
+print(paste0("Number of meQTLs with opposite betas for dex and baseline: ", nrow(selected.meqtls.df), " out of ", nrow(joined.grp.with.delta)))
+```
+
+
+```{r}
+summary(selected.meqtls.df[, .(pval_dex, pval_veh, fdr_dex, fdr_veh, beta_dex, beta_veh)]) %>%
+  unclass() %>% data.frame(row.names = NULL , check.names = F)
+```
+
+```{r}
+fwrite(selected.meqtls.df,
+       paste0(out.dir.pre, "dex_veh_meqtl_opposite_beta_group_with_delta.csv"),
+       quote = F, row.names = F, sep   = "\t")
 ```
 
 ```{r, include=F, eval=T}

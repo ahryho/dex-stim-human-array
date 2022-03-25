@@ -315,6 +315,7 @@ meqtl.grp.overlaps.delta.dex <- setdiff(intersect(meqtls.meqtls$dex, meqtls.meqt
 meqtl.grp.only.delta         <- setdiff(setdiff(meqtls.meqtls$delta, meqtls.meqtls$dex), meqtls.meqtls$veh)
 ```
 
+
 <!-- Annotate data -->
 
 ```{r include = F, eval = F}
@@ -644,6 +645,23 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
         axis.text.x = element_text(angle = 0, hjust = 0.5)) +
    scale_fill_manual("", values = cbPalette)
 ```
+
+### Groups annotation
+
+Read meQTLs with opposite effects
+
+```{r, eval = T, warning = F}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+
+meqtls.opposite.fc.grp.with.delta <- 
+  fread(paste0(out.dir.pre, "dex_veh_meqtl_opposite_beta_group_with_delta.csv"))
+
+meqtls.opposite.fc.grp.no.delta <- 
+  fread(paste0(out.dir.pre, "dex_veh_meqtl_opposite_beta_9K.csv"))
+
+meqtl.opposite.fc <- c(meqtls.opposite.fc.grp.with.delta$meQTL_ID, meqtls.opposite.fc.grp.no.delta$meQTL_ID)
+```
+
 
 ***
 

@@ -307,14 +307,36 @@ ggplot(bins.df, aes(DistanceInterval, fill = treatment)) +
 ```
 ***
 
+```{r, eval = F, include = F, warning = F}
+
+## Groups annotation
+
+### Read meQTLs with opposite effects
+
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+
+meqtls.opposite.fc.grp.with.delta <- 
+  fread(paste0(out.dir.pre, "dex_veh_meqtl_opposite_beta_group_with_delta.csv"))
+
+meqtls.opposite.fc.grp.no.delta <- 
+  fread(paste0(out.dir.pre, "dex_veh_meqtl_opposite_beta_9K.csv"))
+
+meqtl.opposite.fc <- c(meqtls.opposite.fc.grp.with.delta$meQTL_ID, meqtls.opposite.fc.grp.no.delta$meQTL_ID)
+```
 
 ```{r include = F, eval = F}
 meqtl.grp.overlaps.all       <- intersect(intersect(meqtls.meqtls$veh, meqtls.meqtls$delta), meqtls.meqtls$dex)
 meqtl.grp.overlaps.delta.veh <- setdiff(intersect(meqtls.meqtls$veh, meqtls.meqtls$delta), meqtls.meqtls$dex)
 meqtl.grp.overlaps.delta.dex <- setdiff(intersect(meqtls.meqtls$dex, meqtls.meqtls$delta), meqtls.meqtls$veh)
 meqtl.grp.only.delta         <- setdiff(setdiff(meqtls.meqtls$delta, meqtls.meqtls$dex), meqtls.meqtls$veh)
-```
 
+meqtl.grp.overlaps.dex.veh <- setdiff(intersect(meqtls.meqtls$veh, meqtls.meqtls$dex), meqtls.meqtls$delta)
+meqtl.grp.only.dex         <- setdiff(setdiff(meqtls.meqtls$dex, meqtls.meqtls$veh), meqtls.meqtls$delta)
+meqtl.grp.only.veh         <- setdiff(setdiff(meqtls.meqtls$veh, meqtls.meqtls$dex), meqtls.meqtls$delta)
+
+meqtls.opposite.fc.grp.veh.dex <- setdiff(c(meqtl.grp.overlaps.dex.veh, meqtl.grp.only.dex, meqtl.grp.only.veh), meqtls.opposite.fc.grp.no.delta$meQTL_ID)
+meqtls.opposite.fc.grp.delta   <- setdiff(c(meqtl.grp.overlaps.all, meqtl.grp.overlaps.delta.veh, meqtl.grp.overlaps.delta.dex,  meqtl.grp.only.delta), meqtls.opposite.fc.grp.with.delta$meQTL_ID)
+```
 
 <!-- Annotate data -->
 
@@ -324,6 +346,8 @@ library(ChIPseeker)
 library(org.Hs.eg.db)
 
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
+
+# anno.snps.all.gr <- readRDS("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/snp_annotated_withChIPseeker_all.rds")
 
 meqtl.overlap.snp.all.df <- meqtl.all.full.df[meQTL_ID %in% meqtl.grp.overlaps.all]
 meqtl.overlap.snp.all.gr <- annotate_with_chipseeker(meqtl.overlap.snp.all.df, "chr", "pos_snp", "pos_snp", "SNP")
@@ -340,6 +364,44 @@ saveRDS(meqtl.overlap.snp.delta.dex.gr, file =  paste0(out.dir.pre, "meqtl_overl
 meqtl.only.snp.delta.df <- meqtl.all.full.df[meQTL_ID %in% meqtl.grp.only.delta]
 meqtl.only.snp.delta.gr <- annotate_with_chipseeker(meqtl.only.snp.delta.df, "chr", "pos_snp", "pos_snp", "SNP")
 saveRDS(meqtl.only.snp.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_only_delta_gr.rds"))
+
+meqtl.overlap.snp.dex.veh.df <- meqtl.all.full.df[meQTL_ID %in% meqtl.grp.overlaps.dex.veh]
+meqtl.overlap.snp.dex.veh.gr <- annotate_with_chipseeker(meqtl.overlap.snp.dex.veh.df, "chr", "pos_snp", "pos_snp", "SNP")
+saveRDS(meqtl.overlap.snp.dex.veh.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_dex_veh_gr.rds"))
+
+meqtl.only.snp.dex.df <- meqtl.all.full.df[meQTL_ID %in% meqtl.grp.only.dex]
+meqtl.only.snp.dex.gr <- annotate_with_chipseeker(meqtl.only.snp.dex.df, "chr", "pos_snp", "pos_snp", "SNP")
+saveRDS(meqtl.only.snp.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_only_dex_gr.rds"))
+
+meqtl.only.snp.veh.df <- meqtl.all.full.df[meQTL_ID %in% meqtl.grp.only.veh]
+meqtl.only.snp.veh.gr <- annotate_with_chipseeker(meqtl.only.snp.veh.df, "chr", "pos_snp", "pos_snp", "SNP")
+saveRDS(meqtl.only.snp.veh.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_only_veh_gr.rds"))
+
+meqtl.opposite.fc.grp.with.delta.df <- meqtl.all.full.df[meQTL_ID %in% meqtls.opposite.fc.grp.with.delta$meQTL_ID]
+meqtl.opposite.fc.grp.with.delta.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.with.delta.df, "chr", "pos_snp", "pos_snp", "SNP")
+saveRDS(meqtl.opposite.fc.grp.with.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_with_delta_gr.rds"))
+
+meqtl.opposite.fc.grp.no.delta.df <- meqtl.all.full.df[meQTL_ID %in% meqtls.opposite.fc.grp.no.delta$meQTL_ID]
+meqtl.opposite.fc.grp.no.delta.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.no.delta.df, "chr", "pos_snp", "pos_snp", "SNP")
+saveRDS(meqtl.opposite.fc.grp.no.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_no_delta_gr.rds"))
+
+meqtl.opposite.fc.grp.veh.dex.df  <- rbind(meqtl.overlap.snp.dex.veh.df, 
+                                           meqtl.only.snp.dex.df, 
+                                           meqtl.only.snp.veh.df)[!(meQTL_ID %in% meqtls.opposite.fc.grp.no.delta$meQTL_ID)][, .(chr, pos_snp, SNP)] %>% unique()
+meqtl.opposite.fc.grp.veh.dex.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.veh.dex.df, "chr", "pos_snp", "pos_snp", "SNP")
+saveRDS(meqtl.opposite.fc.grp.veh.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_veh_dex_gr.rds"))
+
+meqtl.opposite.fc.grp.delta.df <- rbind(meqtl.overlap.snp.all.df, 
+                                         meqtl.overlap.snp.delta.veh.df, 
+                                         meqtl.overlap.snp.delta.dex.df, 
+                                         meqtl.only.snp.delta.df)[!(meQTL_ID %in% meqtls.opposite.fc.grp.with.delta$meQTL_ID)][, .(chr, pos_snp, SNP)] %>% unique()
+meqtl.opposite.fc.grp.delta.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.delta.df, "chr", "pos_snp", "pos_snp", "SNP")
+saveRDS(meqtl.opposite.fc.grp.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_delta_gr.rds"))
+
+meqtl.opposite.fc.df <- rbind(meqtl.opposite.fc.grp.with.delta.df, meqtl.opposite.fc.grp.no.delta.df)[, .(chr, pos_snp, SNP)] %>% unique()
+meqtl.opposite.fc.gr <- annotate_with_chipseeker(meqtl.opposite.fc.df, "chr", "pos_snp", "pos_snp", "SNP")
+saveRDS(meqtl.opposite.fc.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_gr.rds"))
+
 ```
 
 # Functional annotation
@@ -348,7 +410,7 @@ saveRDS(meqtl.only.snp.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meq
 
 <!-- ### SNP level -->
   
-### Manhattan plots{.tabset .tabset-fade .tabset-pills}
+<!-- ### Manhattan plots{.tabset .tabset-fade .tabset-pills} -->
 
 #### Veh + Dex + Delta
 
@@ -522,6 +584,10 @@ meqtl.overlap.all.gr       <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlap
 meqtl.overlap.delta.veh.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_delta_veh_gr.rds"))
 meqtl.overlap.delta.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_delta_dex_gr.rds"))
 meqtl.only.delta.gr        <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_only_delta_gr.rds"))
+
+meqtl.overlap.snp.dex.veh.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_dex_veh_gr.rds"))
+meqtl.only.snp.dex.gr        <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_only_dex_gr.rds"))
+meqtl.only.snp.veh.gr        <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_only_veh_gr.rds"))
 ```
 
 ```{r}
@@ -537,15 +603,30 @@ delta.veh.anno.stat.df[["Model"]] <- paste0("intersect \n (delta, veh) \n N = ",
 delta.dex.anno.stat.df <- meqtl.overlap.delta.dex.gr@annoStat
 delta.dex.anno.stat.df[["Model"]] <-  paste0("intersect \n (delta, dex) \n N = ", length(meqtl.overlap.delta.dex.gr@anno))
 
-anno.stat.df <- rbind(all.anno.stat.df, delta.veh.anno.stat.df, delta.dex.anno.stat.df, delta.anno.stat.df)
+dex.veh.anno.stat.df <- meqtl.overlap.snp.dex.veh.gr@annoStat
+dex.veh.anno.stat.df[["Model"]] <-  paste0("intersect \n (dex, veh) \n N = ", length(meqtl.overlap.snp.dex.veh.gr@anno))
+
+dex.anno.stat.df <- meqtl.only.snp.dex.gr@annoStat
+dex.anno.stat.df[["Model"]] <-  paste0("only dex \n N = ", length(meqtl.only.snp.dex.gr@anno))
+
+veh.anno.stat.df <- meqtl.only.snp.veh.gr@annoStat
+veh.anno.stat.df[["Model"]] <-  paste0("only veh \n N = ", length(meqtl.only.snp.veh.gr@anno))
+
+anno.stat.df <- rbind(all.anno.stat.df, delta.veh.anno.stat.df, delta.dex.anno.stat.df, delta.anno.stat.df,
+                      dex.veh.anno.stat.df, dex.anno.stat.df, veh.anno.stat.df)
 
 anno.stat.df$Feature   <- factor(anno.stat.df$Feature)
 anno.stat.df$Frequency <- signif(anno.stat.df$Frequency, 3)
 anno.stat.df$Model     <- factor(anno.stat.df$Model)
-levels(anno.stat.df$Model) <- c(unique(all.anno.stat.df$Model), 
-                                unique(delta.veh.anno.stat.df$Model), 
-                                unique(delta.dex.anno.stat.df$Model), 
-                                unique(delta.anno.stat.df$Model))
+# levels(anno.stat.df$Model) <- c(
+#                                 unique(all.anno.stat.df$Model), 
+#                                 unique(delta.veh.anno.stat.df$Model), 
+#                                 unique(delta.dex.anno.stat.df$Model), 
+#                                 unique(delta.anno.stat.df$Model),
+#                                 unique(dex.veh.anno.stat.df$Model), 
+#                                 unique(dex.anno.stat.df$Model),
+#                                 unique(veh.anno.stat.df$Model)
+#                                 )
 
 cbPalette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
 
@@ -566,6 +647,56 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
    scale_fill_manual("", values = cbPalette)
 ```
 
+### SNP annotation by groups
+
+```{r eval = T, include = F}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
+
+meqtl.opposite.fc.grp.with.delta.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_with_delta_gr.rds"))
+meqtl.opposite.fc.grp.no.delta.gr  <- readRDS(paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_no_delta_gr.rds"))
+
+meqtl.opposite.fc.grp.veh.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_veh_dex_gr.rds"))
+meqtl.opposite.fc.grp.delta.gr   <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_delta_gr.rds"))
+meqtl.opposite.fc.gr             <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_gr.rds"))
+```
+
+```{r}
+opposite.fc.grp.veh.dex.anno.stat.df <- meqtl.opposite.fc.grp.veh.dex.gr@annoStat
+opposite.fc.grp.veh.dex.anno.stat.df[["Model"]] <- paste0("veh + dex with parallel FC \n N = ", length(meqtl.opposite.fc.grp.veh.dex.gr@anno)) 
+
+opposite.fc.grp.delta.anno.stat.df <- meqtl.opposite.fc.grp.delta.gr@annoStat
+opposite.fc.grp.delta.anno.stat.df[["Model"]] <- paste0("delta with parallel FC \n N = ", length(meqtl.opposite.fc.grp.delta.gr@anno)) 
+
+meqtl.opposite.fc.anno.stat.df <- meqtl.opposite.fc.gr@annoStat
+meqtl.opposite.fc.anno.stat.df[["Model"]] <- paste0("opposite FC \n N = ", length(meqtl.opposite.fc.gr@anno)) 
+
+anno.stat.df <- rbind(opposite.fc.grp.veh.dex.anno.stat.df, opposite.fc.grp.delta.anno.stat.df, meqtl.opposite.fc.anno.stat.df)
+
+anno.stat.df$Feature   <- factor(anno.stat.df$Feature)
+anno.stat.df$Frequency <- signif(anno.stat.df$Frequency, 3)
+anno.stat.df$Model     <- factor(anno.stat.df$Model)
+# levels(anno.stat.df$Model) <- c(unique(opposite.fc.grp.veh.dex.anno.stat.df$Model), 
+#                                 unique(opposite.fc.grp.delta.anno.stat.df$Model), 
+#                                 unique(meqtl.opposite.fc.anno.stat.df$Model))
+
+cbPalette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
+
+ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) + 
+  geom_bar( position = "fill", stat = "identity") + 
+  geom_text(data = subset(anno.stat.df, Frequency > 2),
+            aes(label = Frequency), 
+            position = position_fill(vjust = .5), size = 3) +
+  labs(x = "",
+       y = "Percentage of SNPs", 
+       title = "meSNP annotation from UCSC for the hg19 genome build using \nTxDb.Hsapiens.UCSC.hg19.knownGene and ChIPseeker Bioconductor R packages \n\nmeQTL level, N is the number of SNPs") +
+  theme(legend.position = "right",
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+   scale_fill_manual("", values = cbPalette)
+```
 
 ### CpG annotation
 
@@ -593,6 +724,44 @@ saveRDS(meqtl.overlap.cpg.delta.dex.gr, file =  paste0(out.dir.pre, "meqtl_overl
 meqtl.only.cpg.delta.df <- meqtl.all.full.df[meQTL_ID %in% meqtl.grp.only.delta]
 meqtl.only.cpg.delta.gr <- annotate_with_chipseeker(meqtl.only.cpg.delta.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
 saveRDS(meqtl.only.cpg.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_only_delta_gr.rds"))
+
+meqtl.overlap.snp.dex.veh.df <- meqtl.all.full.df[meQTL_ID %in% meqtl.grp.overlaps.dex.veh]
+meqtl.overlap.cpg.dex.veh.gr <- annotate_with_chipseeker(meqtl.overlap.snp.dex.veh.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
+saveRDS(meqtl.overlap.cpg.dex.veh.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_dex_veh_gr.rds"))
+
+meqtl.only.cpg.dex.df <- meqtl.all.full.df[meQTL_ID %in% meqtl.grp.only.dex]
+meqtl.only.cpg.dex.gr <- annotate_with_chipseeker(meqtl.only.cpg.dex.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
+saveRDS(meqtl.only.cpg.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_only_dex_gr.rds"))
+
+meqtl.only.cpg.veh.df <- meqtl.all.full.df[meQTL_ID %in% meqtl.grp.only.veh]
+meqtl.only.cpg.veh.gr <- annotate_with_chipseeker(meqtl.only.cpg.veh.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
+saveRDS(meqtl.only.cpg.veh.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_only_veh_gr.rds"))
+
+meqtl.opposite.fc.grp.with.delta.df <- meqtl.all.full.df[meQTL_ID %in% meqtls.opposite.fc.grp.with.delta$meQTL_ID]
+meqtl.opposite.fc.grp.with.delta.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.with.delta.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
+saveRDS(meqtl.opposite.fc.grp.with.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_with_delta_gr.rds"))
+
+meqtl.opposite.fc.grp.no.delta.df <- meqtl.all.full.df[meQTL_ID %in% meqtls.opposite.fc.grp.no.delta$meQTL_ID]
+meqtl.opposite.fc.grp.no.delta.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.no.delta.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
+saveRDS(meqtl.opposite.fc.grp.no.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_no_delta_gr.rds"))
+
+meqtl.opposite.fc.grp.veh.dex.df  <- rbind(meqtl.overlap.cpg.dex.veh.df, 
+                                           meqtl.only.cpg.dex.df, 
+                                           meqtl.only.cpg.veh.df)[!(meQTL_ID %in% meqtls.opposite.fc.grp.no.delta$meQTL_ID)][, .(chr, pos_cpg, CpG_ID)] %>% unique()
+meqtl.opposite.fc.grp.veh.dex.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.veh.dex.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
+saveRDS(meqtl.opposite.fc.grp.veh.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_veh_dex_gr.rds"))
+
+meqtl.opposite.fc.grp.delta.df <- rbind(meqtl.overlap.cpg.all.df, 
+                                         meqtl.overlap.cpg.delta.veh.df, 
+                                         meqtl.overlap.cpg.delta.dex.df, 
+                                         meqtl.only.cpg.delta.df)[!(meQTL_ID %in% meqtls.opposite.fc.grp.with.delta$meQTL_ID)][, .(chr, pos_cpg, CpG_ID)] %>% unique()
+meqtl.opposite.fc.grp.delta.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.delta.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
+saveRDS(meqtl.opposite.fc.grp.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_delta_gr.rds"))
+
+meqtl.opposite.fc.df <- rbind(meqtl.opposite.fc.grp.with.delta.df, meqtl.opposite.fc.grp.no.delta.df)[, .(chr, pos_cpg, CpG_ID)] %>% unique()
+meqtl.opposite.fc.gr <- annotate_with_chipseeker(meqtl.opposite.fc.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
+saveRDS(meqtl.opposite.fc.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_gr.rds"))
+
 ```
 
 ```{r eval = T, include = F}
@@ -602,6 +771,10 @@ meqtl.overlap.all.gr       <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlap
 meqtl.overlap.delta.veh.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_delta_veh_gr.rds"))
 meqtl.overlap.delta.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_delta_dex_gr.rds"))
 meqtl.only.delta.gr        <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_only_delta_gr.rds"))
+
+meqtl.overlap.dex.veh.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_dex_veh_gr.rds"))
+meqtl.only.dex.gr        <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_only_dex_gr.rds"))
+meqtl.only.veh.gr        <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_only_veh_gr.rds"))
 ```
 
 ```{r}
@@ -617,15 +790,25 @@ delta.veh.anno.stat.df[["Model"]] <- paste0("intersect \n (delta, veh) \n N = ",
 delta.dex.anno.stat.df <- meqtl.overlap.delta.dex.gr@annoStat
 delta.dex.anno.stat.df[["Model"]] <-  paste0("intersect \n (delta, dex) \n N = ", length(meqtl.overlap.delta.dex.gr@anno))
 
-anno.stat.df <- rbind(all.anno.stat.df, delta.veh.anno.stat.df, delta.dex.anno.stat.df, delta.anno.stat.df)
+dex.veh.anno.stat.df <- meqtl.overlap.dex.veh.gr@annoStat
+dex.veh.anno.stat.df[["Model"]] <-  paste0("intersect \n (dex, veh) \n N = ", length(meqtl.overlap.dex.veh.gr@anno))
+
+dex.anno.stat.df <- meqtl.only.dex.gr@annoStat
+dex.anno.stat.df[["Model"]] <-  paste0("only dex \n N = ", length(meqtl.only.dex.gr@anno))
+
+veh.anno.stat.df <- meqtl.only.veh.gr@annoStat
+veh.anno.stat.df[["Model"]] <-  paste0("only veh \n N = ", length(meqtl.only.veh.gr@anno))
+
+anno.stat.df <- rbind(all.anno.stat.df, delta.veh.anno.stat.df, delta.dex.anno.stat.df, delta.anno.stat.df,
+                      dex.veh.anno.stat.df, dex.anno.stat.df, veh.anno.stat.df)
 
 anno.stat.df$Feature   <- factor(anno.stat.df$Feature)
 anno.stat.df$Frequency <- signif(anno.stat.df$Frequency, 3)
 anno.stat.df$Model     <- factor(anno.stat.df$Model)
-levels(anno.stat.df$Model) <- c(unique(all.anno.stat.df$Model), 
-                                unique(delta.veh.anno.stat.df$Model), 
-                                unique(delta.dex.anno.stat.df$Model), 
-                                unique(delta.anno.stat.df$Model))
+# levels(anno.stat.df$Model) <- c(unique(all.anno.stat.df$Model), 
+#                                 unique(delta.veh.anno.stat.df$Model), 
+#                                 unique(delta.dex.anno.stat.df$Model), 
+#                                 unique(delta.anno.stat.df$Model))
 
 cbPalette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
 
@@ -646,207 +829,37 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
    scale_fill_manual("", values = cbPalette)
 ```
 
-### Groups annotation
-
-Read meQTLs with opposite effects
-
-```{r, eval = T, warning = F}
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
-
-meqtls.opposite.fc.grp.with.delta <- 
-  fread(paste0(out.dir.pre, "dex_veh_meqtl_opposite_beta_group_with_delta.csv"))
-
-meqtls.opposite.fc.grp.no.delta <- 
-  fread(paste0(out.dir.pre, "dex_veh_meqtl_opposite_beta_9K.csv"))
-
-meqtl.opposite.fc <- c(meqtls.opposite.fc.grp.with.delta$meQTL_ID, meqtls.opposite.fc.grp.no.delta$meQTL_ID)
-```
-
-
-***
-
-
-## meSNP level
-
-```{r include = F, eval = F}
-snp.grp.overlaps.all       <- intersect(intersect(meqtls.snps$veh, meqtls.snps$delta), meqtls.snps$dex)
-snp.grp.overlaps.delta.veh <- setdiff(intersect(meqtls.snps$veh, meqtls.snps$delta), meqtls.snps$dex)
-snp.grp.overlaps.delta.dex <- setdiff(intersect(meqtls.snps$dex, meqtls.snps$delta), meqtls.snps$veh)
-snp.grp.only.delta         <- setdiff(setdiff(meqtls.snps$delta, meqtls.snps$dex), meqtls.snps$veh)
-```
-
-<!-- Annotate data -->
-
-```{r eval = F, include = F}
-library(TxDb.Hsapiens.UCSC.hg19.knownGene)
-library(ChIPseeker)
-library(org.Hs.eg.db)
-
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
-
-meqtl.overlap.snp.all.df <- meqtl.all.full.df[SNP %in% snp.grp.overlaps.all]
-meqtl.overlap.snp.all.gr <- annotate_with_chipseeker(meqtl.overlap.snp.all.df, "chr", "pos_snp", "pos_snp", "SNP")
-saveRDS(meqtl.overlap.snp.all.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_dex_veh_gr.rds"))
-
-meqtl.overlap.snp.delta.veh.df <- meqtl.all.full.df[SNP %in% snp.grp.overlaps.delta.veh]
-meqtl.overlap.snp.delta.veh.gr <- annotate_with_chipseeker(meqtl.overlap.snp.delta.veh.df, "chr", "pos_snp", "pos_snp", "SNP")
-saveRDS(meqtl.overlap.snp.delta.veh.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_veh_gr.rds"))
-
-meqtl.overlap.snp.delta.dex.df <- meqtl.all.full.df[SNP %in% snp.grp.overlaps.delta.dex]
-meqtl.overlap.snp.delta.dex.gr <- annotate_with_chipseeker(meqtl.overlap.snp.delta.dex.df, "chr", "pos_snp", "pos_snp", "SNP")
-saveRDS(meqtl.overlap.snp.delta.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_dex_gr.rds"))
-
-meqtl.only.snp.delta.df <- meqtl.all.full.df[SNP %in% snp.grp.only.delta]
-meqtl.only.snp.delta.gr <- annotate_with_chipseeker(meqtl.only.snp.delta.df, "chr", "pos_snp", "pos_snp", "SNP")
-saveRDS(meqtl.only.snp.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_only_delta_gr.rds"))
-```
+### CpG annotation by groups
 
 ```{r eval = T, include = F}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
 
-meqtl.overlap.all.gr       <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_dex_veh_gr.rds"))
-meqtl.overlap.delta.veh.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_veh_gr.rds"))
-meqtl.overlap.delta.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_dex_gr.rds"))
-meqtl.only.delta.gr        <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_only_delta_gr.rds"))
+meqtl.opposite.fc.grp.with.delta.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_with_delta_gr.rds"))
+meqtl.opposite.fc.grp.no.delta.gr   <- readRDS(paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_no_delta_gr.rds"))
+
+meqtl.opposite.fc.grp.veh.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_veh_dex_gr.rds"))
+meqtl.opposite.fc.grp.delta.gr   <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_delta_gr.rds"))
+meqtl.opposite.fc.gr             <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_gr.rds"))
 ```
 
-
 ```{r}
-delta.anno.stat.df <- meqtl.only.delta.gr@annoStat
-delta.anno.stat.df[["Model"]] <- paste0("only delta \n N = ", length(meqtl.only.delta.gr@anno)) 
+opposite.fc.grp.veh.dex.anno.stat.df <- meqtl.opposite.fc.grp.veh.dex.gr@annoStat
+opposite.fc.grp.veh.dex.anno.stat.df[["Model"]] <- paste0("veh + dex with parallel FC \n N = ", length(meqtl.opposite.fc.grp.veh.dex.gr@anno)) 
 
-all.anno.stat.df <- meqtl.overlap.all.gr@annoStat
-all.anno.stat.df[["Model"]] <- paste0("intersect \n (delta, veh, dex), \n N = ", length(meqtl.overlap.all.gr@anno))
+opposite.fc.grp.delta.anno.stat.df <- meqtl.opposite.fc.grp.delta.gr@annoStat
+opposite.fc.grp.delta.anno.stat.df[["Model"]] <- paste0("delta with parallel FC \n N = ", length(meqtl.opposite.fc.grp.delta.gr@anno)) 
 
-delta.veh.anno.stat.df <- meqtl.overlap.delta.veh.gr@annoStat
-delta.veh.anno.stat.df[["Model"]] <- paste0("intersect \n (delta, veh) \n N = ", length(meqtl.overlap.delta.veh.gr@anno))
+meqtl.opposite.fc.anno.stat.df <- meqtl.opposite.fc.gr@annoStat
+meqtl.opposite.fc.anno.stat.df[["Model"]] <- paste0("opposite FC \n N = ", length(meqtl.opposite.fc.gr@anno)) 
 
-delta.dex.anno.stat.df <- meqtl.overlap.delta.dex.gr@annoStat
-delta.dex.anno.stat.df[["Model"]] <-  paste0("intersect \n (delta, dex) \n N = ", length(meqtl.overlap.delta.dex.gr@anno))
-
-anno.stat.df <- rbind(all.anno.stat.df, delta.veh.anno.stat.df, delta.dex.anno.stat.df, delta.anno.stat.df)
+anno.stat.df <- rbind(opposite.fc.grp.veh.dex.anno.stat.df, opposite.fc.grp.delta.anno.stat.df, meqtl.opposite.fc.anno.stat.df)
 
 anno.stat.df$Feature   <- factor(anno.stat.df$Feature)
 anno.stat.df$Frequency <- signif(anno.stat.df$Frequency, 3)
 anno.stat.df$Model     <- factor(anno.stat.df$Model)
-levels(anno.stat.df$Model) <- c(unique(all.anno.stat.df$Model), 
-                                unique(delta.veh.anno.stat.df$Model), 
-                                unique(delta.dex.anno.stat.df$Model), 
-                                unique(delta.anno.stat.df$Model))
-
-cbPalette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
-
-ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) + 
-  geom_bar( position = "fill", stat = "identity") + 
-  geom_text(data = subset(anno.stat.df, Frequency > 2),
-            aes(label = Frequency), 
-            position = position_fill(vjust = .5), size = 3) +
-  labs(x = "",
-       y = "Percentage of SNPs", 
-       title = "meSNP annotation from UCSC for the hg19 genome build using \nTxDb.Hsapiens.UCSC.hg19.knownGene and ChIPseeker Bioconductor R packages \n\nmeSNP level, N is the number of SNPs") +
-  theme(legend.position = "right",
-        panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
-   scale_fill_manual("", values = cbPalette)
-```
-***
-
-## meCpG level
-
-```{r include = F, eval = F}
-meqtls.cpg <- list(delta = meqtl.delta.full.df$CpG_ID, dex = meqtl.dex.full.df$CpG_ID, veh = meqtl.veh.full.df$CpG_ID)
-
-overlaps.all       <- intersect(intersect(meqtls.cpg$veh, meqtls.cpg$delta), meqtls.cpg$dex)
-overlaps.delta.veh <- setdiff(intersect(meqtls.cpg$veh, meqtls.cpg$delta), meqtls.cpg$dex)
-overlaps.delta.dex <- setdiff(intersect(meqtls.cpg$dex, meqtls.cpg$delta), meqtls.cpg$veh)
-only.delta         <- setdiff(setdiff(meqtls.cpg$delta, meqtls.cpg$dex), meqtls.cpg$veh)
-```
-
-<!-- Annotate data -->
-
-```{r eval = F, include = F}
-library(TxDb.Hsapiens.UCSC.hg19.knownGene)
-library(ChIPseeker)
-library(org.Hs.eg.db)
-
-out.dir.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
-
-anno.epic   <- readRDS( "~/bio/code/mpip/dex-stim-human-array/data/annotation/IlluminaHumanMethylationEPICanno-ilm10b4-hg19.rds")
-
-meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% overlaps.all, ]) %>% setDT()
-fwrite(meqtls.cpg.anno.df,
-       paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex_veh.csv"),
-       quote = F, row.names = F, sep   = "\t")
-
-meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% overlaps.delta.veh, ]) %>% setDT()
-fwrite(meqtls.cpg.anno.df,
-       paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_veh.csv"),
-       quote = F, row.names = F, sep   = "\t")
-
-meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% overlaps.delta.dex, ]) %>% setDT()
-fwrite(meqtls.cpg.anno.df,
-       paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex.csv"),
-       quote = F, row.names = F, sep   = "\t")
-
-meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% only.delta, ]) %>% setDT()
-fwrite(meqtls.cpg.anno.df,
-       paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_only_delta.csv"),
-       quote = F, row.names = F, sep   = "\t")
-
-meqtl.overlap.all.df <- meqtl.all.full.df[CpG_ID %in% overlaps.all]
-meqtl.overlap.all.gr <- annotate_with_chipseeker(meqtl.overlap.all.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
-saveRDS(meqtl.overlap.all.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_dex_veh_gr.rds"))
-
-meqtl.overlap.delta.veh.df <- meqtl.all.full.df[CpG_ID %in% overlaps.delta.veh]
-meqtl.overlap.delta.veh.gr <- annotate_with_chipseeker(meqtl.overlap.delta.veh.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
-saveRDS(meqtl.overlap.delta.veh.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_veh_gr.rds"))
-
-meqtl.overlap.delta.dex.df <- meqtl.all.full.df[CpG_ID %in% overlaps.delta.dex]
-meqtl.overlap.delta.dex.gr <- annotate_with_chipseeker(meqtl.overlap.delta.dex.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
-saveRDS(meqtl.overlap.delta.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_dex_gr.rds"))
-
-meqtl.only.delta.df <- meqtl.all.full.df[CpG_ID %in% only.delta]
-meqtl.only.delta.gr <- annotate_with_chipseeker(meqtl.only.delta.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
-saveRDS(meqtl.only.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_only_delta_gr.rds"))
-```
-
-### Generic annotation
-
-```{r eval = T, include = F}
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
-
-meqtl.overlap.all.gr       <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_dex_veh_gr.rds"))
-meqtl.overlap.delta.veh.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_veh_gr.rds"))
-meqtl.overlap.delta.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_dex_gr.rds"))
-meqtl.only.delta.gr        <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_only_delta_gr.rds"))
-```
-
-
-```{r}
-delta.anno.stat.df <- meqtl.only.delta.gr@annoStat
-delta.anno.stat.df[["Model"]] <- paste0("only delta \n N = ", length(meqtl.only.delta.gr@anno)) 
-
-all.anno.stat.df <- meqtl.overlap.all.gr@annoStat
-all.anno.stat.df[["Model"]] <- paste0("intersect \n (delta, veh, dex), \n N = ", length(meqtl.overlap.all.gr@anno))
-
-delta.veh.anno.stat.df <- meqtl.overlap.delta.veh.gr@annoStat
-delta.veh.anno.stat.df[["Model"]] <- paste0("intersect \n (delta, veh) \n N = ", length(meqtl.overlap.delta.veh.gr@anno))
-
-delta.dex.anno.stat.df <- meqtl.overlap.delta.dex.gr@annoStat
-delta.dex.anno.stat.df[["Model"]] <-  paste0("intersect \n (delta, dex) \n N = ", length(meqtl.overlap.delta.dex.gr@anno))
-
-anno.stat.df <- rbind(all.anno.stat.df, delta.veh.anno.stat.df, delta.dex.anno.stat.df, delta.anno.stat.df)
-
-anno.stat.df$Feature   <- factor(anno.stat.df$Feature)
-anno.stat.df$Frequency <- signif(anno.stat.df$Frequency, 3)
-anno.stat.df$Model     <- factor(anno.stat.df$Model)
-levels(anno.stat.df$Model) <- c(unique(all.anno.stat.df$Model), 
-                                unique(delta.veh.anno.stat.df$Model), 
-                                unique(delta.dex.anno.stat.df$Model), 
-                                unique(delta.anno.stat.df$Model))
+# levels(anno.stat.df$Model) <- c(unique(opposite.fc.grp.veh.dex.anno.stat.df$Model), 
+#                                 unique(opposite.fc.grp.delta.anno.stat.df$Model), 
+#                                 unique(meqtl.opposite.fc.anno.stat.df$Model))
 
 cbPalette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
 
@@ -857,7 +870,7 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
             position = position_fill(vjust = .5), size = 3) +
   labs(x = "",
        y = "Percentage of CpGs", 
-       title = "meCpG annotation from UCSC for the hg19 genome build using \nTxDb.Hsapiens.UCSC.hg19.knownGene and ChIPseeker Bioconductor R packages \n\nmeCpG level, N is the number of CpGs") +
+       title = "meCpG annotation from UCSC for the hg19 genome build using \nTxDb.Hsapiens.UCSC.hg19.knownGene and ChIPseeker Bioconductor R packages \n\nmeQTL level, N is the number of CpGs") +
   theme(legend.position = "right",
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
@@ -867,50 +880,255 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
    scale_fill_manual("", values = cbPalette)
 ```
 
-### Genomic annotation
 
-### Genomic regions
+***
 
-```{r include = F, eval = T}
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
 
-ovarlap.all.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex_veh.csv"), sep = "\t")
-ovarlap.delta.dex.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex.csv"), sep = "\t")
-ovarlap.delta.veh.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_veh.csv"), sep = "\t")
-only.delta.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_only_delta.csv"), sep = "\t")
-```
+<!-- ## meSNP level -->
 
-```{r include = F, eval = T}
-ovarlap.all.cpg.anno.df[["Model"]] <- paste0("intersect \n (delta, veh, dex)\nN = ", nrow(ovarlap.all.cpg.anno.df)) 
-ovarlap.delta.dex.cpg.anno.df[["Model"]] <- paste0("intersect \n (delta, dex)\nN=", nrow(ovarlap.delta.dex.cpg.anno.df)) 
-ovarlap.delta.veh.cpg.anno.df[["Model"]] <- paste0("intersect \n (delta, veh)\nN=", nrow(ovarlap.delta.veh.cpg.anno.df)) 
-only.delta.cpg.anno.df[["Model"]] <- paste0("only delta\nN", nrow(only.delta.cpg.anno.df)) 
+<!-- ```{r include = F, eval = F} -->
+<!-- snp.grp.overlaps.all       <- intersect(intersect(meqtls.snps$veh, meqtls.snps$delta), meqtls.snps$dex) -->
+<!-- snp.grp.overlaps.delta.veh <- setdiff(intersect(meqtls.snps$veh, meqtls.snps$delta), meqtls.snps$dex) -->
+<!-- snp.grp.overlaps.delta.dex <- setdiff(intersect(meqtls.snps$dex, meqtls.snps$delta), meqtls.snps$veh) -->
+<!-- snp.grp.only.delta         <- setdiff(setdiff(meqtls.snps$delta, meqtls.snps$dex), meqtls.snps$veh) -->
+<!-- ``` -->
 
-meqtl.cpg.anno.df <- rbind(ovarlap.all.cpg.anno.df, ovarlap.delta.dex.cpg.anno.df, ovarlap.delta.veh.cpg.anno.df, only.delta.cpg.anno.df)
+<!-- <!-- Annotate data --> -->
 
-meqtl.cpg.anno.df$Model <- as.factor(meqtl.cpg.anno.df$Model)
-meqtl.cpg.anno.df$Relation_to_Island <- factor(meqtl.cpg.anno.df$Relation_to_Island,
-                                                   levels = c("N_Shelf", "N_Shore", "Island", "S_Shore", "S_Shelf", "OpenSea"))
-```
+<!-- ```{r eval = F, include = F} -->
+<!-- library(TxDb.Hsapiens.UCSC.hg19.knownGene) -->
+<!-- library(ChIPseeker) -->
+<!-- library(org.Hs.eg.db) -->
 
-```{r out.width = "90%", fig.cap = "Distribution of locations of the CpGs in different genomic regions based on Illumina EPIC annotation", include = T, eval = T}
-cbPalette <- c( "#CC6677", "#DDCC77", "#117733", "#AA4499", "#44AA99", "#888888")
+<!-- out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/" -->
 
-ggplot(meqtl.cpg.anno.df, aes(x = Model, fill = Relation_to_Island)) + 
-  geom_bar( position = "fill") + 
-  geom_text(aes(by = Model, 
-                y = (..count..)/sum(..count..)), 
-            stat = "prop", 
-            position = position_fill(vjust = .5), size = 3) +
-  scale_y_continuous(labels = scales::percent) +
-  labs(x = "",
-       y = "Percentage of CpGs", 
-       title = "") +
-  theme(legend.position = "right",
-        panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
-   scale_fill_manual("", values = cbPalette)
-```
+<!-- meqtl.overlap.snp.all.df <- meqtl.all.full.df[SNP %in% snp.grp.overlaps.all] -->
+<!-- meqtl.overlap.snp.all.gr <- annotate_with_chipseeker(meqtl.overlap.snp.all.df, "chr", "pos_snp", "pos_snp", "SNP") -->
+<!-- saveRDS(meqtl.overlap.snp.all.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_dex_veh_gr.rds")) -->
+
+<!-- meqtl.overlap.snp.delta.veh.df <- meqtl.all.full.df[SNP %in% snp.grp.overlaps.delta.veh] -->
+<!-- meqtl.overlap.snp.delta.veh.gr <- annotate_with_chipseeker(meqtl.overlap.snp.delta.veh.df, "chr", "pos_snp", "pos_snp", "SNP") -->
+<!-- saveRDS(meqtl.overlap.snp.delta.veh.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_veh_gr.rds")) -->
+
+<!-- meqtl.overlap.snp.delta.dex.df <- meqtl.all.full.df[SNP %in% snp.grp.overlaps.delta.dex] -->
+<!-- meqtl.overlap.snp.delta.dex.gr <- annotate_with_chipseeker(meqtl.overlap.snp.delta.dex.df, "chr", "pos_snp", "pos_snp", "SNP") -->
+<!-- saveRDS(meqtl.overlap.snp.delta.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_dex_gr.rds")) -->
+
+<!-- meqtl.only.snp.delta.df <- meqtl.all.full.df[SNP %in% snp.grp.only.delta] -->
+<!-- meqtl.only.snp.delta.gr <- annotate_with_chipseeker(meqtl.only.snp.delta.df, "chr", "pos_snp", "pos_snp", "SNP") -->
+<!-- saveRDS(meqtl.only.snp.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_only_delta_gr.rds")) -->
+<!-- ``` -->
+
+<!-- ```{r eval = T, include = F} -->
+<!-- out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/" -->
+
+<!-- meqtl.overlap.all.gr       <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_dex_veh_gr.rds")) -->
+<!-- meqtl.overlap.delta.veh.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_veh_gr.rds")) -->
+<!-- meqtl.overlap.delta.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_delta_dex_gr.rds")) -->
+<!-- meqtl.only.delta.gr        <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_snps_level_only_delta_gr.rds")) -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- delta.anno.stat.df <- meqtl.only.delta.gr@annoStat -->
+<!-- delta.anno.stat.df[["Model"]] <- paste0("only delta \n N = ", length(meqtl.only.delta.gr@anno))  -->
+
+<!-- all.anno.stat.df <- meqtl.overlap.all.gr@annoStat -->
+<!-- all.anno.stat.df[["Model"]] <- paste0("intersect \n (delta, veh, dex), \n N = ", length(meqtl.overlap.all.gr@anno)) -->
+
+<!-- delta.veh.anno.stat.df <- meqtl.overlap.delta.veh.gr@annoStat -->
+<!-- delta.veh.anno.stat.df[["Model"]] <- paste0("intersect \n (delta, veh) \n N = ", length(meqtl.overlap.delta.veh.gr@anno)) -->
+
+<!-- delta.dex.anno.stat.df <- meqtl.overlap.delta.dex.gr@annoStat -->
+<!-- delta.dex.anno.stat.df[["Model"]] <-  paste0("intersect \n (delta, dex) \n N = ", length(meqtl.overlap.delta.dex.gr@anno)) -->
+
+<!-- anno.stat.df <- rbind(all.anno.stat.df, delta.veh.anno.stat.df, delta.dex.anno.stat.df, delta.anno.stat.df) -->
+
+<!-- anno.stat.df$Feature   <- factor(anno.stat.df$Feature) -->
+<!-- anno.stat.df$Frequency <- signif(anno.stat.df$Frequency, 3) -->
+<!-- anno.stat.df$Model     <- factor(anno.stat.df$Model) -->
+<!-- levels(anno.stat.df$Model) <- c(unique(all.anno.stat.df$Model),  -->
+<!--                                 unique(delta.veh.anno.stat.df$Model),  -->
+<!--                                 unique(delta.dex.anno.stat.df$Model),  -->
+<!--                                 unique(delta.anno.stat.df$Model)) -->
+
+<!-- cbPalette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888") -->
+
+<!-- ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +  -->
+<!--   geom_bar( position = "fill", stat = "identity") +  -->
+<!--   geom_text(data = subset(anno.stat.df, Frequency > 2), -->
+<!--             aes(label = Frequency),  -->
+<!--             position = position_fill(vjust = .5), size = 3) + -->
+<!--   labs(x = "", -->
+<!--        y = "Percentage of SNPs",  -->
+<!--        title = "meSNP annotation from UCSC for the hg19 genome build using \nTxDb.Hsapiens.UCSC.hg19.knownGene and ChIPseeker Bioconductor R packages \n\nmeSNP level, N is the number of SNPs") + -->
+<!--   theme(legend.position = "right", -->
+<!--         panel.grid.major = element_blank(), -->
+<!--         panel.background = element_blank(), -->
+<!--         plot.title = element_text(size = 8), -->
+<!--         axis.title = element_text(size = 8), -->
+<!--         axis.text.x = element_text(angle = 0, hjust = 0.5)) + -->
+<!--    scale_fill_manual("", values = cbPalette) -->
+<!-- ``` -->
+<!-- *** -->
+
+<!-- ## meCpG level -->
+
+<!-- ```{r include = F, eval = F} -->
+<!-- meqtls.cpg <- list(delta = meqtl.delta.full.df$CpG_ID, dex = meqtl.dex.full.df$CpG_ID, veh = meqtl.veh.full.df$CpG_ID) -->
+
+<!-- overlaps.all       <- intersect(intersect(meqtls.cpg$veh, meqtls.cpg$delta), meqtls.cpg$dex) -->
+<!-- overlaps.delta.veh <- setdiff(intersect(meqtls.cpg$veh, meqtls.cpg$delta), meqtls.cpg$dex) -->
+<!-- overlaps.delta.dex <- setdiff(intersect(meqtls.cpg$dex, meqtls.cpg$delta), meqtls.cpg$veh) -->
+<!-- only.delta         <- setdiff(setdiff(meqtls.cpg$delta, meqtls.cpg$dex), meqtls.cpg$veh) -->
+<!-- ``` -->
+
+<!-- <!-- Annotate data --> -->
+
+<!-- ```{r eval = F, include = F} -->
+<!-- library(TxDb.Hsapiens.UCSC.hg19.knownGene) -->
+<!-- library(ChIPseeker) -->
+<!-- library(org.Hs.eg.db) -->
+
+<!-- out.dir.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/" -->
+
+<!-- anno.epic   <- readRDS( "~/bio/code/mpip/dex-stim-human-array/data/annotation/IlluminaHumanMethylationEPICanno-ilm10b4-hg19.rds") -->
+
+<!-- meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% overlaps.all, ]) %>% setDT() -->
+<!-- fwrite(meqtls.cpg.anno.df, -->
+<!--        paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex_veh.csv"), -->
+<!--        quote = F, row.names = F, sep   = "\t") -->
+
+<!-- meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% overlaps.delta.veh, ]) %>% setDT() -->
+<!-- fwrite(meqtls.cpg.anno.df, -->
+<!--        paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_veh.csv"), -->
+<!--        quote = F, row.names = F, sep   = "\t") -->
+
+<!-- meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% overlaps.delta.dex, ]) %>% setDT() -->
+<!-- fwrite(meqtls.cpg.anno.df, -->
+<!--        paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex.csv"), -->
+<!--        quote = F, row.names = F, sep   = "\t") -->
+
+<!-- meqtls.cpg.anno.df <- data.frame(anno.epic[anno.epic$Name %in% only.delta, ]) %>% setDT() -->
+<!-- fwrite(meqtls.cpg.anno.df, -->
+<!--        paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_only_delta.csv"), -->
+<!--        quote = F, row.names = F, sep   = "\t") -->
+
+<!-- meqtl.overlap.all.df <- meqtl.all.full.df[CpG_ID %in% overlaps.all] -->
+<!-- meqtl.overlap.all.gr <- annotate_with_chipseeker(meqtl.overlap.all.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID") -->
+<!-- saveRDS(meqtl.overlap.all.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_dex_veh_gr.rds")) -->
+
+<!-- meqtl.overlap.delta.veh.df <- meqtl.all.full.df[CpG_ID %in% overlaps.delta.veh] -->
+<!-- meqtl.overlap.delta.veh.gr <- annotate_with_chipseeker(meqtl.overlap.delta.veh.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID") -->
+<!-- saveRDS(meqtl.overlap.delta.veh.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_veh_gr.rds")) -->
+
+<!-- meqtl.overlap.delta.dex.df <- meqtl.all.full.df[CpG_ID %in% overlaps.delta.dex] -->
+<!-- meqtl.overlap.delta.dex.gr <- annotate_with_chipseeker(meqtl.overlap.delta.dex.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID") -->
+<!-- saveRDS(meqtl.overlap.delta.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_dex_gr.rds")) -->
+
+<!-- meqtl.only.delta.df <- meqtl.all.full.df[CpG_ID %in% only.delta] -->
+<!-- meqtl.only.delta.gr <- annotate_with_chipseeker(meqtl.only.delta.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID") -->
+<!-- saveRDS(meqtl.only.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_only_delta_gr.rds")) -->
+<!-- ``` -->
+
+<!-- ### Generic annotation -->
+
+<!-- ```{r eval = T, include = F} -->
+<!-- out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/" -->
+
+<!-- meqtl.overlap.all.gr       <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_dex_veh_gr.rds")) -->
+<!-- meqtl.overlap.delta.veh.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_veh_gr.rds")) -->
+<!-- meqtl.overlap.delta.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_delta_dex_gr.rds")) -->
+<!-- meqtl.only.delta.gr        <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_cpg_level_only_delta_gr.rds")) -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- delta.anno.stat.df <- meqtl.only.delta.gr@annoStat -->
+<!-- delta.anno.stat.df[["Model"]] <- paste0("only delta \n N = ", length(meqtl.only.delta.gr@anno))  -->
+
+<!-- all.anno.stat.df <- meqtl.overlap.all.gr@annoStat -->
+<!-- all.anno.stat.df[["Model"]] <- paste0("intersect \n (delta, veh, dex), \n N = ", length(meqtl.overlap.all.gr@anno)) -->
+
+<!-- delta.veh.anno.stat.df <- meqtl.overlap.delta.veh.gr@annoStat -->
+<!-- delta.veh.anno.stat.df[["Model"]] <- paste0("intersect \n (delta, veh) \n N = ", length(meqtl.overlap.delta.veh.gr@anno)) -->
+
+<!-- delta.dex.anno.stat.df <- meqtl.overlap.delta.dex.gr@annoStat -->
+<!-- delta.dex.anno.stat.df[["Model"]] <-  paste0("intersect \n (delta, dex) \n N = ", length(meqtl.overlap.delta.dex.gr@anno)) -->
+
+<!-- anno.stat.df <- rbind(all.anno.stat.df, delta.veh.anno.stat.df, delta.dex.anno.stat.df, delta.anno.stat.df) -->
+
+<!-- anno.stat.df$Feature   <- factor(anno.stat.df$Feature) -->
+<!-- anno.stat.df$Frequency <- signif(anno.stat.df$Frequency, 3) -->
+<!-- anno.stat.df$Model     <- factor(anno.stat.df$Model) -->
+<!-- levels(anno.stat.df$Model) <- c(unique(all.anno.stat.df$Model),  -->
+<!--                                 unique(delta.veh.anno.stat.df$Model),  -->
+<!--                                 unique(delta.dex.anno.stat.df$Model),  -->
+<!--                                 unique(delta.anno.stat.df$Model)) -->
+
+<!-- cbPalette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888") -->
+
+<!-- ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +  -->
+<!--   geom_bar( position = "fill", stat = "identity") +  -->
+<!--   geom_text(data = subset(anno.stat.df, Frequency > 2), -->
+<!--             aes(label = Frequency),  -->
+<!--             position = position_fill(vjust = .5), size = 3) + -->
+<!--   labs(x = "", -->
+<!--        y = "Percentage of CpGs",  -->
+<!--        title = "meCpG annotation from UCSC for the hg19 genome build using \nTxDb.Hsapiens.UCSC.hg19.knownGene and ChIPseeker Bioconductor R packages \n\nmeCpG level, N is the number of CpGs") + -->
+<!--   theme(legend.position = "right", -->
+<!--         panel.grid.major = element_blank(), -->
+<!--         panel.background = element_blank(), -->
+<!--         plot.title = element_text(size = 8), -->
+<!--         axis.title = element_text(size = 8), -->
+<!--         axis.text.x = element_text(angle = 0, hjust = 0.5)) + -->
+<!--    scale_fill_manual("", values = cbPalette) -->
+<!-- ``` -->
+
+<!-- ### Genomic annotation -->
+
+<!-- ### Genomic regions -->
+
+<!-- ```{r include = F, eval = T} -->
+<!-- out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/" -->
+
+<!-- ovarlap.all.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex_veh.csv"), sep = "\t") -->
+<!-- ovarlap.delta.dex.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_dex.csv"), sep = "\t") -->
+<!-- ovarlap.delta.veh.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_delta_veh.csv"), sep = "\t") -->
+<!-- only.delta.cpg.anno.df <- fread(paste0(out.dir.pre, "meqtl_overlaps_cpg_level_cpg_anno_only_delta.csv"), sep = "\t") -->
+<!-- ``` -->
+
+<!-- ```{r include = F, eval = T} -->
+<!-- ovarlap.all.cpg.anno.df[["Model"]] <- paste0("intersect \n (delta, veh, dex)\nN = ", nrow(ovarlap.all.cpg.anno.df))  -->
+<!-- ovarlap.delta.dex.cpg.anno.df[["Model"]] <- paste0("intersect \n (delta, dex)\nN=", nrow(ovarlap.delta.dex.cpg.anno.df))  -->
+<!-- ovarlap.delta.veh.cpg.anno.df[["Model"]] <- paste0("intersect \n (delta, veh)\nN=", nrow(ovarlap.delta.veh.cpg.anno.df))  -->
+<!-- only.delta.cpg.anno.df[["Model"]] <- paste0("only delta\nN", nrow(only.delta.cpg.anno.df))  -->
+
+<!-- meqtl.cpg.anno.df <- rbind(ovarlap.all.cpg.anno.df, ovarlap.delta.dex.cpg.anno.df, ovarlap.delta.veh.cpg.anno.df, only.delta.cpg.anno.df) -->
+
+<!-- meqtl.cpg.anno.df$Model <- as.factor(meqtl.cpg.anno.df$Model) -->
+<!-- meqtl.cpg.anno.df$Relation_to_Island <- factor(meqtl.cpg.anno.df$Relation_to_Island, -->
+<!--                                                    levels = c("N_Shelf", "N_Shore", "Island", "S_Shore", "S_Shelf", "OpenSea")) -->
+<!-- ``` -->
+
+<!-- ```{r out.width = "90%", fig.cap = "Distribution of locations of the CpGs in different genomic regions based on Illumina EPIC annotation", include = T, eval = T} -->
+<!-- cbPalette <- c( "#CC6677", "#DDCC77", "#117733", "#AA4499", "#44AA99", "#888888") -->
+
+<!-- ggplot(meqtl.cpg.anno.df, aes(x = Model, fill = Relation_to_Island)) +  -->
+<!--   geom_bar( position = "fill") +  -->
+<!--   geom_text(aes(by = Model,  -->
+<!--                 y = (..count..)/sum(..count..)),  -->
+<!--             stat = "prop",  -->
+<!--             position = position_fill(vjust = .5), size = 3) + -->
+<!--   scale_y_continuous(labels = scales::percent) + -->
+<!--   labs(x = "", -->
+<!--        y = "Percentage of CpGs",  -->
+<!--        title = "") + -->
+<!--   theme(legend.position = "right", -->
+<!--         panel.grid.major = element_blank(), -->
+<!--         panel.background = element_blank(), -->
+<!--         plot.title = element_text(size = 8), -->
+<!--         axis.title = element_text(size = 8), -->
+<!--         axis.text.x = element_text(angle = 0, hjust = 0.5)) + -->
+<!--    scale_fill_manual("", values = cbPalette) -->
+<!-- ``` -->

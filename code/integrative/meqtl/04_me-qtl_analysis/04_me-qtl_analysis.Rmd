@@ -1,0 +1,122 @@
+---
+title: "cis-meQTLs Analysis"
+subtitle: "Dexamethasone-Stimulated Human Array Project"
+author: 
+  - name: Anastasiia Hryhorzhevska
+    email: anastasiia_hry@psych.mpg.de
+    url: https://github.com/ahryho
+    affiliation: Max Planck Institute of Psychiatry
+    affiliation_url: https://www.psych.mpg.de/2664393/medizinische-genomforschung
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    df_print: paged
+    css: style.css
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=FALSE}
+options(digits = 4, width = 100, stringsAsFactors = T)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 100),
+                      tidy=TRUE,
+                      fig.pos = "H",
+                      dpi = 200,
+                      warning = FALSE, 
+                      message = FALSE, 
+                      cache = TRUE, 
+                      cache.lazy = FALSE)
+
+# define DT as the standard printing method for data.frame
+library(knitr)
+library(DT)
+knit_print.data.frame <- function(x, ...) {
+  knit_print(DT::datatable(x,
+                           filter="top",
+                           rownames = FALSE,
+                           extensions = "FixedColumns",
+                           options = list(
+                             scrollX = TRUE,
+                             pageLength = 5
+                             
+                           )), ...)
+}
+
+registerS3method("knit_print", "data.frame", knit_print.data.frame)
+
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(scales)
+library(corrplot)
+library(factoextra)
+library(viridis)
+library(knitr)
+```
+
+# __Introduction__
+***
+
+## Methodology
+
+To explore the cis regulatory effects of SNPs on DNA methylation, the meQTL analysis was performed using a linear regression (LM) implemented in the R package "MatrixEQTL":
+
+- uses the functions of the sample correlation as a test statistics; 
+
+- standardise variables of both gene expression and genotype matrices. By “standardisation”, the algorithm subtracts the mean from each observation and divides that by the standard deviation. The standardisation greatly simplifies the calculation of the sample correlation because the means of variables = 0,  standard deviations = 1, and also the intercept in a standardised regression is always 0. Therefore, the algorithm doesn’t perform unnecessary calculations and increases the performance time;
+
+- calculates the standardised slope coefficient, or standardised effect size, as correlation of standardised data;
+converts standardised coefficient back into metric coefficient via the formula: BETAunstand = BETAstand x SD(gene) / SD(snp).
+
+## Data overview
+
+In the meQTL study, the imputed QC __SNP data__ (no LD pruning, the MHC regions are included) were used.
+The data includes __3'957'338 SNPs__.
+
+The __DNAm data__ underwent the folowing QC analysis steps:
+
+```{r dnam_qc_roadmap,  out.width = '100%'}
+# knitr::include_graphics("~/bio/code/mpip/dex-stim-human-array/code/integrative/Rmds/img/dnam_qc_roadmap.png")
+knitr::include_graphics("../../Rmds/img/dnam_qc_roadmap.png")
+```
+
+As a result, __740'358 CpGs__ were included in the meQTL analysis.
+
+The correction for treatment, sex, case / control status, age, BMI,  smoking score, first two principal components (PCs) for population stratification and first three significant Surrogate Variables (SVs) was done in a cis-window of ±1M bp using the linear regression model of Matrix eQTL. 
+
+Delta (differences between baseline and dex-stimulation) was done based on residuals following the algorithm:
+
+  1. lm_treatment <- lm(beta.mtrx[cpg, ] ~ Sex + Age + BMI + Status + Smoking_Score +
+                                           DNAm_SV_treatment{1-3} + PC{1-2})
+
+  2. res_treatment <- residuals(lm_treatment)
+  
+  3. res_delta <- res_dex - res_veh
+ 
+  4. compute meQTLs using res_delta from (3) adjusting for sex, case / control status, age, BMI,  smoking score, first two principal components (PCs) for population stratification.
+
+The MatrixEQTL meQTL analysis led to 
+
+  + __1'970'917'769__ performed tests
+
+  + __123'399'645__ dex significant (p < 0.05) cis-meQTLs
+
+  + __123'574'934__ veh significant (p < 0.05) cis-meQTLs
+
+  + __100,206,545__ delta significant (p < 0.05) cis-meQTLs
+
+The false discovery rate (FDR) of 5% was chosen. 
+
+
+```{sh, include = F, eval = F}
+meqtl_rslt_dir="~/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL"
+awk 'NR == 1 || $6 < 0.05' me-qtl_cis_result_delta.csv > me-qtl_cis_result_delta_fdr_005.csv
+```
+
+```{r child = c('04_01_me-qtl_primary_results_analysis.Rmd', '04_02a_me-qtl_independent_analysis_global.Rmd', '04_03a_me-qtl_visualisation_global.Rmd', '04_02b_me-qtl_independent_analysis_rw.Rmd', '04_03b_me-qtl_visualisation_rw.Rmd', '04_02c_me-qtl_independent_analysis_comparison_global_vs_rw_veh.Rmd', '04_02c_me-qtl_independent_analysis_comparison_global_vs_rw_delta.Rmd')}
+```

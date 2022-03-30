@@ -1,0 +1,97 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(data.table)
+library(dplyr)
+library(GenomicFeatures)
+library(GenomicRanges)
+```
+
+```{r load-datd}
+
+eqtm.pre <- "~/bio/datasets/eQTM/"
+cpg.loc.fn <- paste0(eqtm.pre, "cpg_locations.csv")
+ensg.loc.fn <- paste0(eqtm.pre, "ensg_locations.csv")
+
+# Load data
+
+cpg.loc  <- fread(cpg.loc.fn)
+ensg.loc <- fread(ensg.loc.fn)
+```
+
+
+# Make Granges
+
+```{r make-ranges}
+cpg.grange        <- makeGRangesFromDataFrame(cpg.loc, start.field = "pos", end.field = "pos", seqnames.field = c("chr"))
+names(cpg.grange) <- cpg.loc$CpG_ID
+
+ensg.grange        <- makeGRangesFromDataFrame(ensg.loc, start.field = "P_start", end.field = "P_end", seqnames.field = c("chr"))
+names(ensg.grange) <- ensg.loc$ENSG_ID
+
+cpg.grange 
+ensg.grange
+```
+
+# Compute distance
+
+```{r dist-nearest}
+dist.nearest <- distanceToNearest(cpg.grange, ensg.grange)
+dist.nearest
+```
+
+```{r}
+hits        <- names(ensg.grange)[subjectHits(dist.nearest)]
+names(hits) <- names(cpg.grange)[queryHits(dist.nearest)]
+
+# Get distances
+dists <- dist.nearest@elementMetadata@listData$distance
+hits[1:3 ]
+summary(dists)
+```
+
+```{r create-df}
+cpg.dist <- cbind(as.data.frame(cpg.grange[names(hits), ]), dists) %>% 
+ mutate(chr = seqnames, pos = start, distance = dists) %>% 
+ dplyr::select(chr, pos, distance) 
+
+cps.ensg.dist.df <- cbind(cpg.dist, as.data.frame(ensg.grange[hits, ]@seqnames), as.data.frame(ensg.grange[hits, ]@ranges))
+cps.ensg.dist.df["CpG_ID"] <- rownames(cps.ensg.dist.df)
+colnames(cps.ensg.dist.df) <- c("CG_CHR", "CG_POS", "DIST", "ENSG_CHR", "ENSG_P_START", "ENSG_P_END", "ENSG_WIDTH", "ENSG_ID", "CpG_ID")
+cps.ensg.dist.df <- cps.ensg.dist.df %>% dplyr::select(CpG_ID, everything())
+head(cps.ensg.dist.df)
+```
+```{r write-results}
+fwrite(cps.ensg.dist.df, 
+       paste0(eqtm.pre, "cpg_ensg_distances.csv"),
+       quote = F, row.names = F, sep = ";")
+```
+
+```{r}
+library(ggplot2)
+ggplot(cps.ensg.dist.df, aes(x=DIST)) + geom_boxplot(alpha=.3)
+```
+
+
+```{r}
+library(mltools)
+library(ggrepel)
+
+bins.df <- data.frame(DistanceInterval = bin_data(data.table::data.table(cps.ensg.dist.df), binCol = "DIST", bins = c(0, 1, 200, 1e3, 1e4+1, 1e5+1, 1e6+1, 1e7+1, Inf), returnDT = F))
+levels(bins.df$DistanceInterval) <- c("0", "(0; 200]", "(200; 1e3]", "(1e3; 1e4]", "(1e4; 1e5]", "(1e5; 1e6]", "(1e6; 1e7]", "[1e7; Inf)")
+
+ggplot(bins.df, aes(DistanceInterval)) + 
+  geom_bar(fill = "grey") +
+  stat_count(geom = "text", 
+             aes(label = stat(count)),
+             position=position_nudge_repel(), colour="black") +
+  ylab("No. CpGs") + 
+  xlab("Distance Interval, bp") +
+  ggtitle("Distribution of CpGs")
+
+```
+
+

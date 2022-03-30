@@ -1,0 +1,219 @@
+***
+# __Identification of independent meQTLs__
+***
+
+## Methodology
+
+The number of independent SNPs per cis-region was identified by LD pruning and clumping the SNPs using the “clump” command in PLINK (using distance < __200 kb__ and __r2 > 0.2__ as setting). Each SNP forms a SNP bin, by aggregating all other SNPs into bins by the tag SNP at r2 > 0.2 and distance < 200 kb, such that all SNPs within a given bin were correlated to the current SNP, but to any other SNP. 
+
+
+```{r include = F, eval = F}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_result_dex_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_result_veh_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_result_delta_fdr_005.csv")
+
+col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
+
+meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
+meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
+meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
+
+meqtl.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_delta_ind_cpg_snp_associations.txt")
+meqtl.cpg.snp.ass.lst <- fread(meqtl.cpg.snp.ass) 
+meqtl.delta.ind.rw.df <- left_join(meqtl.cpg.snp.ass.lst, meqtl.delta.df)
+
+fwrite(meqtl.delta.ind.rw.df,
+       paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_indp_rw_delta_fdr_005.csv"),
+       quote = F, row.names = F, sep = ";")
+
+meqtl.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_veh_ind_cpg_snp_associations.txt")
+meqtl.cpg.snp.ass.lst <- fread(meqtl.cpg.snp.ass, header = F, fill = T) 
+colnames(meqtl.cpg.snp.ass.lst) <- c("CpG_ID", "SNP")
+meqtl.cpg.snp.ass.lst <- meqtl.cpg.snp.ass.lst[SNP != ""]
+meqtl.veh.ind.rw.df <- left_join(meqtl.cpg.snp.ass.lst, meqtl.veh.df)
+
+fwrite(meqtl.veh.ind.rw.df,
+       paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_indp_rw_veh_fdr_005.csv"),
+       quote = F, row.names = F, sep = ";")
+
+meqtl.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_dex_ind_cpg_snp_associations.txt")
+meqtl.cpg.snp.ass.lst <- fread(meqtl.cpg.snp.ass, header = F, col.names =  c("CpG_ID", "SNP"))
+meqtl.dex.ind.rw.df <- left_join(meqtl.cpg.snp.ass.lst, meqtl.dex.df)
+
+fwrite(meqtl.dex.ind.rw.df,
+       paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_indp_rw_dex_fdr_005.csv"),
+       quote = F, row.names = F, sep = ";")
+```
+
+```{r, include = F, eval = T}
+library(data.table)
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/region_wise_independent_snps/"
+
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_dex_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_veh_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_delta_fdr_005.csv")
+
+col.names <-  c("CpG_ID", "SNP", "beta", "t-stat", "p-value", "fdr")
+
+ind.meqtl.dex.df   <- fread(meqtl.dex.fn) #, col.names = col.names)
+ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
+ind.meqtl.delta.df <- fread(meqtl.delta.fn) #, col.names = col.names)
+```
+
+```{r, include = F, eval = T}
+meqtl.all.full.df <- rbind(ind.meqtl.dex.df[, treatment := "dex"],
+                           ind.meqtl.veh.df[, treatment := "veh"],
+                           ind.meqtl.delta.df[, treatment := "delta"])
+
+meqtl.all.full.df <- meqtl.all.full.df[!is.na(meqtl.all.full.df$fdr),]
+meqtl.all.full.df[["meQTL_ID"]] <- paste(meqtl.all.full.df$SNP, meqtl.all.full.df$CpG_ID, sep = "-")
+meqtl.all.full.df <- setDT(meqtl.all.full.df)
+```
+
+```{r include = F, eval = T}
+freq <- fread("/Users/anastasiia_hry/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/freq.afreq")
+```
+
+## Significant Hits, FDR < 0.05
+
+```{r, include = F, eval = T}
+sign.hits.df <- data.table(c(ind.meqtl.delta.df$fdr  %>% length(), 
+                             ind.meqtl.delta.df$CpG_ID %>% unique() %>% length(),
+                             ind.meqtl.delta.df$SNP %>% unique() %>% length()),
+                           c(ind.meqtl.dex.df$fdr  %>% length(), 
+                             ind.meqtl.dex.df$CpG_ID %>% unique() %>% length(),
+                             ind.meqtl.dex.df$SNP %>% unique() %>% length()),
+                           c(ind.meqtl.veh.df$fdr  %>% length(), 
+                             ind.meqtl.veh.df$CpG_ID %>% unique() %>% length(),
+                             ind.meqtl.veh.df$SNP %>% unique() %>% length()))
+
+sign.hits.df <- as.data.frame(sign.hits.df)
+rownames(sign.hits.df) <- c("cis-meQTLs", "CpG", "SNP")
+colnames(sign.hits.df) <- c("delta", "dex", "veh")
+```
+
+```{r out.width = "95%", include = T, eval = T}
+
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+
+sign.hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment"), value.name = "cnt") %>%
+  ggplot(aes(y = cnt, x = Var2, fill = as.factor(as.numeric(Var2)))) +
+    geom_col() +
+    geom_text(aes(label = comma(cnt, accuracy = 1L), y = cnt), 
+                  stat = "identity", 
+                  vjust = -0.2, size = 2.5) + 
+    scale_y_continuous(labels = scientific) +
+    # scale_fill_viridis(discrete = TRUE, alpha = 0.9, option = "C") +
+    labs(title = " ", y = "Count", x = " ") + 
+    facet_wrap(~ Var1, ncol = 3) +
+    theme(legend.position = "none", 
+          legend.title = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 10),
+          axis.title = element_text(size = 8),
+          axis.title.x = element_blank()) +
+  scale_fill_manual(values = cbPalette)
+```
+
+## Upset plots{.tabset .tabset-fade .tabset-pills}
+
+### meQTL level
+  
+```{r out.width = "95%", include = T, eval = T}
+library(UpSetR)
+
+meqtls.meqtls <- list(delta = meqtl.all.full.df[treatment == "delta", meQTL_ID], 
+                      dex = meqtl.all.full.df[treatment == "dex", meQTL_ID], 
+                      veh = meqtl.all.full.df[treatment == "veh", meQTL_ID])
+
+upset(fromList(meqtls.meqtls), 
+      sets = c("delta", "dex", "veh"),
+      nsets = 3, 
+      nintersects = 20, 
+      mainbar.y.label = "Number of intersections, meQTL", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq")
+```
+
+### SNP level
+  
+```{r out.width = "95%", include = T, eval = T}
+library(UpSetR)
+
+meqtls.snps <- list(delta = ind.meqtl.delta.df$SNP, 
+                    dex = ind.meqtl.dex.df$SNP, 
+                    veh = ind.meqtl.veh.df$SNP)
+
+upset(fromList(meqtls.snps), 
+      sets = c("delta", "dex", "veh"),
+      nsets = 3, 
+      nintersects = 20, 
+      mainbar.y.label = "Number of intersections, SNP", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c("#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq")
+```
+
+### CpG level
+
+```{r out.width = "95%", include = T, eval = T}
+library(UpSetR)
+
+meqtls.cpg <- list(delta = ind.meqtl.delta.df$CpG_ID, 
+                   dex = ind.meqtl.dex.df$CpG_ID, 
+                   veh = ind.meqtl.veh.df$CpG_ID)
+
+upset(fromList(meqtls.cpg), 
+      sets = c("delta", "dex", "veh"),
+      nsets = 3, 
+      nintersects = 10, 
+      mainbar.y.label = "Number of intersections, CpG", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c("#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq",
+      )
+```
+
+## Scatter plot
+
+```{r include = F, eval = T}
+source("~/bio/code/mpip/dex-stim-human-array/code/integrative/eqtl/04_me-qtl_analysis/util.R")
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+```
+
+```{r out.width = "95%", include = T, eval = T}
+fdr.thr <- 0.05
+plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " meQTLs.",
+                     "\nResult of MatrixEQTL")
+GetScatterPlot2(meqtl.all.full.df, plot.title = plot.title)
+```
+
+```{r out.width = "95%", include = T, eval = T}
+fdr.thr <- 0.05
+
+plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " meQTLs.",
+                     "\nResult of MatrixEQTL")
+
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+
+ggplot(meqtl.all.full.df, aes(x = `t-stat`, y = -log10(fdr), shape = treatment, color = treatment)) +
+  geom_point(alpha = 1.5, size = 1.2) +
+  scale_x_continuous(labels = scientific) +
+  geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 
+  geom_hline(yintercept = -log10(fdr.thr), colour = "#990000", linetype = "dashed") +
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  labs(x = "t-stat, MatrixEQTL",
+       title = plot.title) +
+  scale_colour_manual(values = cbPalette)
+```

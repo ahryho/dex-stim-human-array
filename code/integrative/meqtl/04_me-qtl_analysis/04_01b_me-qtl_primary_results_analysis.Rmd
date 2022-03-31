@@ -658,6 +658,13 @@ meqtl.opposite.fc.grp.no.delta.gr  <- readRDS(paste0(out.dir.pre, "meqtl_overlap
 meqtl.opposite.fc.grp.veh.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_veh_dex_gr.rds"))
 meqtl.opposite.fc.grp.delta.gr   <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_delta_gr.rds"))
 meqtl.opposite.fc.gr             <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_gr.rds"))
+
+# meqtl.opposite.fc.df <- data.frame(meqtl.opposite.fc.gr@anno) %>% setDT()
+# gene.df <- meqtl.opposite.fc.df[, .(geneId, ENSEMBL, SYMBOL, GENENAME)] %>% unique()
+# fwrite(gene.df,
+#        paste0(out.dir.pre, "../genes/meqtl_genes_opposite_fc_gr.csv"),
+#        quote = F, row.names = F, sep   = "\t")
+
 ```
 
 ```{r  out.width = "95%", include = T, eval = T}
@@ -698,7 +705,22 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
    scale_fill_manual("", values = cbPalette)
 ```
 
-### SNP distribution around TSS
+#### Wilcoxon test 
+
+```{r}
+anno.stat.df <- rbind(opposite.fc.grp.veh.dex.anno.stat.df, opposite.fc.grp.delta.anno.stat.df, meqtl.opposite.fc.anno.stat.df)
+
+wilcox.test.rslt <- pairwise.wilcox.test(anno.stat.df$Frequency, anno.stat.df$Model, p.adjust.method = "none", paired = F)$p.value %>%
+  signif(3)
+
+colnames(wilcox.test.rslt) <- c("parallel FC (delta)", "opposite FC")
+rownames(wilcox.test.rslt) <- c("opposite FC", "parallel FC (veh&dex)")
+wilcox.test.rslt
+
+# wilcox.test(anno.stat.df$Frequency[1:22] ~ anno.stat.df$Model[1:22])
+```
+
+#### SNP distribution around TSS
 
 ```{r out.width = "95%", include = T, eval = T} 
 plotDistToTSS(list(Parallel_FC = meqtl.opposite.fc.grp.veh.dex.gr, 
@@ -904,9 +926,22 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
    scale_fill_manual("", values = cbPalette)
 ```
 
-***
+#### Wilcoxon test 
 
-### CpG distribution around TSS
+```{r}
+anno.stat.df <- rbind(opposite.fc.grp.veh.dex.anno.stat.df, opposite.fc.grp.delta.anno.stat.df, meqtl.opposite.fc.anno.stat.df)
+
+wilcox.test.rslt <- pairwise.wilcox.test(anno.stat.df$Frequency, anno.stat.df$Model, p.adjust.method = "none", paired = F)$p.value %>%
+  signif(3)
+
+colnames(wilcox.test.rslt) <- c("parallel FC (delta)", "opposite FC")
+rownames(wilcox.test.rslt) <- c("opposite FC", "parallel FC (veh&dex)")
+wilcox.test.rslt
+
+# wilcox.test(anno.stat.df$Frequency[1:22] ~ anno.stat.df$Model[1:22])
+```
+
+#### SNP distribution around TSS
 
 ```{r out.width = "95%", include = T, eval = T} 
 plotDistToTSS(list(Parallel_FC = meqtl.opposite.fc.grp.veh.dex.gr, 

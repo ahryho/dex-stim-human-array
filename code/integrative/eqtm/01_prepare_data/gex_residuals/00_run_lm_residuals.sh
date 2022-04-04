@@ -11,7 +11,7 @@ if [ $# -ne 6 ]; then
     exit 1
 fi
 
-gwx_mtrx_fn="/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_"
+gex_mtrx_fn="/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_"
 pheno_fn="/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
 
 module load R

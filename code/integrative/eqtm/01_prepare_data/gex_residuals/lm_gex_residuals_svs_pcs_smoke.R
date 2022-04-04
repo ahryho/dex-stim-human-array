@@ -19,20 +19,15 @@ pheno.fn        <- as.character(args[2])
 lmer.res.out.fn <- as.character(args[3]) # gex_residuals
 treatment       <- as.character(args[4]) # dex
 
-# beta.mtrx.fn <- "/binder/mgp/datasets/2020_DexStim_Array_Human/methylation/10_final_qc_data/dex_methyl_beta_combat_mtrx.rds"
-# beta.mtrx.fn <- "/binder/mgp/datasets/2020_DexStim_Array_Human/methylation/10_final_qc_data_no_outlier/dex_methyl_beta_combat_mtrx.rds"
-# pheno.fn <- "/binder/mgp/datasets/2020_DexStim_Array_Human/pheno/pheno_full_for_kimono.csv"
-
-gex.mtrx.fn <- paste0("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_", treatment, ".csv")
-pheno.fn    <- "~/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
-
-gex.mtrx.fn     <- paste0("/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/methyl_beta_mtrx_", treatment, ".csv")
-pheno.fn        <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
-lmer.res.out.fn <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/gex_residuals/gex_residuals"
-
+# gex.mtrx.fn <- paste0("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_", treatment, ".csv")
+# pheno.fn    <- "~/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
+# 
+# gex.mtrx.fn     <- paste0("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_", treatment, ".csv")
+# pheno.fn        <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
+# lmer.res.out.fn <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/gex_residuals/gex_residuals"
 
 gex.mtrx <- fread(gex.mtrx.fn) 
-cpg.ids  <- data.frame(gex.mtrx[, ENSG_ID])
+gex.ids  <- data.frame(gex.mtrx[, ENSG_ID])
 gex.mtrx <- gex.mtrx[, -c("ENSG_ID")]
 
 pheno    <- read.csv2(pheno.fn) #, na.strings = "#N/A") 
@@ -64,7 +59,7 @@ table(colnames(gex.mtrx) %in% samples.ids)
 # pheno   <- pheno[match(colnames(beta.mtrx), pheno$DNAm_ID ),]
 all(samples.ids == colnames(gex.mtrx))
 
-beta.mtrx <- as.matrix(beta.mtrx)
+gex.mtrx <- as.matrix(gex.mtrx)
 
 # 3. Build model
 
@@ -72,8 +67,7 @@ no.cores <- detectCores() - 1
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-# res <- foreach(cpg = 1:3, .combine = rbind) %dopar% {
-res <- foreach(gex =  1:nrow(gex.mtrx), .combine = rbind) %dopar% { 
+res <- foreach(gex = 1:nrow(gex.mtrx), .combine = rbind) %dopar% { 
   lm.model <- lm(gex.mtrx[gex, ] ~ pheno$Sex + pheno$Age + pheno$BMI_D1 + pheno$Status + pheno$DNAm_SmokingScore +
                                    pheno$V1 + pheno$V2 + pheno$V3 + 
                                    pheno$PC1 + pheno$PC2)
@@ -84,7 +78,7 @@ res <- foreach(gex =  1:nrow(gex.mtrx), .combine = rbind) %dopar% {
 stopImplicitCluster()
 
 res <- as.data.frame(res)
-res <- cbind(cpg.ids, res)
+res <- cbind(gex.ids, res)
 colnames(res)[1] <- "ENSG_ID"
 
 fwrite(res, 

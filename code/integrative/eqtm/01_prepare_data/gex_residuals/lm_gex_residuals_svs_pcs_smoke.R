@@ -19,10 +19,10 @@ gex.mtrx.fn     <- as.character(args[1])
 lmer.res.out.fn <- as.character(args[2]) # gex_residuals
 treatment       <- as.character(args[3]) # dex
 
-# gex.mtrx.fn <- paste0("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_", treatment, ".csv")
+# gex.mtrx.fn <- paste0("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_", treatment, ".csv")
 # pheno.fn    <- "~/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
 # 
-# gex.mtrx.fn     <- paste0("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_", treatment, ".csv")
+gex.mtrx.fn     <- paste0(gex.mtrx.fn, ".csv")
 pheno.fn        <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
 # lmer.res.out.fn <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/gex_residuals/gex_residuals"
 

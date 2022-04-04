@@ -14,7 +14,7 @@ library(doParallel)
 # input.parameters.fn <- "input_parameters.csv"
 
 args            <- commandArgs(T)
-beta.mtrx.fn    <- as.character(args[1])
+gex.mtrx.fn    <- as.character(args[1])
 pheno.fn        <- as.character(args[2])
 lmer.res.out.fn <- as.character(args[3]) # gex_residuals
 treatment       <- as.character(args[4]) # dex

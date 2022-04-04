@@ -14,16 +14,16 @@ library(doParallel)
 # input.parameters.fn <- "input_parameters.csv"
 
 args            <- commandArgs(T)
-gex.mtrx.fn    <- as.character(args[1])
-pheno.fn        <- as.character(args[2])
-lmer.res.out.fn <- as.character(args[3]) # gex_residuals
-treatment       <- as.character(args[4]) # dex
+gex.mtrx.fn     <- as.character(args[1])
+# pheno.fn        <- as.character(args[2])
+lmer.res.out.fn <- as.character(args[2]) # gex_residuals
+treatment       <- as.character(args[3]) # dex
 
 # gex.mtrx.fn <- paste0("~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_", treatment, ".csv")
 # pheno.fn    <- "~/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
 # 
 # gex.mtrx.fn     <- paste0("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_", treatment, ".csv")
-# pheno.fn        <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
+ pheno.fn        <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
 # lmer.res.out.fn <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/gex_residuals/gex_residuals"
 
 gex.mtrx <- fread(gex.mtrx.fn) 

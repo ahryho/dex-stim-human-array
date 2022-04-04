@@ -1,10 +1,12 @@
 # For initial data processing, please refer to the code in:
 # "~/bio/code/mpip/dex-stim-human-array/code/integrative/meqtl/01_prepare_data/01_prepare_data.R"
- 
+library(data.table) 
 
 # Get GEX DeLTa mtrx from GEX DeX and GEX VeH residulas
 
-lmer.res.out.fn <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/gex_residuals/gex_residuals/"
+lmer.res.out.fn <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/gex_residuals/"
+
+rslt.dir        <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/"
 
 gex.mtrx.veh    <- fread(paste0(lmer.res.out.fn, "gex_residuals_veh.csv"))
 gex.mtrx.dex    <- fread(paste0(lmer.res.out.fn, "gex_residuals_dex.csv"), select = colnames(gex.mtrx.veh))
@@ -22,5 +24,5 @@ gex.mtrx.delta <- gex.mtrx.veh[,-1] - gex.mtrx.dex[,-1]
 gex.mtrx.delta <- cbind(gex.mtrx.veh[,1], gex.mtrx.delta)
 
 fwrite(gex.mtrx.delta, 
-       paste0(lmer.res.out.fn, "gex_mtrx_delta.csv"),
+       paste0(rslt.dir, "gex_mtrx_delta.csv"),
        quote = F, row.names = F, sep = ";")

@@ -37,15 +37,14 @@ eqtm.trans.result.fn <- paste0(eqtm.res.pre, "eqtm_trans_result_", treatment, ty
 cpg.loc  <- fread(cpg.loc.fn)[, .(CpG_ID, chr, pos)]
 ensg.loc <- fread(ensg.loc.fn)
 
-gex.layer    <- fread(gex.layer.fn) 
-methyl.layer <- fread(methyl.layer.fn)
-bio.layer    <- fread(bio.layer.fn)
+# gex.layer    <- fread(gex.layer.fn) 
+# methyl.layer <- fread(methyl.layer.fn)
 
 # Check the colnames of layers are in the same order
 
-all(colnames(gex.layer)[-1] == colnames(methyl.layer)[-1])
-all(colnames(bio.layer)[-1] == colnames(methyl.layer)[-1])
-all(colnames(bio.layer)[-1] == colnames(gex.layer)[-1])
+# all(colnames(gex.layer)[-1] == colnames(methyl.layer)[-1])
+# all(colnames(bio.layer)[-1] == colnames(methyl.layer)[-1])
+# all(colnames(bio.layer)[-1] == colnames(gex.layer)[-1])
 
 RunMatrixEQTL <- function(methyl.fn, gex.fn, bio.fn, cis.res.fn, trans.res.fn, cis.cutoff, trans.cutoff){
   
@@ -108,7 +107,7 @@ RunMatrixEQTL <- function(methyl.fn, gex.fn, bio.fn, cis.res.fn, trans.res.fn, c
     noFDRsaveMemory = FALSE,
     verbose = TRUE)
   
-  return (me)
+  return (me.all)
 }
 
 # Run matrixEQTL w

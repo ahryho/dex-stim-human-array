@@ -12,7 +12,7 @@ if [ $# -ne 6 ]; then
 fi
 
 gex_mtrx_fn="/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_"
-pheno_fn="/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
+pheno_fn="/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
 
 module load R
 
@@ -32,5 +32,7 @@ sbatch --job-name=$job_name --part=$partition \
   --nodelist=$partition$node --mem=$memory --output=$out_fn \
   --wrap="Rscript --vanilla $r_script $gex_mtrx_fn $pheno_fn $rslt_dir/$rslt_lmem_fn $treatment"
 
-# ./00_run_lm_residuals.sh lm_gex_residuals_svs_pcs_smoke.R /binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/gex_residuals/gex_residuals dex pe 7 900Gb
+# ./00_run_lm_residuals.sh lm_gex_residuals_svs_pcs_smoke.R \
+# /binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/gex_residuals/gex_residuals 
+# dex pe 7 900Gb
 

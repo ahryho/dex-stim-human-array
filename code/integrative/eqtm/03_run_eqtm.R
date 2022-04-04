@@ -9,15 +9,15 @@ treatment    <- as.character(args[1]) #"veh"
 eqtm.in.pre  <- as.character(args[2]) #"~/bio/datasets/eQTM/"
 eqtm.res.pre <- as.character(args[3]) # paste0("~/bio/datasets/eQTM/result/")
 
-treatment <- "dex"
+# treatment <- "dex"
 type      <- "" # "_dnam_bcc" #""
 mval <- "_beta" #"_mval"
 
-eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-eqtm.res.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/eqtm/"
-
-eqtm.in.pre  <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-eqtm.res.pre <- "/home/ahryhorzhevska/mpip/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/eqtm"
+# eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+# eqtm.res.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/eqtm/"
+# 
+# eqtm.in.pre  <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/"
+# eqtm.res.pre <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/eqtms/"
 
 cpg.loc.fn  <- paste0(eqtm.in.pre, "cpg_locations.csv")
 ensg.loc.fn <- paste0(eqtm.in.pre, "ensg_locations.csv")
@@ -27,7 +27,7 @@ methyl.layer.fn <- paste0(eqtm.in.pre, "methyl", mval, "_mtrx_", treatment, ".cs
 
 if(treatment == "delta") 
   bio.layer.fn <- SlicedData$new() else
-    bio.layer.fn <- paste0(eqtm.in.pre, "bio_mtrx_methyl_gex_", treatment, type, ".csv")
+    bio.layer.fn <- paste0(eqtm.in.pre, "bio_mtrx_gex_", treatment, type, ".csv")
 
 eqtm.cis.result.fn   <- paste0(eqtm.res.pre, "eqtm_cis_result_", treatment, type, mval, ".csv")
 eqtm.trans.result.fn <- paste0(eqtm.res.pre, "eqtm_trans_result_", treatment, type, mval, ".csv")
@@ -67,7 +67,7 @@ RunMatrixEQTL <- function(methyl.fn, gex.fn, bio.fn, cis.res.fn, trans.res.fn, c
   cpgs$fileSkipRows       <- 1     # one row of column labels
   cpgs$fileSkipColumns    <- 1     # one column of row labels
   cpgs$fileSliceSize      <- 1e5   # read file in pieces of 2,000 rows
-  cpgs$LoadFile(snp.fn)
+  cpgs$LoadFile(methyl.fn)
   
   # GEX Data
   gene                    <- SlicedData$new()
@@ -82,7 +82,7 @@ RunMatrixEQTL <- function(methyl.fn, gex.fn, bio.fn, cis.res.fn, trans.res.fn, c
   cvrt                    <- SlicedData$new()
   cvrt$fileDelimiter      <- ";"  # the TAB character
   cvrt$fileOmitCharacters <- "NA" # denote missing values;
-  cvrt$fileSkipRows       <- 2    # one row of column labels + one row of treatment
+  cvrt$fileSkipRows       <- 1    # one row of column labels
   cvrt$fileSkipColumns    <- 1    # one column of row labels
   
   if(length(bio.fn) > 0){

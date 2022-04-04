@@ -1,19 +1,32 @@
 #!/bin/bash
 
-src_dir=/home/ahryhorzhevska/mpip/code/dex-stim-human-kimono
-data_dir=/binder/mgp/datasets/2020_DexStim_Array_Human/eQTM/
+if [ $# -ne 6 ]; then
+    echo "$0: usage: Not enough arguments
+          First argument: treatment (veh, dex, delta)
+          Second argument: source folder path 
+	        Third argument: result folder path
+	        Fourth argument: partition
+	        Fifth argument: node
+	        Sixth argument: memory in Gb
+	        Seventh argument: path to the R Script"
+    exit 1
+fi
 
-# module load R
+module load R
 
-partition=hp
-node=02
-memory=100G
-job_name=eqtm_
+treatment=$1
+src_dir=$2
+rslt_dir=$3
+partition=$4
+node=$5
+memory=$6
+r_script=$7
 
-# treatment="veh"
-# sbatch --job-name=$job_name$treatment --part=$partition --nodelist=$partition$node --mem=$memory \
-# 	--wrap="Rscript --vanilla $src_dir/04_eqtm/03_run_eqtm.R $treatment $data_dir"
+job_name=eqtm_$1
+out_fn=$job_name.out
 
-treatment="dex"
-sbatch --job-name=$job_name$treatment --part=$partition --nodelist=$partition$node --mem=$memory \
-	--wrap="Rscript --vanilla $src_dir/04_eqtm/03_run_eqtm.R $treatment $data_dir"
+sbatch --job-name=$job_name --part=$partition \
+  --nodelist=$partition$node --mem=$memory --output=$out_fn \
+  --wrap="Rscript --vanilla $r_script $src_dir $rslt_dir"
+
+# ./03_run_eqtl.sh dex /binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/ /binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/eqtms/ pe 7 400Gb

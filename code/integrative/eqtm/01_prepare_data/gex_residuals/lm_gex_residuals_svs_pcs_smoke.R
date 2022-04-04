@@ -15,15 +15,15 @@ library(doParallel)
 
 args            <- commandArgs(T)
 gex.mtrx.fn     <- as.character(args[1])
-# pheno.fn        <- as.character(args[2])
-lmer.res.out.fn <- as.character(args[2]) # gex_residuals
-treatment       <- as.character(args[3]) # dex
+pheno.fn        <- as.character(args[3])
+lmer.res.out.fn <- as.character(args[4]) # gex_residuals
+treatment       <- as.character(args[2]) # dex
 
 # gex.mtrx.fn <- paste0("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/gex_mtrx_", treatment, ".csv")
 # pheno.fn    <- "~/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
 # 
-gex.mtrx.fn     <- paste0(gex.mtrx.fn, ".csv")
-pheno.fn        <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
+gex.mtrx.fn     <- paste0(gex.mtrx.fn, treatment, ".csv")
+# pheno.fn        <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
 # lmer.res.out.fn <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/gex_residuals/gex_residuals"
 
 gex.mtrx <- fread(gex.mtrx.fn) 
@@ -60,6 +60,9 @@ table(colnames(gex.mtrx) %in% samples.ids)
 all(samples.ids == colnames(gex.mtrx))
 
 gex.mtrx <- as.matrix(gex.mtrx)
+
+length(pheno$Sex)
+length(gex.mtrx[1,])
 
 # 3. Build model
 

@@ -34,7 +34,7 @@ eqtm.trans.result.fn <- paste0(eqtm.res.pre, "eqtm_trans_result_", treatment, ty
 
 # Load data
 
-cpg.loc  <- fread(cpg.loc.fn)
+cpg.loc  <- fread(cpg.loc.fn)[, .(CpG_ID, chr, pos)]
 ensg.loc <- fread(ensg.loc.fn)
 
 gex.layer    <- fread(gex.layer.fn) 

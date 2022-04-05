@@ -3,7 +3,7 @@
 ***
 
 ```{r load-func, include = F, eval = T}
-source("~/bio/code/mpip/dex-stim-human-array/code/integrative/eqtl/04_me-qtl_analysis/util.R")
+source("~/bio/code/mpip/dex-stim-human-array/code/integrative/util.R")
 cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
 ```
 

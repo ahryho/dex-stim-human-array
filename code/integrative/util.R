@@ -18,6 +18,25 @@ GetFullmeQTLdf <- function(meqtl.df, fdr.thr = 0.05){
   meqtl.full.df
 }
 
+GetFulleQTMdf <- function(df, cpg.loc = NULL, ensg.loc = NULL, fdr.thr = 0.05, treatment, is.dist  = F){
+  colnames(df) <- c("CpG_ID", "ENSG_ID", "beta", "t-stat", "p-value", "fdr")
+  
+  df <- df[fdr < fdr.thr, ] %>% unique()
+  
+  # if (isTRUE(is.dist) | (cpg.loc != NULL & ensg.loc != NULL)){
+  #   df <- left_join(df, ensg.loc)
+  #   df <- left_join(df, cpg.loc[, .(CpG_ID, chr, pos_cpg)])
+  # }
+  
+  df[["treatment"]] <- treatment
+  df[["eQTM_ID"]]   <- paste(df$CpG_ID, df$ENSG_ID, sep = "-")
+  
+  # meqtl.full.df <- meqtl.full.df[, dist := pos_snp - pos_cpg]  
+  # meqtl.full.df <- meqtl.full.df[, strand := ifelse(dist < 0, "-", "+")]
+  # meqtl.full.df <- meqtl.full.df[, dist := abs(dist)]
+  
+  df[, .(eQTM_ID, CpG_ID, ENSG_ID, beta, `p-value`, fdr, treatment)] %>% setDT()
+}
 
 # function for Scatter Plot
 

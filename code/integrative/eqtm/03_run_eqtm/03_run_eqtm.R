@@ -39,6 +39,7 @@ ensg.loc <- fread(ensg.loc.fn)
 
 # gex.layer    <- fread(gex.layer.fn) 
 # methyl.layer <- fread(methyl.layer.fn)
+# bio.layer    <- fread(bio.layer.fn)
 
 # Check the colnames of layers are in the same order
 

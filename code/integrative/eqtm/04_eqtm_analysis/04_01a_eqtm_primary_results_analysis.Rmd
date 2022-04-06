@@ -1,5 +1,5 @@
 ---
-title: "cis-meQTLs Analysis"
+title: "cis-уQTLm Analysis"
 subtitle: "Dexamethasone-Stimulated Human Array Project"
 author: 
   - name: Anastasiia Hryhorzhevska
@@ -57,7 +57,6 @@ library(scales)
 library(GGally)
 library(factoextra)
 library(viridis)
-library(ChIPseeker)
 ```
 
 ***
@@ -92,7 +91,7 @@ veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
 delta.df <- fread(meqtl.delta.fn, col.names = col.names)
 ```
 
-## __Primary results, FDR <= 1__
+## __Analysis of nominal significant eQTMs, FDR <= 1, p <= 0.05__
 
 ### Hits of all eQTMs
 
@@ -156,6 +155,22 @@ plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " QTMs."
 GetScatterPlot2(all.full.df, plot.title = plot.title, fdr.thr = fdr.thr)
 ```
 
+## Effect size
+
+```{r out.width = "95%", include = T, eval = T}
+ggplot(all.full.df, aes(y = beta, x = treatment, color = treatment)) +
+  geom_boxplot() +
+  scale_y_continuous(breaks = seq(signif(min(all.full.df$beta), 0) * 1.2, max(all.full.df$beta) * 1.2, by = 10)) +
+  theme(legend.position = "none", 
+          legend.title = element_blank(),
+          # panel.grid.major = element_blank(),
+          # panel.background = element_blank(),
+          plot.title = element_text(size = 10),
+          axis.title = element_text(size = 8),
+          axis.title.x = element_blank()) +
+  scale_color_manual(values = cbPalette)
+```
+
 ## Upset plots{.tabset .tabset-fade .tabset-pills}
 
 ### eQTM level
@@ -214,7 +229,7 @@ upset(fromList(eqtms.cpg),
       order.by = "freq")
 ```
 
-## __Significant results, FDR <= 0.05__
+## __Analysis of significant eQTMs, FDR <= 0.05__
 
 ### Significant hits of eQTMs with FDR <= 0.05
 
@@ -227,6 +242,10 @@ dex.full.df   <- GetFulleQTMdf(dex.df, fdr.thr = fdr.thr, treatment = "dex")
 delta.full.df <- GetFulleQTMdf(delta.df, fdr.thr = fdr.thr, treatment = "delta")
 
 all.full.df   <- rbind(dex.full.df, veh.full.df, delta.full.df)
+
+# fwrite(all.full.df,
+#        paste0(out.dir.pre, "eqtm_cis_all_fdr_005.csv"),
+#        quote = F, row.names = F, sep   = "\t")
 ```
 
 Check the number of found eQTLs, unique CpGs and SNPs in all datasets.
@@ -278,37 +297,21 @@ plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " QTMs."
 GetScatterPlot2(all.full.df, plot.title = plot.title, fdr.thr = fdr.thr)
 ```
 
-<!-- ## Manhattan plots{.tabset .tabset-fade .tabset-pills} -->
+## Effect size
 
-<!-- ### Delta -->
-
-<!-- ```{r eval = F, include = F} -->
-<!-- df <- meqtl.delta.full.df[, .(SNP, chr, pos_snp, fdr)] -->
-<!-- colnames(df) <- c("SNP", "CHR", "BP", "P") -->
-
-<!-- GetManhattanPlot(df, ylims = c(-log10(fdr.thr), 40), plot.title = "Delta, FDR <= 0.05") -->
-
-<!-- ``` -->
-
-<!-- ### Baseline -->
-
-<!-- ```{r eval = F, include = F} -->
-<!-- df <- meqtl.veh.full.df[, .(SNP, chr, pos_snp, fdr)] -->
-<!-- colnames(df) <- c("SNP", "CHR", "BP", "P") -->
-
-<!-- GetManhattanPlot(df, ylims = c(-log10(fdr.thr), 40), plot.title = "Delta, FDR <= 0.05") -->
-
-<!-- ``` -->
-
-<!-- ### Dex -->
-
-<!-- ```{r eval = F, include = F} -->
-<!-- df <- meqtl.dex.full.df[, .(SNP, chr, pos_snp, fdr)] -->
-<!-- colnames(df) <- c("SNP", "CHR", "BP", "P") -->
-
-<!-- GetManhattanPlot(df, ylims = c(-log10(fdr.thr), 40), plot.title = "Delta, FDR <= 0.05") -->
-
-<!-- ``` -->
+```{r out.width = "95%", include = T, eval = T}
+ggplot(all.full.df, aes(y = beta, x = treatment, color = treatment)) +
+  geom_boxplot() +
+  scale_y_continuous(breaks = seq(signif(min(all.full.df$beta), 0) * 1.2, max(all.full.df$beta) * 1.2, by = 10)) +
+  theme(legend.position = "none", 
+          legend.title = element_blank(),
+          # panel.grid.major = element_blank(),
+          # panel.background = element_blank(),
+          plot.title = element_text(size = 10),
+          axis.title = element_text(size = 8),
+          axis.title.x = element_blank()) +
+  scale_color_manual(values = cbPalette)
+```
 
 ## Upset plots{.tabset .tabset-fade .tabset-pills}
 

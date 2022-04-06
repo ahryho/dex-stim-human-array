@@ -92,10 +92,13 @@ veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
 delta.df <- fread(meqtl.delta.fn, col.names = col.names)
 ```
 
+## __Primary results, FDR <= 1__
+
+### Hits of all eQTMs
 
 ```{r, include = F, eval = T}
 # head(meqtl.df)
-fdr.thr  <- 0.5
+fdr.thr  <- 1
 
 veh.full.df   <- GetFulleQTMdf(veh.df, fdr.thr = fdr.thr, treatment = "veh")
 dex.full.df   <- GetFulleQTMdf(dex.df, fdr.thr = fdr.thr, treatment = "dex")
@@ -103,8 +106,6 @@ delta.full.df <- GetFulleQTMdf(delta.df, fdr.thr = fdr.thr, treatment = "delta")
 
 all.full.df   <- rbind(dex.full.df, veh.full.df, delta.full.df)
 ```
-
-## Significant Hits, FDR < 0.05
 
 Check the number of found eQTLs, unique CpGs and SNPs in all datasets.
 
@@ -155,37 +156,159 @@ plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " QTMs."
 GetScatterPlot2(all.full.df, plot.title = plot.title, fdr.thr = fdr.thr)
 ```
 
-## Manhattan plots{.tabset .tabset-fade .tabset-pills}
+## Upset plots{.tabset .tabset-fade .tabset-pills}
 
-### Delta
+### eQTM level
+  
+```{r out.width = "95%", include = T, eval = T}
+library(UpSetR)
 
-```{r eval = F, include = F}
-df <- meqtl.delta.full.df[, .(SNP, chr, pos_snp, fdr)]
-colnames(df) <- c("SNP", "CHR", "BP", "P")
+eqtms <- list(delta = all.full.df[treatment == "delta", eQTM_ID], 
+              dex = all.full.df[treatment == "dex", eQTM_ID], 
+              veh = all.full.df[treatment == "veh", eQTM_ID])
 
-GetManhattanPlot(df, ylims = c(-log10(fdr.thr), 40), plot.title = "Delta, FDR <= 0.05")
-
+upset(fromList(eqtms), 
+      sets = c("delta", "dex", "veh"),
+      nsets = 3, 
+      nintersects = 20, 
+      mainbar.y.label = "Number of intersections, eQTM", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq")
 ```
 
-### Baseline
+### SNP level
+  
+```{r out.width = "95%", include = T, eval = T}
+library(UpSetR)
 
-```{r eval = F, include = F}
-df <- meqtl.veh.full.df[, .(SNP, chr, pos_snp, fdr)]
-colnames(df) <- c("SNP", "CHR", "BP", "P")
+eqtms.ensg <- list(delta = delta.full.df$ENSG_ID, dex = dex.full.df$ENSG_ID, veh = veh.full.df$ENSG_ID)
 
-GetManhattanPlot(df, ylims = c(-log10(fdr.thr), 40), plot.title = "Delta, FDR <= 0.05")
-
+upset(fromList(eqtms.ensg), 
+      sets = c("delta", "dex", "veh"),
+      nsets = 3, 
+      nintersects = 20, 
+      mainbar.y.label = "Number of intersections, ENSG", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c("#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq")
 ```
 
-### Dex
+### CpG level
 
-```{r eval = F, include = F}
-df <- meqtl.dex.full.df[, .(SNP, chr, pos_snp, fdr)]
-colnames(df) <- c("SNP", "CHR", "BP", "P")
+```{r out.width = "95%", include = T, eval = T}
+library(UpSetR)
 
-GetManhattanPlot(df, ylims = c(-log10(fdr.thr), 40), plot.title = "Delta, FDR <= 0.05")
+eqtms.cpg <- list(delta = delta.full.df$CpG_ID, dex = dex.full.df$CpG_ID, veh = veh.full.df$CpG_ID)
 
+upset(fromList(eqtms.cpg), 
+      sets = c("delta", "dex", "veh"),
+      nsets = 3, 
+      nintersects = 20, 
+      mainbar.y.label = "Number of intersections, CpG", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c("#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq")
 ```
+
+## __Significant results, FDR <= 0.05__
+
+### Significant hits of eQTMs with FDR <= 0.05
+
+```{r, include = F, eval = T}
+# head(meqtl.df)
+fdr.thr  <- 0.05
+
+veh.full.df   <- GetFulleQTMdf(veh.df, fdr.thr = fdr.thr, treatment = "veh")
+dex.full.df   <- GetFulleQTMdf(dex.df, fdr.thr = fdr.thr, treatment = "dex")
+delta.full.df <- GetFulleQTMdf(delta.df, fdr.thr = fdr.thr, treatment = "delta")
+
+all.full.df   <- rbind(dex.full.df, veh.full.df, delta.full.df)
+```
+
+Check the number of found eQTLs, unique CpGs and SNPs in all datasets.
+
+```{r, include = F, eval = T}
+sign.hits.df <- data.table(c(delta.full.df$fdr  %>% length(), 
+                             delta.full.df$CpG_ID %>% unique() %>% length(),
+                             delta.full.df$ENSG_ID %>% unique() %>% length()),
+                           c(dex.full.df$fdr  %>% length(), 
+                             dex.full.df$CpG_ID %>% unique() %>% length(),
+                             dex.full.df$ENSG_ID %>% unique() %>% length()),
+                           c(veh.full.df$fdr  %>% length(), 
+                             veh.full.df$CpG_ID %>% unique() %>% length(),
+                             veh.full.df$ENSG_ID %>% unique() %>% length()))
+
+sign.hits.df <- as.data.frame(sign.hits.df)
+rownames(sign.hits.df) <- c("cis-eQTL", "CpG_ID", "ENSG_ID")
+colnames(sign.hits.df) <- c("delta", "dex", "veh")
+```
+
+```{r out.width = "95%", include = T, eval = T}
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+
+sign.hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment"), value.name = "cnt") %>%
+  ggplot(aes(y = cnt, x = Var2, fill = as.factor(as.numeric(Var2)))) +
+    geom_col() +
+    geom_text(aes(label = comma(cnt, accuracy = 1L), y = cnt), 
+                  stat = "identity", 
+                  vjust = -0.2, size = 2.5) + 
+    scale_y_continuous(labels = scientific) +
+    # scale_fill_viridis(discrete = TRUE, alpha = 0.9, option = "C") +
+    labs(title = " ", y = "Count", x = " ") + 
+    facet_wrap(~ Var1, ncol = 3) +
+    theme(legend.position = "none", 
+          legend.title = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 10),
+          axis.title = element_text(size = 8),
+          axis.title.x = element_blank()) +
+  scale_fill_manual(values = cbPalette)
+```
+
+## Scatter plot
+
+```{r out.width = "95%", include = T, eval = T}
+plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " QTMs.",
+                     "\nResult of MatrixEQTL")
+GetScatterPlot2(all.full.df, plot.title = plot.title, fdr.thr = fdr.thr)
+```
+
+<!-- ## Manhattan plots{.tabset .tabset-fade .tabset-pills} -->
+
+<!-- ### Delta -->
+
+<!-- ```{r eval = F, include = F} -->
+<!-- df <- meqtl.delta.full.df[, .(SNP, chr, pos_snp, fdr)] -->
+<!-- colnames(df) <- c("SNP", "CHR", "BP", "P") -->
+
+<!-- GetManhattanPlot(df, ylims = c(-log10(fdr.thr), 40), plot.title = "Delta, FDR <= 0.05") -->
+
+<!-- ``` -->
+
+<!-- ### Baseline -->
+
+<!-- ```{r eval = F, include = F} -->
+<!-- df <- meqtl.veh.full.df[, .(SNP, chr, pos_snp, fdr)] -->
+<!-- colnames(df) <- c("SNP", "CHR", "BP", "P") -->
+
+<!-- GetManhattanPlot(df, ylims = c(-log10(fdr.thr), 40), plot.title = "Delta, FDR <= 0.05") -->
+
+<!-- ``` -->
+
+<!-- ### Dex -->
+
+<!-- ```{r eval = F, include = F} -->
+<!-- df <- meqtl.dex.full.df[, .(SNP, chr, pos_snp, fdr)] -->
+<!-- colnames(df) <- c("SNP", "CHR", "BP", "P") -->
+
+<!-- GetManhattanPlot(df, ylims = c(-log10(fdr.thr), 40), plot.title = "Delta, FDR <= 0.05") -->
+
+<!-- ``` -->
 
 ## Upset plots{.tabset .tabset-fade .tabset-pills}
 

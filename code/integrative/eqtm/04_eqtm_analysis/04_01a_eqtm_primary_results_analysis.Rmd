@@ -155,7 +155,7 @@ sign.hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment")
 ## Scatter plot
 
 ```{r out.width = "95%", include = T, eval = T}
-plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " QTMs.",
+plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " eQTMs.",
                      "\nResult of MatrixEQTL")
 GetScatterPlot2(all.full.df, plot.title = plot.title, fdr.thr = fdr.thr)
 ```
@@ -199,7 +199,7 @@ upset(fromList(eqtms),
       order.by = "freq")
 ```
 
-### SNP level
+### Gene level
   
 ```{r out.width = "95%", include = T, eval = T}
 library(UpSetR)
@@ -210,7 +210,7 @@ upset(fromList(eqtms.ensg),
       sets = c("delta", "delta_res", "dex", "veh"),
       nsets = 3, 
       nintersects = 20, 
-      mainbar.y.label = "Number of intersections, ENSG", 
+      mainbar.y.label = "Number of intersections, eGene (ENSG)", 
       text.scale = 1, 
       keep.order = T,
       sets.bar.color = c("#0072B2", "#009E73", "#E69F00", "#F0E442"), 
@@ -228,7 +228,7 @@ upset(fromList(eqtms.cpg),
       sets = c("delta", "delta_res", "dex", "veh"),
       nsets = 3, 
       nintersects = 20, 
-      mainbar.y.label = "Number of intersections, CpG", 
+      mainbar.y.label = "Number of intersections, eCpG", 
       text.scale = 1, 
       keep.order = T,
       sets.bar.color = c("#0072B2", "#009E73", "#E69F00", "#F0E442"), 
@@ -302,7 +302,7 @@ sign.hits.df %>% as.matrix() %>% reshape2::melt(var.names = c("ID", "Treatment")
 ## Scatter plot
 
 ```{r out.width = "95%", include = T, eval = T}
-plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " QTMs.",
+plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " eQTMs.",
                      "\nResult of MatrixEQTL")
 GetScatterPlot2(all.full.df, plot.title = plot.title, fdr.thr = fdr.thr)
 ```
@@ -346,7 +346,7 @@ upset(fromList(eqtms),
       order.by = "freq")
 ```
 
-### SNP level
+### Gene level
   
 ```{r out.width = "95%", include = T, eval = T}
 library(UpSetR)
@@ -357,7 +357,7 @@ upset(fromList(eqtms.ensg),
       sets = c("delta", "delta_res", "dex", "veh"),
       nsets = 3, 
       nintersects = 20, 
-      mainbar.y.label = "Number of intersections, ENSG", 
+      mainbar.y.label = "Number of intersections, eGene (ENSG)", 
       text.scale = 1, 
       keep.order = T,
       sets.bar.color = c("#0072B2", "#009E73", "#E69F00", "#F0E442"), 
@@ -375,7 +375,7 @@ upset(fromList(eqtms.cpg),
       sets = c("delta", "delta_res", "dex", "veh"),
       nsets = 3, 
       nintersects = 20, 
-      mainbar.y.label = "Number of intersections, CpG", 
+      mainbar.y.label = "Number of intersections, eCpG", 
       text.scale = 1, 
       keep.order = T,
       sets.bar.color = c("#0072B2", "#009E73", "#E69F00", "#F0E442"), 

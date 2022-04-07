@@ -26,6 +26,7 @@ output/data/
 *.rar
 *.tar
 *.zip
+*.out
 
 # Output files from R CMD check
 /*.Rcheck/

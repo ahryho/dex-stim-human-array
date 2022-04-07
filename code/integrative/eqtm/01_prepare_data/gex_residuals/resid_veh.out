@@ -1,0 +1,11 @@
+Loading required package: lme4
+Loading required package: Matrix
+Loading required package: foreign
+Loading required package: data.table
+Loading required package: iterators
+
+TRUE 
+ 196 
+[1] TRUE
+[1] 196
+[1] 196

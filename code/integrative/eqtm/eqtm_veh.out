@@ -1,0 +1,35 @@
+Loading required package: MatrixEQTL
+Rows read: 100,000
+Rows read: 200,000
+Rows read: 300,000
+Rows read: 400,000
+Rows read: 500,000
+Rows read: 600,000
+Rows read: 700,000
+Rows read: 740357 done.
+Rows read: 11958 done.
+Rows read: 13 done.
+Matching data files and location files
+11958 of 11958 genes matched
+740357 of 740357 SNPs matched
+
+Task finished in 0.371 seconds
+Reordering genes
+Task finished in 0.611 seconds
+Processing covariates
+Task finished in 0.008 seconds
+Processing gene expression data (imputation, residualization)
+Task finished in 0.253 seconds
+Creating output file(s)
+Task finished in 0.046 seconds
+Performing eQTL analysis
+12.50% done, 76,244 cis-eQTLs
+25.00% done, 122,587 cis-eQTLs
+37.50% done, 310,073 cis-eQTLs
+50.00% done, 369,977 cis-eQTLs
+62.50% done, 457,894 cis-eQTLs
+75.00% done, 539,767 cis-eQTLs
+87.50% done, 704,312 cis-eQTLs
+100.00% done, 741,439 cis-eQTLs
+Task finished in 3149.47 seconds
+

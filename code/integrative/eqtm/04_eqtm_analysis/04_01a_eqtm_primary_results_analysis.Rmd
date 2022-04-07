@@ -1,5 +1,5 @@
 ---
-title: "cis-уQTLm Analysis"
+title: "cis-eQTM Analysis"
 subtitle: "Dexamethasone-Stimulated Human Array Project"
 author: 
   - name: Anastasiia Hryhorzhevska
@@ -83,17 +83,17 @@ ensg.loc          <- fread(ensg.loc.fn, col.names = ensg.loc.colnames)
 meqtl.veh.fn   <- paste0(out.dir.pre, "eqtm_cis_result_veh_beta.csv") 
 meqtl.dex.fn   <- paste0(out.dir.pre, "eqtm_cis_result_dex_beta.csv") 
 meqtl.delta.fn <- paste0(out.dir.pre, "eqtm_cis_result_delta_beta.csv") 
+meqtl.delta.res.fn <- paste0(out.dir.pre, "eqtm_cis_result_delta_residuals_cov_beta.csv") 
 
 col.names <- c("CpG_ID", "ENSG_ID", "beta", "t-stat", "p-value", "FDR")
 
 dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
 veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
 delta.df <- fread(meqtl.delta.fn, col.names = col.names)
+delta.res.df <- fread(meqtl.delta.res.fn, col.names = col.names)
 ```
 
 ## __Analysis of nominal significant eQTMs, FDR <= 1, p <= 0.05__
-
-### Hits of all eQTMs
 
 ```{r, include = F, eval = T}
 # head(meqtl.df)
@@ -102,16 +102,21 @@ fdr.thr  <- 1
 veh.full.df   <- GetFulleQTMdf(veh.df, fdr.thr = fdr.thr, treatment = "veh")
 dex.full.df   <- GetFulleQTMdf(dex.df, fdr.thr = fdr.thr, treatment = "dex")
 delta.full.df <- GetFulleQTMdf(delta.df, fdr.thr = fdr.thr, treatment = "delta")
+delta.res.full.df <- GetFulleQTMdf(delta.res.df, fdr.thr = fdr.thr, treatment = "delta_res")
 
-all.full.df   <- rbind(dex.full.df, veh.full.df, delta.full.df)
+all.full.df   <- rbind(dex.full.df, veh.full.df, delta.full.df, delta.res.full.df)
 ```
 
-Check the number of found eQTLs, unique CpGs and SNPs in all datasets.
+### Hits of all eQTMs
+<!-- Check the number of found eQTLs, unique CpGs and SNPs in all datasets. -->
 
 ```{r, include = F, eval = T}
 sign.hits.df <- data.table(c(delta.full.df$fdr  %>% length(), 
                              delta.full.df$CpG_ID %>% unique() %>% length(),
                              delta.full.df$ENSG_ID %>% unique() %>% length()),
+                           c(delta.res.full.df$fdr  %>% length(), 
+                             delta.res.full.df$CpG_ID %>% unique() %>% length(),
+                             delta.res.full.df$ENSG_ID %>% unique() %>% length()),
                            c(dex.full.df$fdr  %>% length(), 
                              dex.full.df$CpG_ID %>% unique() %>% length(),
                              dex.full.df$ENSG_ID %>% unique() %>% length()),
@@ -121,7 +126,7 @@ sign.hits.df <- data.table(c(delta.full.df$fdr  %>% length(),
 
 sign.hits.df <- as.data.frame(sign.hits.df)
 rownames(sign.hits.df) <- c("cis-eQTL", "CpG_ID", "ENSG_ID")
-colnames(sign.hits.df) <- c("delta", "dex", "veh")
+colnames(sign.hits.df) <- c("delta", "delta_res", "dex", "veh")
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
@@ -179,17 +184,18 @@ ggplot(all.full.df, aes(y = beta, x = treatment, color = treatment)) +
 library(UpSetR)
 
 eqtms <- list(delta = all.full.df[treatment == "delta", eQTM_ID], 
+              delta_res = all.full.df[treatment == "delta_res", eQTM_ID], 
               dex = all.full.df[treatment == "dex", eQTM_ID], 
               veh = all.full.df[treatment == "veh", eQTM_ID])
 
 upset(fromList(eqtms), 
-      sets = c("delta", "dex", "veh"),
+      sets = c("delta", "delta_res", "dex", "veh"),
       nsets = 3, 
       nintersects = 20, 
       mainbar.y.label = "Number of intersections, eQTM", 
       text.scale = 1, 
       keep.order = T,
-      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
+      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00", "#F0E442"), 
       order.by = "freq")
 ```
 
@@ -198,16 +204,16 @@ upset(fromList(eqtms),
 ```{r out.width = "95%", include = T, eval = T}
 library(UpSetR)
 
-eqtms.ensg <- list(delta = delta.full.df$ENSG_ID, dex = dex.full.df$ENSG_ID, veh = veh.full.df$ENSG_ID)
+eqtms.ensg <- list(delta = delta.full.df$ENSG_ID, delta_res = delta.res.full.df$ENSG_ID , dex = dex.full.df$ENSG_ID, veh = veh.full.df$ENSG_ID)
 
 upset(fromList(eqtms.ensg), 
-      sets = c("delta", "dex", "veh"),
+      sets = c("delta", "delta_res", "dex", "veh"),
       nsets = 3, 
       nintersects = 20, 
       mainbar.y.label = "Number of intersections, ENSG", 
       text.scale = 1, 
       keep.order = T,
-      sets.bar.color = c("#0072B2", "#009E73", "#E69F00"), 
+      sets.bar.color = c("#0072B2", "#009E73", "#E69F00", "#F0E442"), 
       order.by = "freq")
 ```
 
@@ -216,22 +222,20 @@ upset(fromList(eqtms.ensg),
 ```{r out.width = "95%", include = T, eval = T}
 library(UpSetR)
 
-eqtms.cpg <- list(delta = delta.full.df$CpG_ID, dex = dex.full.df$CpG_ID, veh = veh.full.df$CpG_ID)
+eqtms.cpg <- list(delta = delta.full.df$CpG_ID, delta_res = delta.res.full.df$CpG_ID, dex = dex.full.df$CpG_ID, veh = veh.full.df$CpG_ID)
 
 upset(fromList(eqtms.cpg), 
-      sets = c("delta", "dex", "veh"),
+      sets = c("delta", "delta_res", "dex", "veh"),
       nsets = 3, 
       nintersects = 20, 
       mainbar.y.label = "Number of intersections, CpG", 
       text.scale = 1, 
       keep.order = T,
-      sets.bar.color = c("#0072B2", "#009E73", "#E69F00"), 
+      sets.bar.color = c("#0072B2", "#009E73", "#E69F00", "#F0E442"), 
       order.by = "freq")
 ```
 
 ## __Analysis of significant eQTMs, FDR <= 0.05__
-
-### Significant hits of eQTMs with FDR <= 0.05
 
 ```{r, include = F, eval = T}
 # head(meqtl.df)
@@ -240,20 +244,26 @@ fdr.thr  <- 0.05
 veh.full.df   <- GetFulleQTMdf(veh.df, fdr.thr = fdr.thr, treatment = "veh")
 dex.full.df   <- GetFulleQTMdf(dex.df, fdr.thr = fdr.thr, treatment = "dex")
 delta.full.df <- GetFulleQTMdf(delta.df, fdr.thr = fdr.thr, treatment = "delta")
+delta.res.full.df <- GetFulleQTMdf(delta.res.df, fdr.thr = fdr.thr, treatment = "delta_res")
 
-all.full.df   <- rbind(dex.full.df, veh.full.df, delta.full.df)
+all.full.df   <- rbind(dex.full.df, veh.full.df, delta.full.df, delta.res.full.df)
 
 # fwrite(all.full.df,
 #        paste0(out.dir.pre, "eqtm_cis_all_fdr_005.csv"),
 #        quote = F, row.names = F, sep   = "\t")
 ```
 
-Check the number of found eQTLs, unique CpGs and SNPs in all datasets.
+### Significant hits of eQTMs with FDR <= 0.05
+
+<!-- Check the number of found eQTLs, unique CpGs and SNPs in all datasets. -->
 
 ```{r, include = F, eval = T}
 sign.hits.df <- data.table(c(delta.full.df$fdr  %>% length(), 
                              delta.full.df$CpG_ID %>% unique() %>% length(),
                              delta.full.df$ENSG_ID %>% unique() %>% length()),
+                           c(delta.res.full.df$fdr  %>% length(), 
+                             delta.res.full.df$CpG_ID %>% unique() %>% length(),
+                             delta.res.full.df$ENSG_ID %>% unique() %>% length()),
                            c(dex.full.df$fdr  %>% length(), 
                              dex.full.df$CpG_ID %>% unique() %>% length(),
                              dex.full.df$ENSG_ID %>% unique() %>% length()),
@@ -263,7 +273,7 @@ sign.hits.df <- data.table(c(delta.full.df$fdr  %>% length(),
 
 sign.hits.df <- as.data.frame(sign.hits.df)
 rownames(sign.hits.df) <- c("cis-eQTL", "CpG_ID", "ENSG_ID")
-colnames(sign.hits.df) <- c("delta", "dex", "veh")
+colnames(sign.hits.df) <- c("delta", "delta_res", "dex", "veh")
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
@@ -321,17 +331,18 @@ ggplot(all.full.df, aes(y = beta, x = treatment, color = treatment)) +
 library(UpSetR)
 
 eqtms <- list(delta = all.full.df[treatment == "delta", eQTM_ID], 
+              delta_res = all.full.df[treatment == "delta_res", eQTM_ID], 
               dex = all.full.df[treatment == "dex", eQTM_ID], 
               veh = all.full.df[treatment == "veh", eQTM_ID])
 
 upset(fromList(eqtms), 
-      sets = c("delta", "dex", "veh"),
+      sets = c("delta", "delta_res", "dex", "veh"),
       nsets = 3, 
       nintersects = 20, 
       mainbar.y.label = "Number of intersections, eQTM", 
       text.scale = 1, 
       keep.order = T,
-      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
+      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00", "#F0E442"), 
       order.by = "freq")
 ```
 
@@ -340,16 +351,16 @@ upset(fromList(eqtms),
 ```{r out.width = "95%", include = T, eval = T}
 library(UpSetR)
 
-eqtms.ensg <- list(delta = delta.full.df$ENSG_ID, dex = dex.full.df$ENSG_ID, veh = veh.full.df$ENSG_ID)
+eqtms.ensg <- list(delta = delta.full.df$ENSG_ID, delta_res = delta.res.full.df$ENSG_ID , dex = dex.full.df$ENSG_ID, veh = veh.full.df$ENSG_ID)
 
 upset(fromList(eqtms.ensg), 
-      sets = c("delta", "dex", "veh"),
+      sets = c("delta", "delta_res", "dex", "veh"),
       nsets = 3, 
       nintersects = 20, 
       mainbar.y.label = "Number of intersections, ENSG", 
       text.scale = 1, 
       keep.order = T,
-      sets.bar.color = c("#0072B2", "#009E73", "#E69F00"), 
+      sets.bar.color = c("#0072B2", "#009E73", "#E69F00", "#F0E442"), 
       order.by = "freq")
 ```
 
@@ -358,16 +369,16 @@ upset(fromList(eqtms.ensg),
 ```{r out.width = "95%", include = T, eval = T}
 library(UpSetR)
 
-eqtms.cpg <- list(delta = delta.full.df$CpG_ID, dex = dex.full.df$CpG_ID, veh = veh.full.df$CpG_ID)
+eqtms.cpg <- list(delta = delta.full.df$CpG_ID, delta_res = delta.res.full.df$CpG_ID, dex = dex.full.df$CpG_ID, veh = veh.full.df$CpG_ID)
 
 upset(fromList(eqtms.cpg), 
-      sets = c("delta", "dex", "veh"),
+      sets = c("delta", "delta_res", "dex", "veh"),
       nsets = 3, 
       nintersects = 20, 
       mainbar.y.label = "Number of intersections, CpG", 
       text.scale = 1, 
       keep.order = T,
-      sets.bar.color = c("#0072B2", "#009E73", "#E69F00"), 
+      sets.bar.color = c("#0072B2", "#009E73", "#E69F00", "#F0E442"), 
       order.by = "freq")
 ```
 

@@ -284,6 +284,8 @@ fwrite(bio.mtrx.t,
 
 
 # Bio layer for eQTMs
+# 
+
 cov.list <- c("DNA_ID",
               "Sex", "Status", "Age", "BMI_D1", "DNAm_SmokingScore",
               "V1", "V2", "V3",
@@ -292,14 +294,16 @@ cov.list <- c("DNA_ID",
  
 # VEH
 
+methyl.mtrx.veh <- fread("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/methyl_beta_mtrx_veh.csv")
+
 bio.mtrx   <- pheno[Dex == 0 & !is.na(DNAm_ID), ..cov.list]
 bio.mtrx.t <- dcast(melt(bio.mtrx, id.vars = "DNA_ID"), variable ~ DNA_ID)
 
 colnames(bio.mtrx.t)[1] <-  "Feature"
 
-all(colnames(methyl.mtrx.veh) == colnames(bio.mtrx.t)[-1])
+all(colnames(methyl.mtrx.veh)[-1] == colnames(bio.mtrx.t)[-1])
 
-order.idx  <- c(0, match(colnames(methyl.mtrx.veh), colnames(bio.mtrx.t)[-1])) + 1
+order.idx  <- c(0, match(colnames(methyl.mtrx.veh)[-1], colnames(bio.mtrx.t)[-1])) + 1
 bio.mtrx.t <- bio.mtrx.t[, ..order.idx]
 
 fwrite(bio.mtrx.t, 
@@ -312,10 +316,12 @@ bio.mtrx   <- pheno[Dex == 1 & !is.na(DNAm_ID), ..cov.list]
 bio.mtrx.t <- dcast(melt(bio.mtrx, id.vars = "DNA_ID"), variable ~ DNA_ID)
 colnames(bio.mtrx.t)[1] <-  "Feature"
 
-order.idx  <- c(0, match(colnames(methyl.mtrx.dex), colnames(bio.mtrx.t)[-1])) + 1
+methyl.mtrx.dex <- fread("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/methyl_beta_mtrx_dex.csv")
+
+order.idx  <- c(0, match(colnames(methyl.mtrx.dex)[-1], colnames(bio.mtrx.t)[-1])) + 1
 bio.mtrx.t <- bio.mtrx.t[, ..order.idx]
 
-all(colnames(methyl.mtrx.dex) == colnames(bio.mtrx.t)[-1])
+all(colnames(methyl.mtrx.dex)[-1] == colnames(bio.mtrx.t)[-1])
 
 fwrite(bio.mtrx.t, 
        paste0(output.eqtm.pre, "bio_mtrx_methyl_gex_dex.csv"),

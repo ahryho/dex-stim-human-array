@@ -18,7 +18,7 @@ lmer.res.out.fn <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-huma
 rslt.dir        <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/"
 
 gex.mtrx.veh    <- fread(paste0(lmer.res.out.fn, "gex_residuals_veh.csv"))
-gex.mtrx.dex    <- fread(paste0(lmer.res.out.fn, "gex_residuals_dex.csv"), select = colnames(gex.mtrx.veh))
+gex.mtrx.dex    <- fread(paste0(lmer.res.out.fn, "gex_residuals_dex.csv"))
 
 all(rownames(gex.mtrx.veh) == rownames(gex.mtrx.dex))
 order.idx  <- match(colnames(gex.mtrx.dex), colnames(gex.mtrx.veh))

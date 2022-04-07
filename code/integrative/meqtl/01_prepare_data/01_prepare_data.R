@@ -3,12 +3,12 @@ library(data.table)
 
 # Set up parameters
 
-output.eqtm.pre <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+output.eqtm.pre <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/integrative/matrixEQTL/"
 
 # src.pheno.data.pre <- "~/bio/code/mpip/dex-stim-human-array/data/pheno/"
 # src.snps.data.pre  <-"~/bio/datasets/snps/"
 # src.pheno.data.pre <- "/binder/mgp/datasets/2020_DexStim_Array_Human/pheno/"
-pheno.fn           <- "~/bio/code/mpip/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
+pheno.fn           <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/pheno/pheno_full_for_kimono.csv"
 
 # Load data
 
@@ -322,6 +322,24 @@ fwrite(bio.mtrx.t,
        quote = F, row.names = F, sep = ";")
 
 
+# DELTA
+cov.list <- c("DNA_ID",
+              "Sex", "Status", "Age", "BMI_D1", "DNAm_SmokingScore",
+              "PC1", "PC2")
+
+bio.mtrx.t <- pheno[Dex == 0 & !is.na(DNAm_ID), ..cov.list]
+
+bio.mtrx.t <- dcast(melt(bio.mtrx.t, id.vars = "DNA_ID"), variable ~ DNA_ID)
+colnames(bio.mtrx.t)[1] <-  "Feature"
+
+all(colnames(gex.mtrx.veh)[-1] == colnames(bio.mtrx.t)[-1])
+
+order.idx  <- c(0, match(colnames(gex.mtrx.veh)[-1], colnames(bio.mtrx.t)[-1])) + 1
+bio.mtrx.t <- bio.mtrx.t[, ..order.idx]
+
+fwrite(bio.mtrx.t, 
+       paste0(output.eqtm.pre, "bio_mtrx_methyl_gex_delta.csv"),
+       quote = F, row.names = F, sep = ";")
 # Bio layer with DNAm BCCs:
 
 cov.list <- c("DNA_ID",

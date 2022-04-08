@@ -22,12 +22,13 @@ mval <- "_beta" #"_mval"
 cpg.loc.fn  <- paste0(eqtm.in.pre, "cpg_locations.csv")
 ensg.loc.fn <- paste0(eqtm.in.pre, "ensg_locations.csv")
 
-gex.layer.fn    <- paste0(eqtm.in.pre, "gex_mtrx_", treatment, ".csv")
-methyl.layer.fn <- paste0(eqtm.in.pre, "methyl", mval, "_mtrx_", treatment, ".csv")
+if(treatment == "delta"){
+	gex.layer.fn    <- paste0(eqtm.in.pre, "mtrx_delta_residuals/gex_mtrx_", treatment, ".csv")
+	methyl.layer.fn <- paste0(eqtm.in.pre, "mtrx_delta_residuals/methyl", mval, "_mtrx_", treatment, ".csv")}
 
-if(treatment == "delta") 
-  bio.layer.fn <- SlicedData$new() else
-    bio.layer.fn <- paste0(eqtm.in.pre, "bio_mtrx_gex_", treatment, type, ".csv")
+# if(treatment == "delta") 
+#  bio.layer.fn <- SlicedData$new() else
+    bio.layer.fn <- paste0(eqtm.in.pre, "bio_mtrx_methyl_gex_", treatment, type, ".csv")
 
 eqtm.cis.result.fn   <- paste0(eqtm.res.pre, "eqtm_cis_result_", treatment, type, mval, ".csv")
 eqtm.trans.result.fn <- paste0(eqtm.res.pre, "eqtm_trans_result_", treatment, type, mval, ".csv")

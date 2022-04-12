@@ -707,17 +707,72 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
 
 #### Wilcoxon test 
 
-```{r}
+```{r out.width = "95%", include = T, eval = T}
 anno.stat.df <- rbind(opposite.fc.grp.veh.dex.anno.stat.df, opposite.fc.grp.delta.anno.stat.df, meqtl.opposite.fc.anno.stat.df)
 
-wilcox.test.rslt <- pairwise.wilcox.test(anno.stat.df$Frequency, anno.stat.df$Model, p.adjust.method = "none", paired = F)$p.value %>%
-  signif(3)
+ggplot(anno.stat.df, aes(x = Frequency, fill = Model, color = Model)) + 
+  geom_density(alpha = 0.2) +
+  theme(legend.position = c(.9,.9), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10)) +
+  labs(title = " ", 
+       x = "Frequency (%)", 
+       y = "") 
+
+print("Unpaired Wilcoxon test: ")
+
+wilcox.test.rslt <- pairwise.wilcox.test(anno.stat.df$Frequency, anno.stat.df$Model, p.adjust.method = "none", paired = F)$p.value %>% signif(3)
+
+colnames(wilcox.test.rslt) <- c("parallel FC (delta)", "opposite FC")
+rownames(wilcox.test.rslt) <- c("opposite FC", "parallel FC (veh&dex)")
+wilcox.test.rslt
+
+print("Paired Wilcoxon test: ")
+
+wilcox.test.rslt <- pairwise.wilcox.test(anno.stat.df$Frequency, anno.stat.df$Model, p.adjust.method = "none", paired = T)$p.value %>% signif(3)
 
 colnames(wilcox.test.rslt) <- c("parallel FC (delta)", "opposite FC")
 rownames(wilcox.test.rslt) <- c("opposite FC", "parallel FC (veh&dex)")
 wilcox.test.rslt
 
 # wilcox.test(anno.stat.df$Frequency[1:22] ~ anno.stat.df$Model[1:22])
+```
+
+#### T-test on log data 
+
+```{r out.width = "95%", include = T, eval = T}
+anno.stat.df[["LogFreq"]] <- log10(anno.stat.df$Frequency)
+
+ggplot(anno.stat.df, aes(x = LogFreq, fill = Model, color = Model)) + 
+  geom_density(alpha = 0.2) +
+  theme(legend.position = c(.9,.9), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10)) +
+  labs(title = " ", 
+       x = " Log Frequency (%)", 
+       y = "") 
+  
+print("Unpaired t-test: ")
+
+t.test.rslt <- pairwise.t.test(anno.stat.df$LogFreq, anno.stat.df$Model, p.adjust.method = "none", paired = F)$p.value %>% signif(3)
+
+colnames(t.test.rslt) <- c("parallel FC (delta)", "opposite FC")
+rownames(t.test.rslt) <- c("opposite FC", "parallel FC (veh&dex)")
+t.test.rslt
+
+print("Paired t-test: ")
+
+t.test.rslt <- pairwise.t.test(anno.stat.df$LogFreq, anno.stat.df$Model, p.adjust.method = "none", paired = T)$p.value %>% signif(3)
+
+colnames(t.test.rslt) <- c("parallel FC (delta)", "opposite FC")
+rownames(t.test.rslt) <- c("opposite FC", "parallel FC (veh&dex)")
+t.test.rslt
 ```
 
 #### SNP distribution around TSS

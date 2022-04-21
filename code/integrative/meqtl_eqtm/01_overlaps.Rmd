@@ -1,0 +1,230 @@
+---
+title: "cis-meQTLs-eQTMs Analysis"
+subtitle: "Dexamethasone-Stimulated Human Array Project"
+author: 
+  - name: Anastasiia Hryhorzhevska
+    email: anastasiia_hry@psych.mpg.de
+    url: https://github.com/ahryho
+    affiliation: Max Planck Institute of Psychiatry
+    affiliation_url: https://www.psych.mpg.de/2664393/medizinische-genomforschung
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    df_print: paged
+    css: ../style.css
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=FALSE}
+options(digits = 4, width = 100, stringsAsFactors = T)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 100),
+                      tidy=TRUE,
+                      fig.pos = "H",
+                      dpi = 200,
+                      warning = FALSE, 
+                      message = FALSE, 
+                      cache = TRUE, 
+                      cache.lazy = FALSE)
+
+# define DT as the standard printing method for data.frame
+library(knitr)
+library(DT)
+knit_print.data.frame <- function(x, ...) {
+  knit_print(DT::datatable(x,
+                           filter="top",
+                           rownames = FALSE,
+                           extensions = "FixedColumns",
+                           options = list(
+                             scrollX = TRUE,
+                             pageLength = 5
+                             
+                           )), ...)
+}
+
+registerS3method("knit_print", "data.frame", knit_print.data.frame)
+
+library(data.table)
+library(dplyr)
+
+library(ggplot2)
+library(ggrepel)
+library(scales)
+library(GGally)
+library(factoextra)
+library(viridis)
+
+library(UpSetR)
+```
+
+```{r load-func, include = F, eval = T}
+source("~/bio/code/mpip/dex-stim-human-array/code/integrative/util.R")
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+```
+
+***
+# __Overlaps: meQTLs and eQTMs__
+***
+
+```{r, include = F, eval = T}
+src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+
+ meqtl.dex.fn   <- paste0(out.dir.pre, "meqtls/me-eqtl_cis_results_06122021/me-qtl_cis_result_dex_fdr_005.csv")  # "me-qtl_cis_result_dex_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "meqtls//me-eqtl_cis_results_06122021/me-qtl_cis_result_veh_fdr_005.csv") # "me-qtl_cis_result_veh_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "meqtls/me-qtl_cis_result_delta_fdr_005.csv") # "me-qtl_cis_result_delta_beta.csv")# 
+# meqtl.delta.fn <- paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/geno_imputed_qc_ld/", "me-qtl_cis_result_delta.csv")
+
+col.names <- c("SNP", "CpG_ID", "beta_meqtl", "t-stat_meqtl", "p-value_meqtl", "fdr_meqtl")
+
+meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
+meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
+meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
+
+# Load eQTMs
+
+eqtm.all.fdr.fn <- paste0(out.dir.pre, "eqtms/eqtm_cis_all_fdr_005.csv") 
+eqtm.veh.nom.fn <- paste0(out.dir.pre, "eqtms/eqtm_cis_result_veh_beta.csv") 
+eqtm.dex.nom.fn <- paste0(out.dir.pre, "eqtms/eqtm_cis_result_dex_beta.csv") 
+
+col.names       <- c("eQTM_ID", "CpG_ID", "ENSG_ID", "beta_eqtm", "p-value_eqtm", "fdr_eqtm", "treatment")
+eqtm.all.fdr.df <- fread(eqtm.all.fdr.fn, col.names = col.names)
+
+col.names       <- c("CpG_ID", "ENSG_ID", "beta_eqtm", "t-stat_eqtm", "p-value_eqtm", "fdr_eqtm")
+eqtm.veh.nom.df <- fread(eqtm.veh.nom.fn, col.names = col.names)
+eqtm.dex.nom.df <- fread(eqtm.dex.nom.fn, col.names = col.names)
+eqtm.all.nom.df <- rbind(eqtm.veh.nom.df, eqtm.dex.nom.df)
+```
+
+## __dex/veh/delta meQTLs__
+
+```{r, include = F, eval = T}
+eqtm.veh.fdr.df <- eqtm.all.fdr.df[treatment == "veh"]
+eqtm.dex.fdr.df <- eqtm.all.fdr.df[treatment == "dex"]
+```
+
+```{r, include = F, eval = F}
+veh.df   <- inner_join(meqtl.veh.df, eqtm.veh.fdr.df)
+dex.df   <- inner_join(meqtl.dex.df, eqtm.dex.fdr.df)
+delta.df <- inner_join(meqtl.delta.df, eqtm.dex.fdr.df)
+```
+
+```{r out.width = "95%", include = T, eval = T}
+cpgs <- list(meqtl    = meqtl.veh.df$CpG_ID %>% unique(), 
+             eqtm.fdr = eqtm.veh.fdr.df$CpG_ID %>% unique(),
+             eqtm.nom = eqtm.veh.nom.df$CpG_ID %>% unique())
+              
+upset(fromList(cpgs), 
+      sets = c("meqtl", "eqtm.fdr", "eqtm.nom"),
+      nsets = 3, 
+      nintersects = 20, 
+      mainbar.y.label = "Number of intersections, veh CpGs", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq")
+```
+
+```{r out.width = "95%", include = T, eval = T}
+cpgs <- list(meqtl    = meqtl.dex.df$CpG_ID %>% unique(), 
+             eqtm.fdr = eqtm.dex.fdr.df$CpG_ID %>% unique(),
+             eqtm.nom = eqtm.dex.nom.df$CpG_ID %>% unique())
+              
+upset(fromList(cpgs), 
+      sets = c("meqtl", "eqtm.fdr", "eqtm.nom"),
+      nsets = 3, 
+      nintersects = 20, 
+      mainbar.y.label = "Number of intersections, dex CpGs", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq")
+```
+
+```{r out.width = "95%", include = T, eval = T}
+cpgs <- list(meqtl    = meqtl.delta.df$CpG_ID %>% unique(), 
+             eqtm.fdr = eqtm.dex.fdr.df$CpG_ID %>% unique(),
+             eqtm.nom = eqtm.dex.nom.df$CpG_ID %>% unique())
+              
+upset(fromList(cpgs), 
+      sets = c("meqtl", "eqtm.fdr", "eqtm.nom"),
+      nsets = 3, 
+      nintersects = 20, 
+      mainbar.y.label = "Number of intersections, delta CpGs", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq")
+```
+
+## __meQTLs groups based on fold change direction__
+
+```{r eval = T, include = F}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/primary_meqtl_results/"
+
+meqtl.parallel.fc.grp.veh.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_parallel_fc_grp_veh_dex_gr.rds"))
+meqtl.parallel.fc.grp.delta.gr   <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_parallel_fc_grp_delta_gr.rds"))
+meqtl.opposite.fc.gr             <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_gr.rds"))
+```
+
+```{r include = F, eval = T}
+parallel.fc.grp.veh.dex.cpg <- names(meqtl.parallel.fc.grp.veh.dex.gr@anno)
+parallel.fc.grp.delta.cpg   <- names(meqtl.parallel.fc.grp.delta.gr@anno)
+opposite.fc.grp.cpg         <- names(meqtl.opposite.fc.gr@anno)
+```
+
+```{r out.width = "95%", include = T, eval = T}
+parallel.fc.grp.veh.dex.cpg <- names(meqtl.parallel.fc.grp.veh.dex.gr@anno)
+
+cpgs <- list(parallel_fc_dex_veh = unique(parallel.fc.grp.veh.dex.cpg), 
+             eqtm_all_fdr = eqtm.all.fdr.df$CpG_ID %>% unique(),
+             eqtm_all_nom = eqtm.all.nom.df$CpG_ID %>% unique())
+
+upset(fromList(cpgs),
+      sets = c("parallel_fc_dex_veh", "eqtm_all_fdr", "eqtm_all_nom"),
+      nsets = 3,
+      nintersects = NA,
+      mainbar.y.label = "Number of intersections, CpGs \n dex + veh with parallel FC",
+      text.scale = 1,
+      keep.order = T,
+      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"),
+      order.by = "freq")
+```
+
+```{r out.width = "95%", include = T, eval = T}
+cpgs <- list(parallel_fc_delta = unique(parallel.fc.grp.delta.cpg), 
+             eqtm_all_fdr = eqtm.all.fdr.df$CpG_ID %>% unique(),
+             eqtm_all_nom = eqtm.all.nom.df$CpG_ID %>% unique())
+              
+upset(fromList(cpgs), 
+      sets = c("parallel_fc_delta", "eqtm_all_fdr", "eqtm_all_nom"),
+      nsets = 3, 
+      nintersects = 20, 
+      mainbar.y.label = "Number of intersections, CpGs \n delta with parallel FC", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq",
+      empty.intersections = "on")
+```
+
+```{r out.width = "95%", include = T, eval = T}
+cpgs <- list(opposite_fc  = unique(opposite.fc.grp.cpg), 
+             eqtm_all_fdr = eqtm.all.fdr.df$CpG_ID %>% unique(),
+             eqtm_all_nom = eqtm.all.nom.df$CpG_ID %>% unique())
+              
+upset(fromList(cpgs), 
+      sets = c("opposite_fc", "eqtm_all_fdr", "eqtm_all_nom"),
+      nsets = 3, 
+      nintersects = 20, 
+      mainbar.y.label = "Number of intersections, CpGs \n opposite FC", 
+      text.scale = 1, 
+      keep.order = T,
+      sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
+      order.by = "freq",
+      empty.intersections = "on")
+```

@@ -76,28 +76,28 @@ dmps.450k
 ```
 
 ```{r set-up-params, out.width = "85%", fig.cap = "Model with DNAm BCCs and Genotype PCs", include = T, eval = T}
-fdr <- 0.01 #0.05
-fc  <- 0.02 #0.01
+fdr <- 0.05 #0.05
+fc  <- 0.00 #0.01
 
 VolcanoPlot(lmem.rslt, fdr, fc, "DNAm SVs and SNP PCs")
 ```
 
-<!-- # Get significant dmps -->
+# Get significant dmps
 
-<!-- ```{r save-dmps, include = F, eval = F} -->
-<!-- dmps.sign.df <- lmem.rslt[abs(FC) > fc & FDR < fdr,] -->
+```{r save-dmps, include = F, eval = F}
+dmps.sign.df <- lmem.rslt[abs(FC) > fc & FDR <= fdr,]
 
-<!-- dmps.sign.anno.df <- anno.df[PROBE_ID %in% dmps.sign.df$PROBE_ID ] -->
-<!-- dmps.sign.anno.df <- left_join(dmps.sign.df, dmps.sign.anno.df, by = c("PROBE_ID" = "Name")) -->
+dmps.sign.anno.df <- anno.df[PROBE_ID %in% dmps.sign.df$PROBE_ID ]
+dmps.sign.anno.df <- left_join(dmps.sign.df[,.(PROBE_ID, FDR, FC)], dmps.sign.anno.df, by = c("PROBE_ID" = "PROBE_ID"))
 
-<!-- fwrite(dmps.sign.anno.df,  -->
-<!--        "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dmps_fdr01_fc02_anno_full.csv",  -->
-<!--        quote = F, row.names = F) -->
+fwrite(dmps.sign.anno.df,
+       "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dmps_fdr005_fc00_anno.csv",
+       quote = F, row.names = F)
 
 
-<!-- summary(dmps.sign.anno.df) -->
-<!-- colnames(dmps.sign.anno.df) -->
-<!-- ``` -->
+summary(dmps.sign.anno.df)
+colnames(dmps.sign.anno.df)
+```
 
 ```{r load-sign-dmps, include = F, eval = T}
 dmps.sign.anno.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dmps_fdr01_fc02_anno_full.csv"

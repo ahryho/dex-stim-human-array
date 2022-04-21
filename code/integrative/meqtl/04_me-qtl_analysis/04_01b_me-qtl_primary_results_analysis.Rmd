@@ -314,7 +314,7 @@ ggplot(bins.df, aes(DistanceInterval, fill = treatment)) +
 
 ### Read meQTLs with opposite effects
 
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/"
 
 meqtls.opposite.fc.grp.with.delta <- 
   fread(paste0(out.dir.pre, "dex_veh_meqtl_opposite_beta_group_with_delta.csv"))
@@ -390,14 +390,14 @@ meqtl.opposite.fc.grp.veh.dex.df  <- rbind(meqtl.overlap.snp.dex.veh.df,
                                            meqtl.only.snp.dex.df, 
                                            meqtl.only.snp.veh.df)[!(meQTL_ID %in% meqtls.opposite.fc.grp.no.delta$meQTL_ID)][, .(chr, pos_snp, SNP)] %>% unique()
 meqtl.opposite.fc.grp.veh.dex.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.veh.dex.df, "chr", "pos_snp", "pos_snp", "SNP")
-saveRDS(meqtl.opposite.fc.grp.veh.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_veh_dex_gr.rds"))
+saveRDS(meqtl.opposite.fc.grp.veh.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_parallel_fc_grp_veh_dex_gr.rds"))
 
 meqtl.opposite.fc.grp.delta.df <- rbind(meqtl.overlap.snp.all.df, 
                                          meqtl.overlap.snp.delta.veh.df, 
                                          meqtl.overlap.snp.delta.dex.df, 
                                          meqtl.only.snp.delta.df)[!(meQTL_ID %in% meqtls.opposite.fc.grp.with.delta$meQTL_ID)][, .(chr, pos_snp, SNP)] %>% unique()
 meqtl.opposite.fc.grp.delta.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.delta.df, "chr", "pos_snp", "pos_snp", "SNP")
-saveRDS(meqtl.opposite.fc.grp.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_delta_gr.rds"))
+saveRDS(meqtl.opposite.fc.grp.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_parallel_fc_grp_delta_gr.rds"))
 
 meqtl.opposite.fc.df <- rbind(meqtl.opposite.fc.grp.with.delta.df, meqtl.opposite.fc.grp.no.delta.df)[, .(chr, pos_snp, SNP)] %>% unique()
 meqtl.opposite.fc.gr <- annotate_with_chipseeker(meqtl.opposite.fc.df, "chr", "pos_snp", "pos_snp", "SNP")
@@ -650,13 +650,13 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
 ### SNP annotation by groups
 
 ```{r eval = T, include = F}
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/primary_meqtl_results/"
 
 meqtl.opposite.fc.grp.with.delta.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_with_delta_gr.rds"))
 meqtl.opposite.fc.grp.no.delta.gr  <- readRDS(paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_no_delta_gr.rds"))
 
-meqtl.opposite.fc.grp.veh.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_veh_dex_gr.rds"))
-meqtl.opposite.fc.grp.delta.gr   <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_delta_gr.rds"))
+meqtl.opposite.fc.grp.veh.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_parallel_fc_grp_veh_dex_gr.rds"))
+meqtl.opposite.fc.grp.delta.gr   <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_parallel_fc_grp_delta_gr.rds"))
 meqtl.opposite.fc.gr             <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_snp_anno_opposite_fc_grp_gr.rds"))
 
 # meqtl.opposite.fc.df <- data.frame(meqtl.opposite.fc.gr@anno) %>% setDT()
@@ -846,14 +846,14 @@ meqtl.opposite.fc.grp.veh.dex.df  <- rbind(meqtl.overlap.cpg.dex.veh.df,
                                            meqtl.only.cpg.dex.df, 
                                            meqtl.only.cpg.veh.df)[!(meQTL_ID %in% meqtls.opposite.fc.grp.no.delta$meQTL_ID)][, .(chr, pos_cpg, CpG_ID)] %>% unique()
 meqtl.opposite.fc.grp.veh.dex.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.veh.dex.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
-saveRDS(meqtl.opposite.fc.grp.veh.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_veh_dex_gr.rds"))
+saveRDS(meqtl.opposite.fc.grp.veh.dex.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_parallel_fc_grp_veh_dex_gr.rds"))
 
 meqtl.opposite.fc.grp.delta.df <- rbind(meqtl.overlap.cpg.all.df, 
                                          meqtl.overlap.cpg.delta.veh.df, 
                                          meqtl.overlap.cpg.delta.dex.df, 
                                          meqtl.only.cpg.delta.df)[!(meQTL_ID %in% meqtls.opposite.fc.grp.with.delta$meQTL_ID)][, .(chr, pos_cpg, CpG_ID)] %>% unique()
 meqtl.opposite.fc.grp.delta.gr <- annotate_with_chipseeker(meqtl.opposite.fc.grp.delta.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
-saveRDS(meqtl.opposite.fc.grp.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_delta_gr.rds"))
+saveRDS(meqtl.opposite.fc.grp.delta.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_parallel_fc_grp_delta_gr.rds"))
 
 meqtl.opposite.fc.df <- rbind(meqtl.opposite.fc.grp.with.delta.df, meqtl.opposite.fc.grp.no.delta.df)[, .(chr, pos_cpg, CpG_ID)] %>% unique()
 meqtl.opposite.fc.gr <- annotate_with_chipseeker(meqtl.opposite.fc.df, "chr", "pos_cpg", "pos_cpg", "CpG_ID")
@@ -932,13 +932,13 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
 ### CpG annotation by groups
 
 ```{r eval = T, include = F}
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/primary_meqtl_results/"
 
 meqtl.opposite.fc.grp.with.delta.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_with_delta_gr.rds"))
 meqtl.opposite.fc.grp.no.delta.gr   <- readRDS(paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_no_delta_gr.rds"))
 
-meqtl.opposite.fc.grp.veh.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_veh_dex_gr.rds"))
-meqtl.opposite.fc.grp.delta.gr   <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_delta_gr.rds"))
+meqtl.opposite.fc.grp.veh.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_parallel_fc_grp_veh_dex_gr.rds"))
+meqtl.opposite.fc.grp.delta.gr   <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_parallel_fc_grp_delta_gr.rds"))
 meqtl.opposite.fc.gr             <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_gr.rds"))
 ```
 
@@ -977,7 +977,6 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 0, hjust = 0.5, size = 7)) +
    scale_fill_manual("", values = cbPalette)
 ```
 

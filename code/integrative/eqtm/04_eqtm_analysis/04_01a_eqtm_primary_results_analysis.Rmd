@@ -82,8 +82,8 @@ ensg.loc          <- fread(ensg.loc.fn, col.names = ensg.loc.colnames)
 
 meqtl.veh.fn   <- paste0(out.dir.pre, "eqtm_cis_result_veh_beta.csv") 
 meqtl.dex.fn   <- paste0(out.dir.pre, "eqtm_cis_result_dex_beta.csv") 
-meqtl.delta.fn <- paste0(out.dir.pre, "eqtm_cis_result_delta_beta.csv") 
-meqtl.delta.res.fn <- paste0(out.dir.pre, "eqtm_cis_result_delta_residuals_cov_beta.csv") 
+meqtl.delta.fn <- paste0(out.dir.pre, "eqtm_cis_result_delta_no_residuals_or_cov_beta.csv") 
+meqtl.delta.res.fn <- paste0(out.dir.pre, "eqtm_cis_result_delta_beta.csv") 
 
 col.names <- c("CpG_ID", "ENSG_ID", "beta", "t-stat", "p-value", "FDR")
 

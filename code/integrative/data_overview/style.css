@@ -1,0 +1,135 @@
+
+.modebar{
+      display: none !important;
+}
+ 
+.title{
+  font-family: 'Arial';
+  font-weight: 48;
+  letter-spacing: 2px;
+  color: #00688B;
+}
+
+.subtitle{
+  color:grey;
+  font-family: 'Arial';
+  font-weight: 24;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+h1, .h1, h2, .h2, h3, .h3 {
+    margin-top: 20px;
+    font-family: 'Arial';
+}
+
+h1 {
+  padding-top: 20px;
+  font-family: 'Arial';
+  font-size: 200%;
+  color: #00688B;
+}
+
+h2 {
+  font-family: 'Arial';
+  font-size: 170%;
+}
+
+h3 {
+  font-family: 'Arial';
+  font-size: 150%;
+}
+
+h1.title {
+  text-align: center;
+  font-family: 'Arial';
+}
+
+pre {
+    border: 0px solid #cccccc;
+    border-radius: 0px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+pre[class] {
+  max-height: 200px;
+} 
+
+p.caption {
+  font-size: 12px;
+  font-style: italic;
+  color: grey;
+  margin-right: 10%;
+  margin-left: 10%;  
+  text-align: justify;
+}
+
+/* ---------- Links ----------------- */
+a {
+  color: #00688B;
+}
+a:hover {
+  color: #00688B;
+}
+
+
+
+
+/* ---------- TOC ----------------- */
+#TOC {
+  padding-top: 80px !important;
+  background-repeat: no-repeat;
+  top: 5%;
+  position: fixed;
+  width: 250px;
+}
+
+.tocify {
+  border: none;
+  color: grey;
+  border-radius: 0px;
+}
+.list-group-item.active {
+    color: #00688B;
+    background-color: white;
+    border-left: solid;
+    border-color: #00688B;
+}
+.list-group-item:hover {
+    color: #00688B;
+    background-color: white;
+    border-left: solid;
+    border-color: #00688B;
+}
+
+.list-group-item.active:focus, .list-group-item.active:hover {
+    z-index: 2;
+    color: #fff;
+    background-color: #00688B;
+    border-color: #00688B;
+}
+
+
+.tocify-extend-page {
+  display: none;
+}
+
+
+
+/* ---------- Button ----------------- */
+.btn {
+    border-width: 0 0px 0px 0px;
+    font-weight: normal;
+    text-transform: ;
+    color: #00688B;
+}
+.btn-default {
+    color: #00688B;
+    background-color: #ffffff;
+    border-color: #ffffff;
+}
+
+.nav-pills > li.active > a, .nav-pills > li.active > a:hover, .nav-pills > li.active > a:focus {
+    background-color: #00688B;
+}

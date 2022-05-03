@@ -131,7 +131,7 @@ GetVennPlt(meqtl.df = meqtl.delta.df, eqtm.df = eqtm.dex.nom.df)
 GetVennPlt(meqtl.df = meqtl.delta.df, eqtm.df = eqtm.delta.nom.df)
 ```
 
-## __meQTLs groups based on fold change direction__
+## __meQTLs groups based on allelic direction__
 
 ```{r eval = T, include = F}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/primary_meqtl_results/"
@@ -147,20 +147,27 @@ parallel.fc.grp.delta.cpg   <- list(CpG_ID = names(meqtl.parallel.fc.grp.delta.g
 opposite.fc.grp.cpg         <- list(CpG_ID = names(meqtl.opposite.fc.gr@anno))
 ```
 
-### Parallel FC: veh & dex
+### Parallel FC veh meQTLs & veh eQTMs
 
+```{r eval = T, include = F}
+eqtm.veh.nom.df[["eQTM_ID"]] <- paste(eqtm.veh.nom.df$CpG_ID, eqtm.veh.nom.df$ENSG_ID, sep = "-")
+eqtm.dex.nom.df[["eQTM_ID"]] <- paste(eqtm.dex.nom.df$CpG_ID, eqtm.dex.nom.df$ENSG_ID, sep = "-")
+intersect.dex.veh.eqtms      <- intersect(eqtm.veh.nom.df$eQTM_ID, eqtm.dex.nom.df$eQTM_ID)  
+```
+Intersection between the group of baseline meQTLs with the same allelic (FC) directions and the set of baseline eQTMs which are not intersected with dex eQTMs 
+<!-- The direction of an allelic effect is the direction (add or subtract) that an allele has on a phenotype. -->
 ```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n dex + veh with parallel FC"}
-GetVennPlt(meqtl.df = parallel.fc.grp.veh.dex.cpg, eqtm.df = eqtm.all.nom.df, cbPal.col = "#999999")
+GetVennPlt(meqtl.df = parallel.fc.grp.veh.dex.cpg, eqtm.df = eqtm.veh.nom.df[!(eQTM_ID %in% intersect.dex.veh.eqtms)], cbPal.col = "#999999")
 ```
 
-### Parallel FC: delta
+### Parallel FC delta meQTLs & dex eQTMs
 
 ```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n delta with parallel FC"}
-GetVennPlt(meqtl.df = parallel.fc.grp.delta.cpg, eqtm.df = eqtm.all.nom.df, cbPal.col = "#999999")
+GetVennPlt(meqtl.df = parallel.fc.grp.delta.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
 ```
 
-### Opposite FC
+### Opposite FC meQTLs & dex eQTMs
 
 ```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n opposite FC"}
-GetVennPlt(meqtl.df = opposite.fc.grp.cpg, eqtm.df = eqtm.all.nom.df, cbPal.col = "#999999")
+GetVennPlt(meqtl.df = opposite.fc.grp.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
 ```

@@ -471,7 +471,6 @@ ggplot(pheno.veh, aes(x = mAge_Hovath, y = Age, color = Sex)) +
 pheno.melt.df     <- pheno.veh[, .(mAge_Hovath, Age, Status, Sex)] %>% reshape2::melt() 
 
 ggplot(pheno.melt.df, aes(y = value, x = variable, fill = variable)) +
- # geom_violin(width = 0.4) +
   geom_boxplot() +
   scale_fill_viridis(discrete = TRUE, alpha = 0.3, option = "C") +
   labs(title = " ", y = "Age", x = " ") + 
@@ -973,17 +972,30 @@ summary(glmm)
 
 ### Omic BCCs Correlation 
 
+Baseline
+```{r include = F, eval = T}
+bcc.epidish.rpc.salas <- read.csv2( file = "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/dex_stim_array_human_epidish_salas_bcc_rpc.csv")
+colnames(bcc.epidish.rpc.salas)[2:13] <- paste0("salas.", colnames(bcc.epidish.rpc.salas)[2:13])
+
+pheno.veh <- pheno.full[Include == 1][Dex == 0]
+pheno.veh <- left_join(pheno.veh, bcc.epidish.rpc.salas)
+
+pheno <- pheno.veh
+```
+
 ```{r combine-all-data-integrative, include = F, eval = T}
 bcc          <- pheno[, c("Cort_D1", "ACTH_D1", "Leukos_D1", "Gran_D1", "Mono_D1", "Lymph_D1")]
 bcc          <- bcc %>% mutate_all(~ifelse(is.na(.), median(., na.rm = TRUE), .))
 bcc.meth     <- pheno[, c("CD8T", "CD4T", "NK", "Bcell", "Mono", "Gran")]
 bcc.cellcode <- pheno[, c("Neutrophil_CellCODE", "Tcell_CellCODE", "Monocyte_CellCODE", "Bcell_CellCODE",
                           "NKcell_CellCODE", "PlasmaCell_CellCODE", "DendriticCell_CellCODE")]
+bcc.salas    <- pheno[, c("salas.Bas", "salas.Bmem", "salas.Bnv", "salas.CD4mem", "salas.CD4nv", "salas.CD8mem", "salas.CD8nv", "salas.Eos", "salas.Mono", "salas.Neu", "salas.NK", "salas.Treg")]
+
 sv.gex   <- pheno[, paste0("V", 1:10)] 
 sv.meth  <- pheno[, paste0("DNAm_SV", 1:10)]
 snp.pcs  <- pheno[, paste0("PC", 1:5)]
 
-tmp.df <- data.frame(meth = bcc.meth, bcc, bcc.cellcode, sv.meth, gex = sv.gex, snp.pcs) %>%
+tmp.df <- data.frame(meth = bcc.meth, bcc, bcc.cellcode, bcc.salas, sv.meth, gex = sv.gex, snp.pcs) %>%
                     # Dex = as.numeric(pheno$Dex), Status = as.numeric(pheno$Status), Sex = as.numeric(pheno$Sex), BMI = pheno$BMI_D1, 
                     # Age = pheno$Age) %>% 
   na.omit() %>% 
@@ -992,21 +1004,23 @@ tmp.df <- data.frame(meth = bcc.meth, bcc, bcc.cellcode, sv.meth, gex = sv.gex, 
 cor.mtrx <- cor(tmp.df)
 ```
 
-```{r out.width = "98%", fig.cap = "Relationship of the BCCs", include = T, eval = T}
+```{r out.width = "110%", fig.cap = "Relationship of the BCCs", include = T, eval = T}
 # cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), -which(colnames(cor.mtrx) %in% c(paste0("DNAm_SV", 1:10), paste0("DNAm_PC", 1:10)))]
 cor.mtrx.plt <- cor.mtrx[which(rownames(cor.mtrx) %in% c(paste("meth", colnames(bcc.meth), sep = "." ),
-                                                           colnames(bcc),
-                                                           colnames(bcc.cellcode))), 
+                                                         colnames(bcc.salas),
+                                                         colnames(bcc.cellcode),
+                                                         colnames(bcc))), 
                          which(colnames(cor.mtrx) %in% c(paste("meth", colnames(bcc.meth), sep = "." ),
-                                                         colnames(bcc),
-                                                         colnames(bcc.cellcode)))]
+                                                         colnames(bcc.salas),
+                                                         colnames(bcc.cellcode),
+                                                         colnames(bcc)))]
 
 
 corrplot(cor.mtrx.plt, 
          method = "color", cl.pos = "r", cl.cex = 0.6,
          type = "upper",
          addgrid.col = "gray90",
-         addCoef.col = "black", number.cex = 0.5, number.digits = 1, # Add coefficient of correlation
-         tl.col = "red",  tl.cex = 0.6, tl.srt = 45, tl.offset = 0.5, tl.pos = "td", #Text label color and rotation
+         addCoef.col = "black", number.cex = 0.4, number.digits = 1, # Add coefficient of correlation
+         tl.col = "red",  tl.cex = 0.5, tl.srt = 45, tl.offset = 0.5, tl.pos = "td", #Text label color and rotation
          sig.level = 0.01) 
 ```

@@ -106,7 +106,8 @@ covar.names <- c("Dex", "Sex", "Status", "Age", "BMI_D1", "SNP_Chip", "Batch")
 
 ### Derived Covariates
   + __DNAm BCC__: CD8T, CD4T, NK, Bcell, Mono, Gran - cellular proportion estimates from Houseman algorithm
-  + __CellCODE BCC__: Cort_D1, ACTH_D1, Leukos_D1, Gran_D1, Mono_D1, Lymph_D1, hamd_D1 - cellular proportion estimates from CellCODE 
+  + __CellCODE BCC__: Cort_D1, ACTH_D1, Leukos_D1, Gran_D1, Mono_D1, Lymph_D1, hamd_D1 - cellular proportion estimates from CellCODE
+  + __Salas BCC__: cellular proportion estimates using _EpiDISH_ R-package and the reference dataset of 12 cell types (neutrophils, eosinophils, basophils, monocytes, naïve and memory B cells, naïve and memory CD4T and CD8T cells, natural killer, and T regulatory cells) from _Salas et. al 2022_ publication
   + __DNAm SV__: 62 significant Surrogate Variables (SV)
   + __GEX SV__: 43 significant Surrogate Variables (SV)
   + __SNP PC__: 10 signififcant PCs computed using PLINK MDS method (4.26% of total variants)
@@ -972,7 +973,7 @@ summary(glmm)
 
 ### Omic BCCs Correlation 
 
-Baseline
+##### Baseline
 ```{r include = F, eval = T}
 bcc.epidish.rpc.salas <- read.csv2( file = "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/dex_stim_array_human_epidish_salas_bcc_rpc.csv")
 colnames(bcc.epidish.rpc.salas)[2:13] <- paste0("salas.", colnames(bcc.epidish.rpc.salas)[2:13])
@@ -1004,6 +1005,20 @@ tmp.df <- data.frame(meth = bcc.meth, bcc, bcc.cellcode, bcc.salas, sv.meth, gex
 cor.mtrx <- cor(tmp.df)
 ```
 
+###### The reference dataset of 12 cell types from _Salas et. al 2022_ publication :
+  + __Neu__: neutrophils
+  + __Eos__: eosinophils
+  + __Bas__: basophils
+  + __Mono__: monocytes, 
+  + __Bnv__: naïve B cells
+  + __Bmem__: memory B cells
+  + __CD4nv__: T helper CD4+ naïve cells
+  + __CD4mem__: T helper CD4+ memory cells
+  + __CD8nv__: T helper CD8+ naïve cells
+  + __CD8mem__: T helper CD8+ memory cells
+  + __NK__: natural killer
+  + __Treg__: T regulatory cells
+
 ```{r out.width = "110%", fig.cap = "Relationship of the BCCs", include = T, eval = T}
 # cor.mtrx.plt <- cor.mtrx[paste0("DNAm_SV", 1:10), -which(colnames(cor.mtrx) %in% c(paste0("DNAm_SV", 1:10), paste0("DNAm_PC", 1:10)))]
 cor.mtrx.plt <- cor.mtrx[which(rownames(cor.mtrx) %in% c(paste("meth", colnames(bcc.meth), sep = "." ),
@@ -1021,6 +1036,6 @@ corrplot(cor.mtrx.plt,
          type = "upper",
          addgrid.col = "gray90",
          addCoef.col = "black", number.cex = 0.4, number.digits = 1, # Add coefficient of correlation
-         tl.col = "red",  tl.cex = 0.5, tl.srt = 45, tl.offset = 0.5, tl.pos = "td", #Text label color and rotation
+         tl.col = "red",  tl.cex = 0.4, tl.srt = 45, tl.offset = 0.5, tl.pos = "td", #Text label color and rotation
          sig.level = 0.01) 
 ```

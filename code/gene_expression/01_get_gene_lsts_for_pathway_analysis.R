@@ -26,7 +26,7 @@ meqtl.parallel.fc.grp.veh.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtls/
 meqtl.parallel.fc.grp.delta.gr   <- readRDS(file =  paste0(out.dir.pre, "meqtls/primary_meqtl_results/meqtl_overlaps_meqtl_level_cpg_anno_parallel_fc_grp_delta_gr.rds"))
 meqtl.opposite.fc.gr             <- readRDS(file =  paste0(out.dir.pre, "meqtls/primary_meqtl_results/meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_gr.rds"))
 
-parallel.fc.grp.veh.dex.cpg <- as.data.frame(list(CpG_ID = names(meqtl.parallel.fc.grp.veh.dex.gr@anno)))
+parallel.fc.grp.veh.dex.cpg <- list(CpG_ID = names(meqtl.parallel.fc.grp.veh.dex.gr@anno))
 parallel.fc.grp.delta.cpg   <- list(CpG_ID = names(meqtl.parallel.fc.grp.delta.gr@anno))
 opposite.fc.grp.cpg         <- list(CpG_ID = names(meqtl.opposite.fc.gr@anno))
 
@@ -67,14 +67,14 @@ write.table(ensg.ids,
 # Parallel FC: veh & dex
 #
 out.fn <- paste0(rslt.dir.pre, "ensg_lst_parallel_fc_grp_veh_dex.csv")
-GetGenes(meqtl.df = parallel.fc.grp.veh.dex.cpg, eqtm.df = eqtm.all.nom.df, out.fn = out.fn) # 11'576
+GetGenes(meqtl.df = parallel.fc.grp.veh.dex.cpg, eqtm.df = eqtm.veh.nom.df, out.fn = out.fn) # 11'492
 
 # Parallel FC: delta
 #
-out.fn <- paste0(rslt.dir.pre, "ensg_lst_parallel_fc_grp_delta.csv") # 4'646
-GetGenes(meqtl.df = parallel.fc.grp.delta.cpg, eqtm.df = eqtm.all.nom.df, out.fn = out.fn)
+out.fn <- paste0(rslt.dir.pre, "ensg_lst_parallel_fc_grp_delta.csv") # 2'277
+GetGenes(meqtl.df = parallel.fc.grp.delta.cpg, eqtm.df = eqtm.dex.nom.df, out.fn = out.fn)
 
 # Opposite FC
 #
-out.fn <- paste0(rslt.dir.pre, "ensg_lst_opposite_fc_grp.csv") #3'252
-GetGenes(meqtl.df = opposite.fc.grp.cpg, eqtm.df = eqtm.all.nom.df, out.fn = out.fn)
+out.fn <- paste0(rslt.dir.pre, "ensg_lst_opposite_fc_grp.csv") #1'451
+GetGenes(meqtl.df = opposite.fc.grp.cpg, eqtm.df = eqtm.dex.nom.df, out.fn = out.fn)

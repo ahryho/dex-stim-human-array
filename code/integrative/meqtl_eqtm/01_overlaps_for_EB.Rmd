@@ -62,6 +62,7 @@ library(viridis)
 library(UpSetR)
 library(eulerr)
 library(ggVennDiagram)
+library(corrplot)
 ```
 
 ```{r load-func, include = F, eval = T}
@@ -74,6 +75,8 @@ cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7"
 ***
 
 ```{r load-data, include = F, eval = T}
+setwd("~/bio/code/mpip/dex-stim-human-array/")
+
 src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
@@ -100,6 +103,11 @@ eqtm.dex.nom.df   <- fread(eqtm.dex.nom.fn, col.names = col.names)
 eqtm.delta.nom.df <- fread(eqtm.delta.nom.fn, col.names = col.names)
 
 eqtm.all.nom.df   <- rbind(eqtm.veh.nom.df, eqtm.dex.nom.df, eqtm.delta.nom.df)
+
+# Load publicly available data from Josine L.Min at el. 2021
+# 
+# public.meqtl.df <- fread("data/public_data/GoDMC_mQTL/assoc_meta_all.csv")
+# public.meqtl.sub.df <- public.meqtl.df[, .(cpg, snp, pval)]
 ```
 
 ## Baseline
@@ -157,17 +165,104 @@ intersect.dex.veh.eqtms      <- intersect(eqtm.veh.nom.df$eQTM_ID, eqtm.dex.nom.
 Intersection between the group of baseline meQTLs with the same allelic (FC) directions and the set of baseline eQTMs which are not intersected with dex eQTMs 
 <!-- The direction of an allelic effect is the direction (add or subtract) that an allele has on a phenotype. -->
 ```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n dex + veh with parallel FC"}
-GetVennPlt(meqtl.df = parallel.fc.grp.veh.dex.cpg, eqtm.df = eqtm.veh.nom.df, cbPal.col = "#999999")
+venn.rslt <- GetVennPlt(meqtl.df = parallel.fc.grp.veh.dex.cpg, eqtm.df = eqtm.veh.nom.df, cbPal.col = "#999999")
+venn.rslt$venn.plot
 ```
 
 ### Parallel FC delta meQTLs & dex eQTMs
 
 ```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n delta with parallel FC"}
-GetVennPlt(meqtl.df = parallel.fc.grp.delta.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
+venn.rslt <- GetVennPlt(meqtl.df = parallel.fc.grp.delta.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
+venn.rslt$venn.plot
+```
+
+#### Heatmap{.tabset .tabset-fade .tabset-pills}
+
+```{r load-omics}
+meth.beta.dex.mtrx <- LoadMethylBeta("dex")
+meth.beta.veh.mtrx <- LoadMethylBeta("veh")
+gex.dex.mtrx       <- LoadGEX("dex")
+gex.veh.mtrx       <- LoadGEX("veh")
+snp.mtrx           <- LoadGenotype()
+```
+
+```{r ad-omics}
+n.subset <- 100
+
+meth.sub.df   <- meth.beta.dex.mtrx[CpG_ID %in% venn.rslt$cpgs]
+
+meqtm.gex.ids <- eqtm.dex.nom.df[CpG_ID %in% venn.rslt$cpgs, ENSG_ID] %>% unique()
+gex.sub.df    <- gex.dex.mtrx[ENSG_ID %in% meqtm.gex.ids]
+
+meth.cor.mtrx <- cor(t(meth.sub.df[, -1]))
+gex.cor.mtrx  <- cor(t(gex.sub.df[, -1]))
+
+meth.gex.sub.df   <- rbind(meth.sub.df[1:n.subset, -1], gex.sub.df[1:n.subset, -1])
+meth.gex.cor.mtrx <- cor(t(meth.gex.sub.df))
+```
+
+##### CpG & GEX
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpG and GEX \n delta with parallel FC"}
+corrplot(meth.gex.cor.mtrx, 
+         method = "color", cl.pos = "r", 
+         type = "full",
+         tl.pos = "n")
+```
+
+##### CpG
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpGs \n delta with parallel FC"}
+corrplot(meth.cor.mtrx[1:n.subset, 1:n.subset], 
+         method = "color", cl.pos = "r", 
+         type = "full",
+         tl.pos = "n")
+```
+
+##### GEX
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, GEX \n delta with parallel FC"}
+corrplot(gex.cor.mtrx[1:100, 1:100], 
+         method = "color", cl.pos = "r", 
+         type = "full",
+         tl.pos = "n")
+```
+
+#### Examples
+
+```{r include = T, eval = T}
+# paste0("Scatter plot for the independent significant at FDR <= ", fdr.thr, " meQTLs")
+eqtm.id       <- eqtm.dex.nom.df[fdr_eqtm == min(fdr_eqtm), eQTM_ID]
+selected.eqtm <- eqtm.dex.nom.df[eQTM_ID %in% eqtm.id] # beta == max(beta)
+
+meqtl.gr <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/dex_meqtl_with_veh_primary_group_with_delta.csv")
+
+meqtl.gr <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/dex_veh_meqtl_opposite_beta_9K.csv")
+
+meqtl.gr <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/dex_veh_meqtl_opposite_beta_group_with_delta.csv")
+
+selected.meqtl <- meqtl.gr[CpG_ID %in% selected.eqtm$CpG_ID]
+
+kable(selected.eqtm %>% 
+        dplyr::select(CpG_ID, ENSG_ID, FC = beta_eqtm, t_stat = `t-stat_eqtm`, 
+                      p_val = `p-value_eqtm`, FDR = fdr_eqtm) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant across DELTA meQTLs: ",
+                     "FC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(meth.beta.veh.mtrx, meth.beta.dex.mtrx, snp.mtrx, selected.eqtm, fdr.thr = 0.05, 
+                  plot.title = plot.title)
 ```
 
 ### Opposite FC meQTLs & dex eQTMs
 
 ```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n opposite FC"}
-GetVennPlt(meqtl.df = opposite.fc.grp.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
+venn.rslt <- GetVennPlt(meqtl.df = opposite.fc.grp.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
+venn.rslt$venn.plot
 ```

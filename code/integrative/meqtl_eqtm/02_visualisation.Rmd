@@ -1,0 +1,143 @@
+---
+title: "cis-meQTLs-eQTMs Analysis"
+subtitle: "Dexamethasone-Stimulated Human Array Project"
+author: 
+  - name: Anastasiia Hryhorzhevska
+    email: anastasiia_hry@psych.mpg.de
+    url: https://github.com/ahryho
+    affiliation: Max Planck Institute of Psychiatry
+    affiliation_url: https://www.psych.mpg.de/2664393/medizinische-genomforschung
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    df_print: paged
+    css: ../style.css
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r, include=FALSE}
+options(digits = 4, width = 100, stringsAsFactors = T)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 100),
+                      tidy=TRUE,
+                      fig.pos = "H",
+                      dpi = 200,
+                      warning = FALSE, 
+                      message = FALSE, 
+                      cache = TRUE, 
+                      cache.lazy = FALSE)
+
+# define DT as the standard printing method for data.frame
+library(knitr)
+library(DT)
+knit_print.data.frame <- function(x, ...) {
+  knit_print(DT::datatable(x,
+                           filter="top",
+                           rownames = FALSE,
+                           extensions = "FixedColumns",
+                           options = list(
+                             scrollX = TRUE,
+                             pageLength = 5
+                             
+                           )), ...)
+}
+
+registerS3method("knit_print", "data.frame", knit_print.data.frame)
+```
+```{r include=FALSE}
+library(data.table)
+library(dplyr)
+
+library(ggplot2)
+library(ggrepel)
+library(scales)
+library(GGally)
+library(factoextra)
+library(viridis)
+
+library(UpSetR)
+library(eulerr)
+library(ggVennDiagram)
+```
+
+```{r load-func, include = F, eval = T}
+source("~/bio/code/mpip/dex-stim-human-array/code/integrative/util.R")
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+```
+
+***
+# __Overlaps: meQTLs and eQTMs__
+***
+
+```{r load-data, include = F, eval = T}
+src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+
+meqtl.dex.fn   <- paste0(out.dir.pre, "meqtls/me-eqtl_cis_results_06122021/me-qtl_cis_result_dex_fdr_005.csv")  # "me-qtl_cis_result_dex_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "meqtls//me-eqtl_cis_results_06122021/me-qtl_cis_result_veh_fdr_005.csv") # "me-qtl_cis_result_veh_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "meqtls/me-qtl_cis_result_delta_fdr_005.csv") # "me-qtl_cis_result_delta_beta.csv")# 
+
+col.names <- c("SNP", "CpG_ID", "beta_meqtl", "t-stat_meqtl", "p-value_meqtl", "fdr_meqtl")
+
+meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
+meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
+meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
+
+# Load eQTMs
+
+eqtm.veh.nom.fn   <- paste0(out.dir.pre, "eqtms/eqtm_cis_result_veh_beta.csv") 
+eqtm.dex.nom.fn   <- paste0(out.dir.pre, "eqtms/eqtm_cis_result_dex_beta.csv") 
+eqtm.delta.nom.fn <- paste0(out.dir.pre, "eqtms/eqtm_cis_result_delta_beta.csv") 
+
+col.names       <- c("CpG_ID", "ENSG_ID", "beta_eqtm", "t-stat_eqtm", "p-value_eqtm", "fdr_eqtm")
+
+eqtm.veh.nom.df   <- fread(eqtm.veh.nom.fn, col.names = col.names)
+eqtm.dex.nom.df   <- fread(eqtm.dex.nom.fn, col.names = col.names)
+eqtm.delta.nom.df <- fread(eqtm.delta.nom.fn, col.names = col.names)
+
+eqtm.all.nom.df   <- rbind(eqtm.veh.nom.df, eqtm.dex.nom.df, eqtm.delta.nom.df)
+
+## __meQTLs groups based on allelic direction__
+
+```{r eval = T, include = F}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/primary_meqtl_results/"
+
+meqtl.parallel.fc.grp.veh.dex.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_parallel_fc_grp_veh_dex_gr.rds"))
+meqtl.parallel.fc.grp.delta.gr   <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_parallel_fc_grp_delta_gr.rds"))
+meqtl.opposite.fc.gr             <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_opposite_fc_grp_gr.rds"))
+```
+
+```{r include = F, eval = T}
+parallel.fc.grp.veh.dex.cpg <- list(CpG_ID = names(meqtl.parallel.fc.grp.veh.dex.gr@anno))
+parallel.fc.grp.delta.cpg   <- list(CpG_ID = names(meqtl.parallel.fc.grp.delta.gr@anno))
+opposite.fc.grp.cpg         <- list(CpG_ID = names(meqtl.opposite.fc.gr@anno))
+```
+
+### Parallel FC veh meQTLs & veh eQTMs
+
+```{r eval = T, include = F}
+eqtm.veh.nom.df[["eQTM_ID"]] <- paste(eqtm.veh.nom.df$CpG_ID, eqtm.veh.nom.df$ENSG_ID, sep = "-")
+eqtm.dex.nom.df[["eQTM_ID"]] <- paste(eqtm.dex.nom.df$CpG_ID, eqtm.dex.nom.df$ENSG_ID, sep = "-")
+intersect.dex.veh.eqtms      <- intersect(eqtm.veh.nom.df$eQTM_ID, eqtm.dex.nom.df$eQTM_ID)  
+```
+Intersection between the group of baseline meQTLs with the same allelic (FC) directions and the set of baseline eQTMs which are not intersected with dex eQTMs 
+<!-- The direction of an allelic effect is the direction (add or subtract) that an allele has on a phenotype. -->
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n dex + veh with parallel FC"}
+GetVennPlt(meqtl.df = parallel.fc.grp.veh.dex.cpg, eqtm.df = eqtm.veh.nom.df, cbPal.col = "#999999")
+```
+
+### Parallel FC delta meQTLs & dex eQTMs
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n delta with parallel FC"}
+GetVennPlt(meqtl.df = parallel.fc.grp.delta.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
+```
+
+### Opposite FC meQTLs & dex eQTMs
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n opposite FC"}
+GetVennPlt(meqtl.df = opposite.fc.grp.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
+```

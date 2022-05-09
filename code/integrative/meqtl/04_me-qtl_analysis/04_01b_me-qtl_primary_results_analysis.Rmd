@@ -862,7 +862,7 @@ saveRDS(meqtl.opposite.fc.gr, file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_
 ```
 
 ```{r eval = T, include = F}
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/primary_meqtl_results/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/primary_meqtl_results/"
 
 meqtl.overlap.all.gr       <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_delta_dex_veh_gr.rds"))
 meqtl.overlap.delta.veh.gr <- readRDS(file =  paste0(out.dir.pre, "meqtl_overlaps_meqtl_level_cpg_anno_delta_veh_gr.rds"))
@@ -976,7 +976,7 @@ ggplot(anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
+        axis.title = element_text(size = 8)) +
    scale_fill_manual("", values = cbPalette)
 ```
 
@@ -995,25 +995,6 @@ wilcox.test.rslt
 # wilcox.test(anno.stat.df$Frequency[1:22] ~ anno.stat.df$Model[1:22])
 ```
 
-#### SNP distribution around TSS
-
-```{r out.width = "95%", include = T, eval = T} 
-plotDistToTSS(list(Parallel_FC = meqtl.opposite.fc.grp.veh.dex.gr, 
-                   Parallel_FC_Delta = meqtl.opposite.fc.grp.delta.gr, 
-                   Opposite_FC = meqtl.opposite.fc.gr),
-              xlab = " ",
-              ylab = "CpGs (%) (5'->3')", 
-              title = "CpG distribution around TSS") +
-    theme(legend.position = "bottom", 
-          legend.title = element_blank(),
-          panel.grid.major = element_blank(),
-          panel.background = element_blank(),
-          plot.title = element_text(size = 10),
-          axis.title = element_text(size = 8),
-          panel.border = element_blank()) +
-  guides(fill = guide_legend(ncol = 6, byrow = F))
-
-```
 
 <!-- ## meSNP level -->
 

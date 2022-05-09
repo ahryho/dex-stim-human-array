@@ -1,6 +1,96 @@
 Sys.setenv(BIOMART_CACHE="~/bio/caches/biomaRt")
 Sys.setenv(ANNOTATION_HUB_CACHE="~/bio/caches/AnnotationHub")
 
+LoadMethylBeta <- function(treatment){
+  dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+  df.fn    <- paste0(dir.pre, "methyl_beta_mtrx_", treatment ,".csv")
+  
+  print("Loading DNAm data: \n")
+  df       <- fread(df.fn)
+  
+  return(df)
+}
+
+LoadGEX <- function(treatment){
+  dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+  df.fn    <- paste0(dir.pre, "gex_mtrx_", treatment ,".csv")
+
+    print("Loading GEX data: \n")
+    df       <- fread(df.fn) 
+  
+  return(df)
+}
+
+LoadGenotype <- function(){
+  dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+  df.fn    <- paste0(dir.pre, "snp_mtrx.csv")
+  
+  print("Loading Genotype data: \n")
+  df       <- fread(df.fn) 
+  
+  return(df)
+}
+
+LoadOmics <- function(treatment, is.methyl.df = T, is.gex.df = T, is.snp.df = T){
+
+  if(is.methyl.df == T) 
+    methyl.df <- LoadMethylBeta(treatment)
+  
+  if(is.gex.df == T) 
+    gex.df <- LoadGEX(treatment)
+  
+  if(is.snp.df == T) 
+    snp.df <- LoadGenotype()
+  
+  return(methyl.df, gex.df, snp.df)
+}
+
+
+GetVennPlt <- function(meqtl.df, eqtm.df, plot.title = NULL, cbPal.col = "#0072B2" ){
+  meqtl.cpgs <- meqtl.df$CpG_ID %>% unique()
+  eqtm.cpgs  <- eqtm.df$CpG_ID %>% unique()
+  
+  intersect.cpgs <- intersect(meqtl.cpgs, eqtm.cpgs)
+  
+  cpgs <- list(meqtl = meqtl.cpgs, 
+               eqtm  = eqtm.cpgs)
+  
+  eqtm.neg.cor.df   <- eqtm.df[CpG_ID %in% intersect.cpgs][beta_eqtm < 0]
+  eqtm.pos.cor.df   <- eqtm.df[CpG_ID %in% intersect.cpgs][beta_eqtm > 0]  
+  
+  perc.eqtm.neg.cor <- round(nrow(eqtm.neg.cor.df) / nrow(eqtm.df[CpG_ID %in% intersect.cpgs]) * 100, 1)
+  perc.eqtm.pos.cor <- round(nrow(eqtm.pos.cor.df) / nrow(eqtm.df[CpG_ID %in% intersect.cpgs]) * 100, 1)
+  
+  perc.olap.mecpgs.with.ecpgs <- round(length(intersect.cpgs) / length(meqtl.cpgs) * 100, 1)
+  perc.olap.ecpgs.with.mecpgs <- round(length(intersect.cpgs) / length(eqtm.cpgs) * 100, 1)
+  
+  if (is.null(plot.title))
+    plot.title <- paste0(perc.olap.mecpgs.with.ecpgs, "% of meCpGs overlap with eQTM CpGs \n",
+                         perc.eqtm.neg.cor, "% of eQTMs (in intersection with meQTLs) are negatively correlated \n",
+                         perc.eqtm.pos.cor, "% of eQTMs (in intersection with meQTLs) are positively correlated \n")
+  
+  cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+  
+  p <- ggVennDiagram(cpgs, 
+                category.names = c(paste0("meQTLs, ", perc.olap.mecpgs.with.ecpgs, "%"), 
+                                   paste0("eQTMs, ", perc.olap.ecpgs.with.mecpgs, "%")), 
+                label_alpha = 0.7,
+                edge_size = 0,
+                set_geom = "text",
+                set_color = "black",
+                label = "count") +
+        theme(legend.position = "none", 
+            legend.title = element_blank(),
+            panel.background = element_blank(),
+            plot.title = element_text(size = 10, face="italic")) +
+      labs(x = "", y = "",
+           title = plot.title) +
+      scale_fill_gradient(low = "white", high = cbPal.col) 
+  
+  return(list(cpgs = intersect.cpgs, venn.plot = p))
+}
+
+
 GetFullmeQTLdf <- function(meqtl.df, fdr.thr = 0.05){
   colnames(meqtl.df) <- c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
   
@@ -241,3 +331,4 @@ annotate_with_chipseeker <- function(df, chr, pos_start, pos_end, term = "SNP"){
                           TxDb = TxDb.Hsapiens.UCSC.hg19.knownGene, 
                           annoDb = "org.Hs.eg.db")
 }
+

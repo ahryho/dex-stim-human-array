@@ -471,7 +471,7 @@ ggplot(pheno.veh, aes(x = mAge_Hovath, y = Age, color = Sex)) +
 ```{r dnam-age-boxplot, out.width = "95%", fig.cap = "Box-plots showing differences DNAm Age vs Chronological age between MDD cases and controls", incldue = T, eval = T}
 pheno.melt.df     <- pheno.veh[, .(mAge_Hovath, Age, Status, Sex)] %>% reshape2::melt() 
 
-ggplot(pheno.melt.df, aes(y = value, x = variable, fill = variable)) +
+ggplot(pheno.melt.df, aes(y = value, x = Sex, fill = variable)) +
   geom_boxplot() +
   scale_fill_viridis(discrete = TRUE, alpha = 0.3, option = "C") +
   labs(title = " ", y = "Age", x = " ") + 
@@ -968,14 +968,15 @@ glmm <- glm(Status ~ PRS, family = "binomial", data = prs.sesa.df)
 summary(glmm)
 ```
 
-# Integrative Basic Analysis
+# Blood cell counts
 ***
 
-### Omic BCCs Correlation 
+### Correlation 
 
 ##### Baseline
 ```{r include = F, eval = T}
-bcc.epidish.rpc.salas <- read.csv2( file = "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/dex_stim_array_human_epidish_salas_bcc_rpc.csv")
+bcc.epidish.rpc.salas <- read.csv2( 
+  file = "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/dex_stim_array_human_epidish_salas_bcc_rpc.csv")
 colnames(bcc.epidish.rpc.salas)[2:13] <- paste0("salas.", colnames(bcc.epidish.rpc.salas)[2:13])
 
 pheno.veh <- pheno.full[Include == 1][Dex == 0]
@@ -1038,4 +1039,42 @@ corrplot(cor.mtrx.plt,
          addCoef.col = "black", number.cex = 0.4, number.digits = 1, # Add coefficient of correlation
          tl.col = "red",  tl.cex = 0.4, tl.srt = 45, tl.offset = 0.5, tl.pos = "td", #Text label color and rotation
          sig.level = 0.01) 
+```
+### Distribution
+```{r bcc-salas-boxplot, out.width = "95%", fig.cap = "Box-plots showing differences between 12 DNAm blood cell type estimated by using the reference dataset from _Salas et. al 2022_ publication and EpiDISH R-package", incldue = T, eval = T}
+bcc.melt.df     <- bcc.epidish.rpc.salas %>% reshape2::melt() 
+
+ggplot(bcc.melt.df, aes(y = value, x = variable, fill = variable)) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha = 0.3, option = "C") +
+  labs(title = " ", y = "DNAm blood cell type estimation", x = " ") +
+  theme(legend.position = "none", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 25, hjust = 0.5))
+```
+
+```{r bcc-salas-mdd-boxplot, out.width = "95%", fig.cap = "Box-plots showing differences between 12 DNAm blood cell type estimated by using the reference dataset from _Salas et. al 2022_ publication and EpiDISH R-package between MDD cases and controls", incldue = T, eval = T}
+bcc.melt.df     <- pheno[, c("Status", "salas.Bas", "salas.Bmem", "salas.Bnv", "salas.CD4mem", "salas.CD4nv", "salas.CD8mem", "salas.CD8nv", "salas.Eos", "salas.Mono", "salas.Neu", "salas.NK", "salas.Treg")] %>%
+  reshape2::melt(id = "Status") %>% setDT()
+bcc.melt.df$Status <- as.factor(bcc.melt.df$Status)
+levels(bcc.melt.df$Status) <- c("Controls", "MDD")
+
+ggplot(bcc.melt.df, aes(y = value, x = variable, fill = Status)) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha = 0.3, option = "C") +
+  labs(title = " ", y = "DNAm blood cell type estimation", x = " ") +
+  # facet_wrap(~ variable, ncol = 6) +
+  theme(legend.position = c(0.1, 0.9), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 25, hjust = 0.5))
 ```

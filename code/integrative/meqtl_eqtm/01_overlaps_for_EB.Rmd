@@ -186,6 +186,14 @@ gex.veh.mtrx       <- LoadGEX("veh")
 snp.mtrx           <- LoadGenotype()
 ```
 
+```{r load-meqtl-fc-groups}
+dir.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/"
+
+meqtl.parallel.fc.grp.veh.dex.df <- fread(paste0(dir.pre, "meqtl_parallel_fc_gr_veh_dex_df.csv"))
+meqtl.parallel.fc.grp.delta.df   <- fread(paste0(dir.pre, "meqtl_parallel_fc_gr_delta_df.csv"))
+meqtl.opposite.fc.df             <- fread(paste0(dir.pre, "eqtl_opposite_fc_gr_df.csv"))
+```
+
 ```{r ad-omics}
 n.subset <- 100
 
@@ -232,20 +240,20 @@ corrplot(gex.cor.mtrx[1:100, 1:100],
 
 ```{r include = T, eval = T}
 # paste0("Scatter plot for the independent significant at FDR <= ", fdr.thr, " meQTLs")
-eqtm.id       <- eqtm.dex.nom.df[fdr_eqtm == min(fdr_eqtm), eQTM_ID]
+eqtm.id       <- eqtm.dex.nom.df[eQTM_ID %in% intersect.dex.veh.eqtms][fdr_eqtm == min(fdr_eqtm), eQTM_ID]
 selected.eqtm <- eqtm.dex.nom.df[eQTM_ID %in% eqtm.id] # beta == max(beta)
 
-meqtl.gr <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/dex_meqtl_with_veh_primary_group_with_delta.csv")
-
-meqtl.gr <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/dex_veh_meqtl_opposite_beta_9K.csv")
-
-meqtl.gr <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/dex_veh_meqtl_opposite_beta_group_with_delta.csv")
-
-selected.meqtl <- meqtl.gr[CpG_ID %in% selected.eqtm$CpG_ID]
+selected.meqtl <- meqtl.parallel.fc.grp.delta.df[CpG_ID %in% selected.eqtm$CpG_ID, 
+                                                 .(meQTL_ID, CpG_ID, SNP, beta, `p-value`, fdr, treatment)] %>% unique()
 
 kable(selected.eqtm %>% 
         dplyr::select(CpG_ID, ENSG_ID, FC = beta_eqtm, t_stat = `t-stat_eqtm`, 
                       p_val = `p-value_eqtm`, FDR = fdr_eqtm) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+
+kable(selected.meqtl %>% 
+        dplyr::select(CpG_ID, SNP, FC = beta, 
+                      p_val = `p-value`, FDR = fdr, treatment) %>% 
         mutate_if(is.numeric, funs(as.character(signif(., 3)))))
 ```
 
@@ -256,7 +264,7 @@ plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID,
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
-ProcessGetBoxPlot(meth.beta.veh.mtrx, meth.beta.dex.mtrx, snp.mtrx, selected.eqtm, fdr.thr = 0.05, 
+ProcessGetBoxPlot(meth.beta.veh.mtrx, meth.beta.dex.mtrx, snp.mtrx, selected.meqtl[1], fdr.thr = 0.05, 
                   plot.title = plot.title)
 ```
 

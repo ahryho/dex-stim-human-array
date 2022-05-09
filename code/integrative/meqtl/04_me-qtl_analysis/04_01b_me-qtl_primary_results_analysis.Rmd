@@ -70,8 +70,8 @@ cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7"
 ```
 
 ```{r, include = F, eval = T}
-src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/ensg_locations.csv"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/"
 
 cpg.loc.fn  <- paste0(src.dir.pre, "cpg_locations.csv")
 snp.loc.fn  <- paste0(src.dir.pre, "snp_locations.csv")
@@ -117,6 +117,10 @@ meqtl.all.full.df <- rbind(meqtl.dex.full.df[, treatment := "dex"],
                            meqtl.delta.full.df[, treatment := "delta"])
 meqtl.all.full.df[["meQTL_ID"]] <- paste(meqtl.all.full.df$SNP, meqtl.all.full.df$CpG_ID, sep = "-")
 meqtl.all.full.df <- setDT(meqtl.all.full.df)
+
+# fwrite(meqtl.all.full.df, 
+#        paste0(out.dir.pre, "meqtl_cis_result_veh_dex_delta_fdr_005.csv"),
+#        quote = F, row.names = F, sep   = "\t")
 ```
 
 ## Significant Hits, FDR < 0.05

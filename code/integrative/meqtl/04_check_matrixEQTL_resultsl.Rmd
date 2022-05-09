@@ -169,7 +169,7 @@ fwrite(joined.grp.with.delta,
 ### Read in merged DF
 
 ```{r, eval = T, warning = F}
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/"
 
 joined.grp.with.delta <- 
   fread(paste0(out.dir.pre, "dex_meqtl_with_veh_primary_group_with_delta.csv"))

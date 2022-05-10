@@ -191,7 +191,7 @@ dir.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixE
 
 meqtl.parallel.fc.grp.veh.dex.df <- fread(paste0(dir.pre, "meqtl_parallel_fc_gr_veh_dex_df.csv"))
 meqtl.parallel.fc.grp.delta.df   <- fread(paste0(dir.pre, "meqtl_parallel_fc_gr_delta_df.csv"))
-meqtl.opposite.fc.df             <- fread(paste0(dir.pre, "eqtl_opposite_fc_gr_df.csv"))
+meqtl.opposite.fc.df             <- fread(paste0(dir.pre, "meqtl_opposite_fc_gr_df.csv"))
 ```
 
 ```{r ad-omics}
@@ -241,10 +241,12 @@ corrplot(gex.cor.mtrx[1:100, 1:100],
 ```{r include = T, eval = T}
 # paste0("Scatter plot for the independent significant at FDR <= ", fdr.thr, " meQTLs")
 eqtm.id       <- eqtm.dex.nom.df[eQTM_ID %in% intersect.dex.veh.eqtms][fdr_eqtm == min(fdr_eqtm), eQTM_ID]
-selected.eqtm <- eqtm.dex.nom.df[eQTM_ID %in% eqtm.id] # beta == max(beta)
+selected.eqtm <- eqtm.dex.nom.df[eQTM_ID %in% eqtm.id] # beta == max(beta) cg18193195
 
 selected.meqtl <- meqtl.parallel.fc.grp.delta.df[CpG_ID %in% selected.eqtm$CpG_ID, 
                                                  .(meQTL_ID, CpG_ID, SNP, beta, `p-value`, fdr, treatment)] %>% unique()
+
+selected.eqtl <- data.frame(CpG_ID = selected.eqtm$ENSG_ID, SNP = selected.meqtl$SNP) %>% unique()
 
 kable(selected.eqtm %>% 
         dplyr::select(CpG_ID, ENSG_ID, FC = beta_eqtm, t_stat = `t-stat_eqtm`, 
@@ -258,13 +260,45 @@ kable(selected.meqtl %>%
 ```
 
 ```{r, eval = T, include = F}
-plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
-                     "The most significant across DELTA meQTLs: ",
-                     "FC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+plot.title <- "Parallel FC dex"
+```
+
+```{r out.width = "95%", include = T, eval = T}
+plt.df <- data.frame(CpG = c(as.numeric(meth.beta.dex.mtrx[CpG_ID == selected.eqtm$CpG_ID, -1]),
+                             as.numeric(meth.beta.veh.mtrx[CpG_ID == selected.eqtm$CpG_ID, -1])), 
+                     ENSG = as.numeric(gex.dex.mtrx[ENSG_ID == selected.eqtm$ENSG_ID, -1],
+                                       gex.veh.mtrx[ENSG_ID == selected.eqtm$ENSG_ID, -1]), 
+                     treatment = c(replicate(ncol(gex.dex.mtrx) - 1, "dex"), replicate(ncol(gex.veh.mtrx) - 1, "veh"))
+                     )
+                      
+plt.df %>%
+  ggplot(aes(x = CpG, 
+             y = ENSG, 
+             color = treatment)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  xlab(selected.eqtm$CpG_ID) + ylab(selected.eqtm$ENSG_ID) +
+  theme( 
+    panel.background = element_blank(),
+    plot.title = element_text(size = 10),
+    axis.line.x = element_blank(),
+    axis.line.y = element_blank(),
+    panel.border = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.title = element_text(size = 8),
+    axis.text.x = element_text(angle = 0, hjust = 0.5), 
+    legend.position = "none", 
+    legend.title = element_blank()) 
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
 ProcessGetBoxPlot(meth.beta.veh.mtrx, meth.beta.dex.mtrx, snp.mtrx, selected.meqtl[1], fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(gex.veh.mtrx, gex.dex.mtrx, snp.mtrx, selected.eqtl[1,], fdr.thr = 0.05, 
                   plot.title = plot.title)
 ```
 

@@ -13,7 +13,7 @@ library(ggplot2)
 ### Set up parameters
 
 ```{r, eval = F, warnings = F}
-out.dir.pre       <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+out.dir.pre       <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/"
 
 col.names         <- c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "FDR")
 
@@ -148,6 +148,8 @@ colnames(joined.grp.with.delta) <- c("SNP", "CpG_ID", "beta_dex", "t-stat_dex", 
 ```
 
 ```{r, eval = F}
+joined.grp.with.delta <- meqtl.parallel.fc.grp.delta.df
+colnames(meqtl.veh.full.df) <- c("SNP", "CpG_ID", "beta_veh", "t-stat_veh", "p-value_veh", "fdr_veh")
 joined.grp.with.delta <- dplyr::left_join(joined.grp.with.delta, meqtl.veh.full.df) 
 ```
 

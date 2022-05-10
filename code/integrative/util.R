@@ -196,6 +196,18 @@ GetBetValuesDF <- function(methyl.beta.df, snp.df, selected.qtl, treatment){
   beta.values.df
 }
 
+GetGEXValuesDF <- function(gex.df, snp.df, selected.qtl, treatment){
+  values.df    <- gex.df[ENSG_ID %in% selected.qtl$ENSG_ID, -1]
+  values.df    <- rbind(values.df, snp.df[SNP %in% selected.qtl$SNP, -1])
+  values.df    <- data.frame(t(values.df)) %>% setDT()
+  colnames(values.df) <- c("ENSG", "SNP")
+  values.df$SNP <- as.factor(values.df$SNP)
+  values.df[SNP == 0, SNP := "AA"]; values.df[SNP == 1, SNP := "AB"]; values.df[SNP == 2, SNP := "BB"] 
+  
+  values.df$treatment <- treatment
+  values.df
+}
+
 # Scatter Plot
 GetScatterPlot <- function(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05, plot.title = NULL){
   
@@ -245,7 +257,7 @@ GetBoxPlot <- function(beta.values.df, selected.meqtl, fdr.thr = 0.05, plot.labe
            axis.text.x = element_text(angle = 0, hjust = 0.5), 
            legend.position = "bottom", 
            legend.title = element_blank()) +
-    labs(y = paste0(selected.meqtl$CpG_ID, "\nDNAm beta value"), 
+    labs(y = paste0(selected.meqtl$CpG_ID), 
          x = selected.meqtl$SNP,
          title = plot.title) +
     scale_fill_manual(values = cbPalette)
@@ -254,6 +266,9 @@ GetBoxPlot <- function(beta.values.df, selected.meqtl, fdr.thr = 0.05, plot.labe
 # BoxPlot main
 ProcessGetBoxPlot <- function(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, 
                               fdr.thr = 0.05, plot.title = NULL){
+  
+  colnames(methyl.beta.veh.df)[1] <- "CpG_ID"
+  colnames(methyl.beta.dex.df)[1] <- "CpG_ID"
   
   beta.values.dex.df <- GetBetValuesDF(methyl.beta.dex.df, snp.df, selected.meqtl, "dex")
   beta.values.veh.df <- GetBetValuesDF(methyl.beta.veh.df, snp.df, selected.meqtl, "veh")

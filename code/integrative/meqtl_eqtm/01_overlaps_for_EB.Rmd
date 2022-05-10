@@ -141,6 +141,14 @@ GetVennPlt(meqtl.df = meqtl.delta.df, eqtm.df = eqtm.delta.nom.df)
 
 ## __meQTLs groups based on allelic direction__
 
+```{r load-omics}
+meth.beta.dex.mtrx <- LoadMethylBeta("dex")
+meth.beta.veh.mtrx <- LoadMethylBeta("veh")
+gex.dex.mtrx       <- LoadGEX("dex")
+gex.veh.mtrx       <- LoadGEX("veh")
+snp.mtrx           <- LoadGenotype()
+```
+
 ```{r eval = T, include = F}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/primary_meqtl_results/"
 
@@ -153,6 +161,14 @@ meqtl.opposite.fc.gr             <- readRDS(file =  paste0(out.dir.pre, "meqtl_o
 parallel.fc.grp.veh.dex.cpg <- list(CpG_ID = names(meqtl.parallel.fc.grp.veh.dex.gr@anno))
 parallel.fc.grp.delta.cpg   <- list(CpG_ID = names(meqtl.parallel.fc.grp.delta.gr@anno))
 opposite.fc.grp.cpg         <- list(CpG_ID = names(meqtl.opposite.fc.gr@anno))
+```
+
+```{r load-meqtl-fc-groups}
+dir.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/"
+
+meqtl.parallel.fc.grp.veh.dex.df <- fread(paste0(dir.pre, "meqtl_parallel_fc_gr_veh_dex_df.csv"))
+meqtl.parallel.fc.grp.delta.df   <- fread(paste0(dir.pre, "meqtl_parallel_fc_gr_delta_df.csv"))
+meqtl.opposite.fc.df             <- fread(paste0(dir.pre, "meqtl_opposite_fc_gr_df.csv"))
 ```
 
 ### Parallel FC veh meQTLs & veh eQTMs
@@ -169,43 +185,22 @@ venn.rslt <- GetVennPlt(meqtl.df = parallel.fc.grp.veh.dex.cpg, eqtm.df = eqtm.v
 venn.rslt$venn.plot
 ```
 
-### Parallel FC delta meQTLs & dex eQTMs
-
-```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n delta with parallel FC"}
-venn.rslt <- GetVennPlt(meqtl.df = parallel.fc.grp.delta.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
-venn.rslt$venn.plot
-```
-
 #### Heatmap{.tabset .tabset-fade .tabset-pills}
 
-```{r load-omics}
-meth.beta.dex.mtrx <- LoadMethylBeta("dex")
-meth.beta.veh.mtrx <- LoadMethylBeta("veh")
-gex.dex.mtrx       <- LoadGEX("dex")
-gex.veh.mtrx       <- LoadGEX("veh")
-snp.mtrx           <- LoadGenotype()
-```
-
-```{r load-meqtl-fc-groups}
-dir.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/"
-
-meqtl.parallel.fc.grp.veh.dex.df <- fread(paste0(dir.pre, "meqtl_parallel_fc_gr_veh_dex_df.csv"))
-meqtl.parallel.fc.grp.delta.df   <- fread(paste0(dir.pre, "meqtl_parallel_fc_gr_delta_df.csv"))
-meqtl.opposite.fc.df             <- fread(paste0(dir.pre, "meqtl_opposite_fc_gr_df.csv"))
-```
-
 ```{r ad-omics}
-n.subset <- 100
+n.top.eqtm <- 200
 
-meth.sub.df   <- meth.beta.dex.mtrx[CpG_ID %in% venn.rslt$cpgs]
+top.eqtm       <- eqtm.veh.nom.df[CpG_ID %in% venn.rslt$cpgs][1:n.top.eqtm]
+top.eqtm.cpgs  <- top.eqtm$CpG_ID %>% unique()
+top.eqtm.ensgs <- top.eqtm$ENSG_ID %>% unique()
 
-meqtm.gex.ids <- eqtm.dex.nom.df[CpG_ID %in% venn.rslt$cpgs, ENSG_ID] %>% unique()
-gex.sub.df    <- gex.dex.mtrx[ENSG_ID %in% meqtm.gex.ids]
+meth.sub.df   <- meth.beta.veh.mtrx[CpG_ID %in% top.eqtm.cpgs]
+gex.sub.df    <- gex.veh.mtrx[ENSG_ID %in% top.eqtm.ensgs]
 
 meth.cor.mtrx <- cor(t(meth.sub.df[, -1]))
 gex.cor.mtrx  <- cor(t(gex.sub.df[, -1]))
 
-meth.gex.sub.df   <- rbind(meth.sub.df[1:n.subset, -1], gex.sub.df[1:n.subset, -1])
+meth.gex.sub.df   <- rbind(meth.sub.df[, -1], gex.sub.df[, -1])
 meth.gex.cor.mtrx <- cor(t(meth.gex.sub.df))
 ```
 
@@ -215,13 +210,14 @@ meth.gex.cor.mtrx <- cor(t(meth.gex.sub.df))
 corrplot(meth.gex.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",
-         tl.pos = "n")
+         tl.pos = "n",
+         title = paste0("Top ", n.top.eqtm, " eQTMs, ", "CpG & GEX"))
 ```
 
 ##### CpG
 
 ```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpGs \n delta with parallel FC"}
-corrplot(meth.cor.mtrx[1:n.subset, 1:n.subset], 
+corrplot(meth.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",
          tl.pos = "n")
@@ -230,7 +226,61 @@ corrplot(meth.cor.mtrx[1:n.subset, 1:n.subset],
 ##### GEX
 
 ```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, GEX \n delta with parallel FC"}
-corrplot(gex.cor.mtrx[1:100, 1:100], 
+corrplot(gex.cor.mtrx, 
+         method = "color", cl.pos = "r", 
+         type = "full",
+         tl.pos = "n")
+```
+
+### Parallel FC delta meQTLs & dex eQTMs
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n delta with parallel FC"}
+venn.rslt <- GetVennPlt(meqtl.df = parallel.fc.grp.delta.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
+venn.rslt$venn.plot
+```
+
+#### Heatmap{.tabset .tabset-fade .tabset-pills}
+
+```{r ad-omics}
+n.top.eqtm <- 200
+
+top.eqtm       <- eqtm.dex.nom.df[CpG_ID %in% venn.rslt$cpgs][1:n.top.eqtm]
+top.eqtm.cpgs  <- top.eqtm$CpG_ID %>% unique()
+top.eqtm.ensgs <- top.eqtm$ENSG_ID %>% unique()
+
+meth.sub.df   <- meth.beta.dex.mtrx[CpG_ID %in% top.eqtm.cpgs]
+gex.sub.df    <- gex.dex.mtrx[ENSG_ID %in% top.eqtm.ensgs]
+
+meth.cor.mtrx <- cor(t(meth.sub.df[, -1]))
+gex.cor.mtrx  <- cor(t(gex.sub.df[, -1]))
+
+meth.gex.sub.df   <- rbind(meth.sub.df[, -1], gex.sub.df[, -1])
+meth.gex.cor.mtrx <- cor(t(meth.gex.sub.df))
+```
+
+##### CpG & GEX
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpG and GEX \n delta with parallel FC"}
+corrplot(meth.gex.cor.mtrx, 
+         method = "color", cl.pos = "r", 
+         type = "full",
+         tl.pos = "n",
+         title = paste0("Top ", n.top.eqtm, " eQTMs, ", "CpG & GEX"))
+```
+
+##### CpG
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpGs \n delta with parallel FC"}
+corrplot(meth.cor.mtrx, 
+         method = "color", cl.pos = "r", 
+         type = "full",
+         tl.pos = "n")
+```
+
+##### GEX
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, GEX \n delta with parallel FC"}
+corrplot(gex.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",
          tl.pos = "n")
@@ -260,36 +310,15 @@ kable(selected.meqtl %>%
 ```
 
 ```{r, eval = T, include = F}
-plot.title <- "Parallel FC dex"
+plot.title <- paste0("Parallel FC: veh x dex x delta: (", selected.meqtl$CpG_ID[1], 
+                     ", ", selected.meqtl$SNP[1], ", ", selected.eqtm$ENSG_ID, ")")
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
-plt.df <- data.frame(CpG = c(as.numeric(meth.beta.dex.mtrx[CpG_ID == selected.eqtm$CpG_ID, -1]),
-                             as.numeric(meth.beta.veh.mtrx[CpG_ID == selected.eqtm$CpG_ID, -1])), 
-                     ENSG = as.numeric(gex.dex.mtrx[ENSG_ID == selected.eqtm$ENSG_ID, -1],
-                                       gex.veh.mtrx[ENSG_ID == selected.eqtm$ENSG_ID, -1]), 
-                     treatment = c(replicate(ncol(gex.dex.mtrx) - 1, "dex"), replicate(ncol(gex.veh.mtrx) - 1, "veh"))
-                     )
-                      
-plt.df %>%
-  ggplot(aes(x = CpG, 
-             y = ENSG, 
-             color = treatment)) +
-  geom_point() +
-  geom_smooth(method = "lm") +
-  xlab(selected.eqtm$CpG_ID) + ylab(selected.eqtm$ENSG_ID) +
-  theme( 
-    panel.background = element_blank(),
-    plot.title = element_text(size = 10),
-    axis.line.x = element_blank(),
-    axis.line.y = element_blank(),
-    panel.border = element_blank(),
-    panel.grid.major.x = element_blank(),
-    panel.grid.minor.x = element_blank(),
-    axis.title = element_text(size = 8),
-    axis.text.x = element_text(angle = 0, hjust = 0.5), 
-    legend.position = "none", 
-    legend.title = element_blank()) 
+
+ScatterPlotGEXvsDNAm(meth.beta.dex.mtrx, meth.beta.veh.mtrx,
+                     gex.dex.mtrx, gex.veh.mtrx,
+                     cpg.id = selected.eqtm$CpG_ID, ensg.id = selected.eqtm$ENSG_ID)
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
@@ -307,4 +336,96 @@ ProcessGetBoxPlot(gex.veh.mtrx, gex.dex.mtrx, snp.mtrx, selected.eqtl[1,], fdr.t
 ```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n opposite FC"}
 venn.rslt <- GetVennPlt(meqtl.df = opposite.fc.grp.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
 venn.rslt$venn.plot
+```
+
+#### Heatmap{.tabset .tabset-fade .tabset-pills}
+
+```{r ad-omics}
+n.top.eqtm <- 200
+
+top.eqtm       <- eqtm.dex.nom.df[CpG_ID %in% venn.rslt$cpgs][1:n.top.eqtm]
+top.eqtm.cpgs  <- top.eqtm$CpG_ID %>% unique()
+top.eqtm.ensgs <- top.eqtm$ENSG_ID %>% unique()
+
+meth.sub.df   <- meth.beta.dex.mtrx[CpG_ID %in% top.eqtm.cpgs]
+gex.sub.df    <- gex.dex.mtrx[ENSG_ID %in% top.eqtm.ensgs]
+
+meth.cor.mtrx <- cor(t(meth.sub.df[, -1]))
+gex.cor.mtrx  <- cor(t(gex.sub.df[, -1]))
+
+meth.gex.sub.df   <- rbind(meth.sub.df[, -1], gex.sub.df[, -1])
+meth.gex.cor.mtrx <- cor(t(meth.gex.sub.df))
+```
+
+##### CpG & GEX
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpG and GEX \n delta with parallel FC"}
+corrplot(meth.gex.cor.mtrx, 
+         method = "color", cl.pos = "r", 
+         type = "full",
+         tl.pos = "n",
+         title = paste0("Top ", n.top.eqtm, " eQTMs, ", "CpG & GEX"))
+```
+
+##### CpG
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpGs \n delta with parallel FC"}
+corrplot(meth.cor.mtrx, 
+         method = "color", cl.pos = "r", 
+         type = "full",
+         tl.pos = "n")
+```
+
+##### GEX
+
+```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, GEX \n delta with parallel FC"}
+corrplot(gex.cor.mtrx, 
+         method = "color", cl.pos = "r", 
+         type = "full",
+         tl.pos = "n")
+```
+
+#### Examples
+
+```{r include = T, eval = T}
+# paste0("Scatter plot for the independent significant at FDR <= ", fdr.thr, " meQTLs")
+eqtm.id       <- eqtm.dex.nom.df[eQTM_ID %in% top.eqtm$eQTM_ID][fdr_eqtm == min(fdr_eqtm), eQTM_ID]
+selected.eqtm <- eqtm.dex.nom.df[eQTM_ID %in% eqtm.id] # beta == max(beta) cg08880347
+
+selected.meqtl <- meqtl.parallel.fc.grp.delta.df[CpG_ID %in% selected.eqtm$CpG_ID, 
+                                                 .(meQTL_ID, CpG_ID, SNP, beta, `p-value`, fdr, treatment)] %>% unique()
+
+selected.eqtl <- data.frame(CpG_ID = selected.eqtm$ENSG_ID, SNP = selected.meqtl$SNP) %>% unique()
+
+kable(selected.eqtm %>% 
+        dplyr::select(CpG_ID, ENSG_ID, FC = beta_eqtm, t_stat = `t-stat_eqtm`, 
+                      p_val = `p-value_eqtm`, FDR = fdr_eqtm) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+
+kable(selected.meqtl %>% 
+        dplyr::select(CpG_ID, SNP, FC = beta, 
+                      p_val = `p-value`, FDR = fdr, treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0("Opposite FC: (", selected.meqtl$CpG_ID[1], 
+                     ", ", selected.meqtl$SNP[1], ", ", selected.eqtm$ENSG_ID, ")")
+```
+
+```{r out.width = "95%", include = T, eval = T}
+
+ScatterPlotGEXvsDNAm(meth.beta.dex.mtrx, meth.beta.veh.mtrx,
+                     gex.dex.mtrx, gex.veh.mtrx,
+                     cpg.id = selected.eqtm$CpG_ID, ensg.id = selected.eqtm$ENSG_ID)
+```
+
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(meth.beta.veh.mtrx, meth.beta.dex.mtrx, snp.mtrx, selected.meqtl[1], fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(gex.veh.mtrx, gex.dex.mtrx, snp.mtrx, selected.eqtl[1,], fdr.thr = 0.05, 
+                  plot.title = plot.title)
 ```

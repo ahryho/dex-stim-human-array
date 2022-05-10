@@ -322,6 +322,41 @@ GetManhattanPlot <- function(df, fdr.thr, ylims, plot.title){
            legend.title = element_blank()) 
 }
 
+ScatterPlotGEXvsDNAm <- function(meth.beta.dex.mtrx, meth.beta.veh.mtrx,
+                                 gex.dex.mtrx, gex.veh.mtrx,
+                                 cpg.id, ensg.id){
+  
+  cbPalette <- c("#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+  
+  plt.df <- data.frame(CpG = c(as.numeric(meth.beta.dex.mtrx[CpG_ID == cpg.id, -1]),
+                               as.numeric(meth.beta.veh.mtrx[CpG_ID == cpg.id, -1])), 
+                       ENSG = as.numeric(gex.dex.mtrx[ENSG_ID == ensg.id, -1],
+                                         gex.veh.mtrx[ENSG_ID == ensg.id, -1]), 
+                       treatment = c(replicate(ncol(gex.dex.mtrx) - 1, "dex"), replicate(ncol(gex.veh.mtrx) - 1, "veh"))
+  )
+  
+  plt.df %>%
+    ggplot(aes(x = CpG, 
+               y = ENSG, 
+               color = treatment)) +
+    geom_point() +
+    geom_smooth(method = "lm") +
+    xlab(cpg.id) + ylab(ensg.id) +
+    theme( 
+      panel.background = element_blank(),
+      plot.title = element_text(size = 10),
+      axis.line.x = element_blank(),
+      axis.line.y = element_blank(),
+      panel.border = element_blank(),
+      panel.grid.major.x = element_blank(),
+      panel.grid.minor.x = element_blank(),
+      axis.title = element_text(size = 10),
+      axis.text.x = element_text(angle = 0, hjust = 0.5), 
+      legend.position = "bottom", 
+      legend.title = element_blank()) +
+    scale_color_manual(values = cbPalette)
+}
+
 # Take overlaps / non-overlaps
 
 get_all_overlaps <- function(delta_df, dex_df, veh_df){

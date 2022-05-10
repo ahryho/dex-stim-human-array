@@ -143,4 +143,8 @@ length(intersect.mecpgs.nom) / length(intersect.all.veh.pub.cpgs) # 99.64 %
 ```{r}
 public.meqtl.nom.intersect.df <- public.meqtl.cis.sub.df[cpg %in% intersect.mecpgs.nom] # 59'400'674
 public.meqtl.nom.intersect.df <- unique(public.meqtl.nom.intersect.df) # 59'400'674
+
+veh.meqtl.nom.intersect.df    <-  meqtl.veh.nom.df[CpG_ID %in% intersect.mecpgs.nom] # 38'095'059
+veh.meqtl.nom.intersect.df    <- left_join(veh.meqtl.nom.intersect.df, snp.loc.df)
+veh.meqtl.nom.intersect[["meQTL_ID"]] <- paste(meqtl.veh.df$CpG_ID, meqtl.veh.df$SNP_ID, sep = "-") 
 ```

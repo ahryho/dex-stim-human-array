@@ -66,7 +66,8 @@ library(corrplot)
 ```
 
 ```{r load-func, include = F, eval = T}
-source("~/bio/code/mpip/dex-stim-human-array/code/integrative/util.R")
+setwd("~/bio/code/mpip/dex-stim-human-array/")
+source("code/integrative/util.R")
 cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
 ```
 
@@ -75,8 +76,6 @@ cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7"
 ***
 
 ```{r load-data, include = F, eval = T}
-setwd("~/bio/code/mpip/dex-stim-human-array/")
-
 src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
 
@@ -187,7 +186,7 @@ venn.rslt$venn.plot
 
 #### Heatmap{.tabset .tabset-fade .tabset-pills}
 
-```{r ad-omics}
+```{r }
 n.top.eqtm <- 200
 
 top.eqtm       <- eqtm.veh.nom.df[CpG_ID %in% venn.rslt$cpgs][1:n.top.eqtm]
@@ -206,7 +205,7 @@ meth.gex.cor.mtrx <- cor(t(meth.gex.sub.df))
 
 ##### CpG & GEX
 
-```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpG and GEX \n delta with parallel FC"}
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Correlation within cis-window of 1Mbp, CpG and GEX \n delta with parallel FC"}
 corrplot(meth.gex.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",
@@ -216,7 +215,7 @@ corrplot(meth.gex.cor.mtrx,
 
 ##### CpG
 
-```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpGs \n delta with parallel FC"}
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Correlation within cis-window of 1Mbp, CpGs \n delta with parallel FC"}
 corrplot(meth.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",
@@ -225,7 +224,7 @@ corrplot(meth.cor.mtrx,
 
 ##### GEX
 
-```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, GEX \n delta with parallel FC"}
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Correlation within cis-window of 1Mbp, GEX \n delta with parallel FC"}
 corrplot(gex.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",
@@ -241,7 +240,7 @@ venn.rslt$venn.plot
 
 #### Heatmap{.tabset .tabset-fade .tabset-pills}
 
-```{r ad-omics}
+```{r }
 n.top.eqtm <- 200
 
 top.eqtm       <- eqtm.dex.nom.df[CpG_ID %in% venn.rslt$cpgs][1:n.top.eqtm]
@@ -260,7 +259,7 @@ meth.gex.cor.mtrx <- cor(t(meth.gex.sub.df))
 
 ##### CpG & GEX
 
-```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpG and GEX \n delta with parallel FC"}
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Correlation within cis-window of 1Mbp, CpG and GEX \n delta with parallel FC"}
 corrplot(meth.gex.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",
@@ -270,7 +269,7 @@ corrplot(meth.gex.cor.mtrx,
 
 ##### CpG
 
-```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpGs \n delta with parallel FC"}
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Correlation within cis-window of 1Mbp, CpGs \n delta with parallel FC"}
 corrplot(meth.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",
@@ -279,7 +278,7 @@ corrplot(meth.cor.mtrx,
 
 ##### GEX
 
-```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, GEX \n delta with parallel FC"}
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Correlation within cis-window of 1Mbp, GEX \n delta with parallel FC"}
 corrplot(gex.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",
@@ -340,7 +339,7 @@ venn.rslt$venn.plot
 
 #### Heatmap{.tabset .tabset-fade .tabset-pills}
 
-```{r ad-omics}
+```{r }
 n.top.eqtm <- 200
 
 top.eqtm       <- eqtm.dex.nom.df[CpG_ID %in% venn.rslt$cpgs][1:n.top.eqtm]
@@ -359,7 +358,7 @@ meth.gex.cor.mtrx <- cor(t(meth.gex.sub.df))
 
 ##### CpG & GEX
 
-```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpG and GEX \n delta with parallel FC"}
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Correlation within cis-window of 1Mbp, CpG and GEX \n delta with parallel FC"}
 corrplot(meth.gex.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",
@@ -369,7 +368,7 @@ corrplot(meth.gex.cor.mtrx,
 
 ##### CpG
 
-```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, CpGs \n delta with parallel FC"}
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Correlation within cis-window of 1Mbp, CpGs \n delta with parallel FC"}
 corrplot(meth.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",
@@ -378,7 +377,7 @@ corrplot(meth.cor.mtrx,
 
 ##### GEX
 
-```{r out.width = "95%", include = T, eval = T, fig.cap = Correlation within cis-window of 1Mbp, GEX \n delta with parallel FC"}
+```{r out.width = "95%", include = T, eval = T, fig.cap = "Correlation within cis-window of 1Mbp, GEX \n delta with parallel FC"}
 corrplot(gex.cor.mtrx, 
          method = "color", cl.pos = "r", 
          type = "full",

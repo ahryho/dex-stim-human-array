@@ -269,6 +269,7 @@ ProcessGetBoxPlot <- function(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, se
   
   colnames(methyl.beta.veh.df)[1] <- "CpG_ID"
   colnames(methyl.beta.dex.df)[1] <- "CpG_ID"
+  colnames(selected.meqtl)[1]     <- "CpG_ID"
   
   beta.values.dex.df <- GetBetValuesDF(methyl.beta.dex.df, snp.df, selected.meqtl, "dex")
   beta.values.veh.df <- GetBetValuesDF(methyl.beta.veh.df, snp.df, selected.meqtl, "veh")

@@ -52,6 +52,8 @@ registerS3method("knit_print", "data.frame", knit_print.data.frame)
 library(data.table)
 library(dplyr)
 
+library(grid)
+library(gridExtra)
 library(ggplot2)
 library(ggrepel)
 library(scales)
@@ -170,7 +172,7 @@ meqtl.parallel.fc.grp.delta.df   <- fread(paste0(dir.pre, "meqtl_parallel_fc_gr_
 meqtl.opposite.fc.df             <- fread(paste0(dir.pre, "meqtl_opposite_fc_gr_df.csv"))
 ```
 
-### Parallel FC veh meQTLs & veh eQTMs
+### Parallel FC veh & dex meQTLs & veh eQTMs
 
 ```{r eval = T, include = F}
 eqtm.veh.nom.df[["eQTM_ID"]] <- paste(eqtm.veh.nom.df$CpG_ID, eqtm.veh.nom.df$ENSG_ID, sep = "-")
@@ -229,6 +231,50 @@ corrplot(gex.cor.mtrx,
          method = "color", cl.pos = "r", 
          type = "full",
          tl.pos = "n")
+```
+
+#### Examples
+
+```{r include = T, eval = T}
+# paste0("Scatter plot for the independent significant at FDR <= ", fdr.thr, " meQTLs")
+eqtm.id       <- eqtm.veh.nom.df[eQTM_ID %in% top.eqtm$eQTM_ID][fdr_eqtm == min(fdr_eqtm), eQTM_ID]
+selected.eqtm <- eqtm.veh.nom.df[eQTM_ID %in% eqtm.id[1]] # beta == max(beta) cg10186336
+
+selected.meqtl <- meqtl.parallel.fc.grp.veh.dex.df[CpG_ID %in% selected.eqtm$CpG_ID, 
+                                                 .(CpG_ID, SNP, beta, `p-value`, fdr, treatment)] %>% unique()
+
+selected.eqtl <- data.frame(ENSG_ID = selected.eqtm$ENSG_ID, SNP = selected.meqtl$SNP) %>% unique()
+
+data.table(selected.eqtm %>% 
+        dplyr::select(CpG_ID, ENSG_ID, FC = beta_eqtm, t_stat = `t-stat_eqtm`, 
+                      p_val = `p-value_eqtm`, FDR = fdr_eqtm) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+
+data.table(selected.meqtl %>% 
+        dplyr::select(CpG_ID, SNP, FC = beta, 
+                      p_val = `p-value`, FDR = fdr, treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0("Parallel FC: veh x dex: (", selected.meqtl$CpG_ID[1], 
+                     ", ", selected.meqtl$SNP[1], ", ", selected.eqtm$ENSG_ID, ")")
+```
+
+```{r out.width = "95%", include = T, eval = T}
+ScatterPlotGEXvsDNAm(meth.beta.dex.mtrx, meth.beta.veh.mtrx,
+                     gex.dex.mtrx, gex.veh.mtrx,
+                     cpg.id = selected.eqtm$CpG_ID, ensg.id = selected.eqtm$ENSG_ID)
+```
+
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(meth.beta.veh.mtrx, meth.beta.dex.mtrx, snp.mtrx, selected.meqtl[1], fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(gex.veh.mtrx, gex.dex.mtrx, snp.mtrx, selected.eqtl[1,], fdr.thr = 0.05, 
+                  plot.title = plot.title)
 ```
 
 ### Parallel FC delta meQTLs & dex eQTMs
@@ -293,16 +339,16 @@ eqtm.id       <- eqtm.dex.nom.df[eQTM_ID %in% intersect.dex.veh.eqtms][fdr_eqtm 
 selected.eqtm <- eqtm.dex.nom.df[eQTM_ID %in% eqtm.id] # beta == max(beta) cg18193195
 
 selected.meqtl <- meqtl.parallel.fc.grp.delta.df[CpG_ID %in% selected.eqtm$CpG_ID, 
-                                                 .(meQTL_ID, CpG_ID, SNP, beta, `p-value`, fdr, treatment)] %>% unique()
+                                                 .(CpG_ID, SNP, beta, `p-value`, fdr, treatment)] %>% unique()
 
-selected.eqtl <- data.frame(CpG_ID = selected.eqtm$ENSG_ID, SNP = selected.meqtl$SNP) %>% unique()
+selected.eqtl <- data.frame(ENSG_ID = selected.eqtm$ENSG_ID, SNP = selected.meqtl$SNP) %>% unique()
 
-kable(selected.eqtm %>% 
+data.table(selected.eqtm %>% 
         dplyr::select(CpG_ID, ENSG_ID, FC = beta_eqtm, t_stat = `t-stat_eqtm`, 
                       p_val = `p-value_eqtm`, FDR = fdr_eqtm) %>% 
         mutate_if(is.numeric, funs(as.character(signif(., 3)))))
 
-kable(selected.meqtl %>% 
+data.table(selected.meqtl %>% 
         dplyr::select(CpG_ID, SNP, FC = beta, 
                       p_val = `p-value`, FDR = fdr, treatment) %>% 
         mutate_if(is.numeric, funs(as.character(signif(., 3)))))
@@ -335,6 +381,60 @@ ProcessGetBoxPlot(gex.veh.mtrx, gex.dex.mtrx, snp.mtrx, selected.eqtl[1,], fdr.t
 ```{r out.width = "95%", include = T, eval = T, fig.cap = "Number of intersections, CpGs \n opposite FC"}
 venn.rslt <- GetVennPlt(meqtl.df = opposite.fc.grp.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
 venn.rslt$venn.plot
+```
+
+#### Numebr of CpG per GEX
+
+```{r}
+# Number of CpGs per GEX probe
+venn.eqtm.df     <- eqtm.dex.nom.df[CpG_ID %in% venn.rslt$cpgs, .(CpG_ID, ENSG_ID)] 
+num.ensg.per.cpg <- venn.eqtm.df %>% 
+  group_by(CpG_ID) %>% tally()
+
+plot.gex.cnt <- ggplot(num.ensg.per.cpg, aes(n)) + 
+  geom_bar(position = position_dodge()) +
+  stat_count(geom = "text", 
+             aes(label = comma(..count.., accuracy = 1L)),
+             position = position_dodge(1),  vjust = -1, colour = "black", cex = 2) +
+  scale_x_continuous(limits = c(0, max(num.ensg.per.cpg$n) + 5), 
+                     breaks = seq(0, max(num.ensg.per.cpg$n) + 5, 5), 
+                     expand = c(0, 0))
+  theme(
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        axis.text.y = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  labs(title = "Number of GEX probes per CpG", 
+       x = "Number of GEX probes", 
+       y = "")
+
+# Number of GEX probes per CpG
+
+num.cpg.per.gex <- venn.eqtm.df %>% 
+  group_by(ENSG_ID) %>% tally()
+
+plot.cpg.cnt <- ggplot(num.cpg.per.gex, aes(n)) + 
+  geom_bar(position = position_dodge()) +
+  stat_count(geom = "text", 
+             aes(label = comma(..count.., accuracy = 1L)),
+             position = position_dodge(1),  vjust = -1, colour = "black", cex = 2) +
+  theme(
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        axis.text.y = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  labs(title = "Number of CpGs per GEX probe", 
+       x = "Number of CpG sites", 
+       y = "")
+
+plot.gex.cnt
+plot.cpg.cnt
+# grid.arrange(plot.gex.cnt, plot.cpg.cnt, nrow = 1)
+
 ```
 
 #### Heatmap{.tabset .tabset-fade .tabset-pills}
@@ -392,16 +492,16 @@ eqtm.id       <- eqtm.dex.nom.df[eQTM_ID %in% top.eqtm$eQTM_ID][fdr_eqtm == min(
 selected.eqtm <- eqtm.dex.nom.df[eQTM_ID %in% eqtm.id] # beta == max(beta) cg08880347
 
 selected.meqtl <- meqtl.parallel.fc.grp.delta.df[CpG_ID %in% selected.eqtm$CpG_ID, 
-                                                 .(meQTL_ID, CpG_ID, SNP, beta, `p-value`, fdr, treatment)] %>% unique()
+                                                 .(CpG_ID, SNP, beta, `p-value`, fdr, treatment)] %>% unique()
 
-selected.eqtl <- data.frame(CpG_ID = selected.eqtm$ENSG_ID, SNP = selected.meqtl$SNP) %>% unique()
+selected.eqtl <- data.frame(ENSG_ID = selected.eqtm$ENSG_ID, SNP = selected.meqtl$SNP) %>% unique()
 
-kable(selected.eqtm %>% 
+data.table(selected.eqtm %>% 
         dplyr::select(CpG_ID, ENSG_ID, FC = beta_eqtm, t_stat = `t-stat_eqtm`, 
                       p_val = `p-value_eqtm`, FDR = fdr_eqtm) %>% 
         mutate_if(is.numeric, funs(as.character(signif(., 3)))))
 
-kable(selected.meqtl %>% 
+data.table(selected.meqtl %>% 
         dplyr::select(CpG_ID, SNP, FC = beta, 
                       p_val = `p-value`, FDR = fdr, treatment) %>% 
         mutate_if(is.numeric, funs(as.character(signif(., 3)))))

@@ -358,6 +358,56 @@ ScatterPlotGEXvsDNAm <- function(meth.beta.dex.mtrx, meth.beta.veh.mtrx,
     scale_color_manual(values = cbPalette)
 }
 
+HistoPlotCntPerProbes <- function(df){
+  
+  num.ensg.per.cpg <- df %>% 
+    group_by(CpG_ID) %>% tally()
+  
+  plot.gex.cnt <- ggplot(num.ensg.per.cpg, aes(n)) + 
+    geom_bar(position = position_dodge()) +
+    stat_count(geom = "text", 
+               aes(label = comma(..count.., accuracy = 1L)),
+               position = position_dodge(1),  vjust = -1, colour = "black", cex = 2) +
+    scale_x_continuous(limits = c(0, max(num.ensg.per.cpg$n) + 5), 
+                       breaks = seq(0, max(num.ensg.per.cpg$n) + 5, 5), 
+                       expand = c(0, 0)) + 
+    theme(
+      legend.title = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.background = element_blank(),
+      axis.text.y = element_blank(),
+      plot.title = element_text(size = 10),
+      axis.title = element_text(size = 8),
+      axis.ticks.y = element_blank()) +
+    labs(title = "Number of GEX probes per CpG", 
+         x = "Number of GEX probes", 
+         y = "")
+  
+  # Number of GEX probes per CpG
+  
+  num.cpg.per.gex <- venn.eqtm.df %>% 
+    group_by(ENSG_ID) %>% tally()
+  
+  plot.cpg.cnt <- ggplot(num.cpg.per.gex, aes(n)) + 
+    geom_bar(position = position_dodge()) +
+    stat_count(geom = "text", 
+               aes(label = comma(..count.., accuracy = 1L)),
+               position = position_dodge(1),  vjust = -1, colour = "black", cex = 2) +
+    theme(legend.title = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          axis.text.y = element_blank(),
+          plot.title = element_text(size = 10),
+          axis.title = element_text(size = 8),
+          axis.ticks.y = element_blank()) +
+    labs(title = "Number of CpGs per GEX probe", 
+         x = "Number of CpG sites", 
+         y = "")
+  
+  return(list(gex = plot.gex.cnt, cpg  = plot.cpg.cnt))
+}
+
+
 # Take overlaps / non-overlaps
 
 get_all_overlaps <- function(delta_df, dex_df, veh_df){

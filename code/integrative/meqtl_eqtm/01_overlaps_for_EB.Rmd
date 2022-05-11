@@ -91,6 +91,7 @@ meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
 meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
 meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
 
+meqtl.all.full.df <- fread()
 # Load eQTMs
 
 eqtm.veh.nom.fn   <- paste0(out.dir.pre, "eqtms/eqtm_cis_result_veh_beta.csv") 
@@ -110,6 +111,16 @@ eqtm.all.nom.df   <- rbind(eqtm.veh.nom.df, eqtm.dex.nom.df, eqtm.delta.nom.df)
 # public.meqtl.df <- fread("data/public_data/GoDMC_mQTL/assoc_meta_all.csv")
 # public.meqtl.sub.df <- public.meqtl.df[, .(cpg, snp, pval)]
 ```
+
+```{r, include = F, eval = T}
+meqtl.all.full.df <- rbind(meqtl.dex.df[, treatment := "dex"],
+                           meqtl.veh.df[, treatment := "veh"],
+                           meqtl.delta.df[, treatment := "delta"])
+
+meqtl.all.full.df <- meqtl.all.full.df[!is.na(meqtl.all.full.df$FDR),]
+meqtl.all.full.df[["meQTL_ID"]] <- paste(meqtl.all.full.df$SNP, meqtl.all.full.df$CpG_ID, sep = "-")
+```
+
 
 ## Baseline
 
@@ -186,6 +197,74 @@ venn.rslt <- GetVennPlt(meqtl.df = parallel.fc.grp.veh.dex.cpg, eqtm.df = eqtm.v
 venn.rslt$venn.plot
 ```
 
+#### Counts {.tabset .tabset-fade .tabset-pills}
+
+```{r}
+venn.eqtm.df  <- eqtm.veh.nom.df[CpG_ID %in% venn.rslt$cpgs, .(CpG_ID, ENSG_ID)] 
+venn.meqtl.df <- meqtl.parallel.fc.grp.veh.dex.df[CpG_ID %in% venn.rslt$cpgs][, .(meQTL_ID, CpG_ID, SNP)] %>% unique()
+# plots.cnt     <- HistoPlotCntPerProbes(venn.eqtm.df)
+```
+
+```{r}
+print(paste("eQTMs:", nrow(venn.eqtm.df), "meQTLs:", length(venn.meqtl.df$meQTL_ID),
+             "CpGs:", length(unique(venn.meqtl.df$CpG_ID)), "SNPs:", length(unique(venn.meqtl.df$SNP)), 
+             "ENSGs:", length(unique(venn.eqtm.df$ENSG_ID)), sep = " "))
+```
+
+##### Numebr of CpG per GEX 
+
+```{r incldue = F, eval = T}
+ num.ensg.per.cpg <- venn.eqtm.df %>% 
+    group_by(CpG_ID) %>% tally()
+  
+ plot.gex.cnt <- ggplot(num.ensg.per.cpg, aes(n)) + 
+    geom_bar(position = position_dodge()) +
+    scale_x_continuous(limits = c(0, max(num.ensg.per.cpg$n) + 5), 
+                       breaks = seq(0, max(num.ensg.per.cpg$n) + 5, 10), 
+                       expand = c(0, 0)) + 
+    theme(
+      legend.title = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.background = element_blank(),
+      axis.text.y = element_blank(),
+      plot.title = element_text(size = 10),
+      axis.title = element_text(size = 8),
+      axis.ticks.y = element_blank()) +
+    labs(title = "Number of GEX probes per CpG", 
+         x = "Number of GEX probes", 
+         y = "")
+```
+
+```{r}
+plot.gex.cnt
+```
+
+##### Numebr of GEX per CpG 
+
+```{r include = F, eval = T}
+ num.cpg.per.gex <- venn.eqtm.df %>% 
+    group_by(ENSG_ID) %>% tally()
+  
+ plot.cpg.cnt <- ggplot(num.cpg.per.gex, aes(n)) + 
+    geom_bar(position = position_dodge()) +
+    scale_x_continuous(limits = c(0, max(num.ensg.per.cpg$n) + 5), 
+                       breaks = seq(0, max(num.ensg.per.cpg$n) + 5, 10), 
+                       expand = c(0, 0)) + 
+    theme(legend.title = element_blank(),
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          axis.text.y = element_blank(),
+          plot.title = element_text(size = 10),
+          axis.title = element_text(size = 8),
+          axis.ticks.y = element_blank()) +
+    labs(title = "Number of CpGs per GEX probe", 
+         x = "Number of CpG sites", 
+         y = "")
+```
+
+```{r}
+plot.cpg.cnt
+```
 #### Heatmap{.tabset .tabset-fade .tabset-pills}
 
 ```{r }
@@ -262,6 +341,11 @@ plot.title <- paste0("Parallel FC: veh x dex: (", selected.meqtl$CpG_ID[1],
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+
+```{r out.width = "95%", include = T, eval = T}
 ScatterPlotGEXvsDNAm(meth.beta.dex.mtrx, meth.beta.veh.mtrx,
                      gex.dex.mtrx, gex.veh.mtrx,
                      cpg.id = selected.eqtm$CpG_ID, ensg.id = selected.eqtm$ENSG_ID)
@@ -283,6 +367,33 @@ ProcessGetBoxPlot(gex.veh.mtrx, gex.dex.mtrx, snp.mtrx, selected.eqtl[1,], fdr.t
 venn.rslt <- GetVennPlt(meqtl.df = parallel.fc.grp.delta.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
 venn.rslt$venn.plot
 ```
+
+#### Counts {.tabset .tabset-fade .tabset-pills}
+
+```{r}
+venn.eqtm.df  <- eqtm.dex.nom.df[CpG_ID %in% venn.rslt$cpgs, .(CpG_ID, ENSG_ID)] 
+venn.meqtl.df <- meqtl.parallel.fc.grp.delta.df[CpG_ID %in% venn.rslt$cpgs][, .(meQTL_ID, CpG_ID, SNP)] %>% unique()
+plots.cnt     <- HistoPlotCntPerProbes(venn.eqtm.df)
+```
+
+```{r}
+print(paste("eQTMs:", nrow(venn.eqtm.df), "meQTLs:", length(venn.meqtl.df$meQTL_ID),
+             "CpGs:", length(unique(venn.meqtl.df$CpG_ID)), "SNPs:", unique(length(venn.meqtl.df$SNP)), 
+             "ENSGs:", length(unique(venn.eqtm.df$ENSG_ID)), sep = " "))
+```
+
+##### Numebr of CpG per GEX 
+
+```{r}
+plots.cnt$cpg
+```
+
+##### Numebr of GEX per CpG 
+
+```{r}
+plots.cnt$gex
+```
+
 
 #### Heatmap{.tabset .tabset-fade .tabset-pills}
 
@@ -383,59 +494,30 @@ venn.rslt <- GetVennPlt(meqtl.df = opposite.fc.grp.cpg, eqtm.df = eqtm.dex.nom.d
 venn.rslt$venn.plot
 ```
 
-#### Numebr of CpG per GEX
+#### Counts {.tabset .tabset-fade .tabset-pills}
 
 ```{r}
-# Number of CpGs per GEX probe
-venn.eqtm.df     <- eqtm.dex.nom.df[CpG_ID %in% venn.rslt$cpgs, .(CpG_ID, ENSG_ID)] 
-num.ensg.per.cpg <- venn.eqtm.df %>% 
-  group_by(CpG_ID) %>% tally()
+venn.eqtm.df  <- eqtm.dex.nom.df[CpG_ID %in% venn.rslt$cpgs, .(CpG_ID, ENSG_ID)] 
+venn.meqtl.df <- meqtl.opposite.fc.df[CpG_ID %in% venn.rslt$cpgs][, .(meQTL_ID, CpG_ID, SNP)] %>% unique()
+plots.cnt     <- HistoPlotCntPerProbes(venn.eqtm.df)
+```
 
-plot.gex.cnt <- ggplot(num.ensg.per.cpg, aes(n)) + 
-  geom_bar(position = position_dodge()) +
-  stat_count(geom = "text", 
-             aes(label = comma(..count.., accuracy = 1L)),
-             position = position_dodge(1),  vjust = -1, colour = "black", cex = 2) +
-  scale_x_continuous(limits = c(0, max(num.ensg.per.cpg$n) + 5), 
-                     breaks = seq(0, max(num.ensg.per.cpg$n) + 5, 5), 
-                     expand = c(0, 0)) + 
-  theme(
-        legend.title = element_blank(),
-        panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        axis.text.y = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8),
-        axis.ticks.y = element_blank()) +
-  labs(title = "Number of GEX probes per CpG", 
-       x = "Number of GEX probes", 
-       y = "")
+```{r}
+print(paste("eQTMs:", nrow(venn.eqtm.df), "meQTLs:", length(venn.meqtl.df$meQTL_ID),
+             "CpGs:", length(unique(venn.meqtl.df$CpG_ID)), "SNPs:", length(unique(venn.meqtl.df$SNP)), 
+             "ENSGs:", length(unique(venn.eqtm.df$ENSG_ID)), sep = " "))
+```
 
-# Number of GEX probes per CpG
+##### Numebr of CpG per GEX 
 
-num.cpg.per.gex <- venn.eqtm.df %>% 
-  group_by(ENSG_ID) %>% tally()
+```{r}
+plots.cnt$cpg
+```
 
-plot.cpg.cnt <- ggplot(num.cpg.per.gex, aes(n)) + 
-  geom_bar(position = position_dodge()) +
-  stat_count(geom = "text", 
-             aes(label = comma(..count.., accuracy = 1L)),
-             position = position_dodge(1),  vjust = -1, colour = "black", cex = 2) +
-  theme(legend.title = element_blank(),
-        panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        axis.text.y = element_blank(),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8),
-        axis.ticks.y = element_blank()) +
-  labs(title = "Number of CpGs per GEX probe", 
-       x = "Number of CpG sites", 
-       y = "")
+##### Numebr of GEX per CpG 
 
-plot.gex.cnt
-plot.cpg.cnt
-# grid.arrange(plot.gex.cnt, plot.cpg.cnt, nrow = 1)
-
+```{r}
+plots.cnt$gex
 ```
 
 #### Heatmap{.tabset .tabset-fade .tabset-pills}

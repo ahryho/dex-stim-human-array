@@ -62,21 +62,12 @@ source("code/integrative/util.R")
 
 # mqtl_data <- fromJSON("http://api.godmc.org.uk/v0.1/assoc_meta/cpg/cg17242362", simplifyVector = FALSE)
  
-public.meqtl.df <- fread("data/public_data/GoDMC_mQTL/assoc_meta_all.csv")
-public.meqtl.cis.sub.df <- public.meqtl.df[cistrans == T, .(cpg, snp, pval)] # 71'616'458
-public.meqtl.cis.sub.df[["meQTL_ID"]] <- paste(public.meqtl.cis.sub.df$cpg, public.meqtl.cis.sub.df$snp, sep = "-")
-
-fwrite(public.meqtl.cis.sub.df, 
-       "data/public_data/GoDMC_mQTL/assoc_meta_cis_meqtl.csv",
-       quote = F, row.names = F, sep = ";")
-
-fwrite(x = as.data.frame(public.meqtl.cis.sub.df$meQTL_ID), 
-       "data/public_data/GoDMC_mQTL/assoc_meta_cis_meqtl_lst.csv",
-       quote = F, row.names = F, sep = ";")
+public.meqtl.df <- fread("data/public_data/GoDMC_mQTL/assoc_meta_all.csv", select = c("cpg", "snp", "pval", "beta_a1", "cistrans"))
+public.meqtl.cis.sub.df <- public.meqtl.df[cistrans == T] # 71'616'458
 ```
 
 ```{r load-public-meqtls, eval = T}
-public.meqtl.cis.sub.df <- fread("data/public_data/GoDMC_mQTL/assoc_meta_cis_meqtl.csv")
+public.meqtl.cis.sub.interest.df <- fread("data/public_data/GoDMC_mQTL/assoc_meta_cis_meqtl.csv")
   # fread("data/public_data/GoDMC_mQTL/assoc_meta_cis_meqtl_lst.csv")
 ```
 
@@ -84,15 +75,16 @@ public.meqtl.cis.sub.df <- fread("data/public_data/GoDMC_mQTL/assoc_meta_cis_meq
 col.names    <- c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "FDR")
 meqtl.veh.df <- fread("output/data/integrative/matrixEQTL/meqtls/me-eqtl_cis_results_06122021/me-qtl_cis_result_veh_fdr_005.csv", col.names = col.names) 
 
-meqtl.veh.nom.df <- fread("output/data/integrative/matrixEQTL/meqtls/me-eqtl_cis_results_06122021/me-qtl_cis_result_veh.csv", col.names = col.names) 
+# meqtl.veh.nom.df <- fread("output/data/integrative/matrixEQTL/meqtls/me-eqtl_cis_results_06122021/me-qtl_cis_result_veh.csv", col.names = col.names) 
 ```
 
 ```{r load-dnam-veh}
 methyl.beta.mtrx <- LoadMethylBeta("veh")
 all.veh.cpgs     <- methyl.beta.mtrx$CpG_ID
+rm(methyl.beta.mtrx)
 ```
 
-```{r load-snp-data, eval = F}
+```{r load-snp-data}
 # Genotype data
 
 snp.loc.df <- fread("data/integrative/matrixEQTL/snp_locations.csv")
@@ -103,48 +95,95 @@ dim(snp.loc.df)
 snp.loc.df[["SNP_ID"]] <- paste0("chr", snp.loc.df$chr, ":", snp.loc.df$pos, ":", "SNP")
 ```
 
-# Join baseline meQTL db with SNP ID
-```{r}
-meqtl.veh.df  <- left_join(meqtl.veh.df, snp.loc.df)
-meqtl.veh.lst <- paste(meqtl.veh.df$CpG_ID, meqtl.veh.df$SNP_ID, sep = "-") # 6'944'026
-meqtl.veh.lst
-```
-
-# Overlap at meQTL level: significant meQTLs @ FDR <= 0.05
-
-```{r}
-(intersect.meqtls <- intersect(meqtl.veh.lst, public.meqtl.cis.sub.df$meQTL_ID)) # 2'851'678
-
-length(intersect.meqtls) / length(meqtl.veh.lst) # 41.1 %
-```
-
 # Overlap at meCpG level: significant meQTLs @ FDR <= 0.05
  
 ```{r}
 veh.mecpgs <- meqtl.veh.df$CpG_ID %>% unique() # 137'537
-pub.mecpgs <- public.meqtl.cis.sub.df$cpg %>% unique() # 232'477
+pub.mecpgs <- public.meqtl.cis.sub.interest.df$cpg %>% unique() # 232'477
 
 intersect.all.veh.pub.cpgs <- intersect(all.veh.cpgs, pub.mecpgs) # 203'696
 intersect.mecpgs.fdr       <- intersect(veh.mecpgs, intersect.all.veh.pub.cpgs) #53'891
 
-length(intersect.mecpgs) / length(veh.mecpgs) # 39.18%
-length(intersect.mecpgs) / length(intersect.all.veh.pub.cpgs) # 26.46 %
+length(intersect.mecpgs.fdr) / length(veh.mecpgs) # 39.18%
+length(intersect.mecpgs.fdr) / length(intersect.all.veh.pub.cpgs) # 26.46 %
 ```
 
-# Overlap at meCpG level: nominal significant meQTLs @ p <= 0.05
-```{r}
-veh.nom.mecpgs        <- meqtl.veh.nom.df$CpG_ID %>% unique() # 736'762
-intersect.mecpgs.nom  <- intersect(veh.nom.mecpgs, intersect.all.veh.pub.cpgs) # 202'972
+# Extract public meQTLs with overlapped with baseline CpGs 
 
-length(intersect.mecpgs.nom) / length(intersect.all.veh.pub.cpgs) # 99.64 %
+```{r eval = F}
+public.meqtl.cis.sub.interest.df      <- public.meqtl.cis.sub.df[cpg %in% intersect.all.veh.pub.cpgs, ] # 59'720'788
+
+public.meqtl.cis.sub.interest.df[["meQTL_ID"]] <- paste(public.meqtl.cis.sub.interest.df$cpg, public.meqtl.cis.sub.interest.df$snp, sep = "-")
+
+fwrite(public.meqtl.cis.sub.interest.df, 
+       "data/public_data/GoDMC_mQTL/assoc_meta_cis_meqtl.csv",
+       quote = F, row.names = F, sep = ";")
 ```
 
-# Direction of meQTLs: intersection (veh meQTLs nom; public)
-```{r}
-public.meqtl.nom.intersect.df <- public.meqtl.cis.sub.df[cpg %in% intersect.mecpgs.nom] # 59'400'674
-public.meqtl.nom.intersect.df <- unique(public.meqtl.nom.intersect.df) # 59'400'674
+# Extract baseline meQTLs with overlapped public meQTL CpGs 
 
-veh.meqtl.nom.intersect.df    <-  meqtl.veh.nom.df[CpG_ID %in% intersect.mecpgs.nom] # 38'095'059
-veh.meqtl.nom.intersect.df    <- left_join(veh.meqtl.nom.intersect.df, snp.loc.df)
-veh.meqtl.nom.intersect[["meQTL_ID"]] <- paste(meqtl.veh.df$CpG_ID, meqtl.veh.df$SNP_ID, sep = "-") 
+```{r eval = F}
+meqtl.veh.df      <- meqtl.veh.df[CpG_ID %in% intersect.all.veh.pub.cpgs, ] # 2'985'831
+```
+
+# Join baseline meQTL db with SNP ID
+```{r}
+meqtl.veh.df  <- left_join(meqtl.veh.df, snp.loc.df)
+meqtl.veh.lst <- paste(meqtl.veh.df$CpG_ID, meqtl.veh.df$SNP_ID, sep = "-") #  2'985'831
+rm (snp.loc.df)
+```
+
+# Overlap at meQTL level: significant veh meQTLs @ FDR <= 0.05 and public meQTL @ p-value < 1e-5
+
+```{r}
+intersect.meqtls <- intersect(meqtl.veh.lst, public.meqtl.cis.sub.interest.df$meQTL_ID) # 2'851'678
+
+length(intersect.meqtls) / length(meqtl.veh.lst) # 95.51 %
+```
+
+## Direction of meQTLs: intersection (veh meQTLs; public)
+
+### Prepare data 
+```{r}
+pub.meqtl.intersect.with.veh.df <- public.meqtl.cis.sub.interest.df[meQTL_ID %in% intersect.meqtls]
+
+colnames(pub.meqtl.intersect.with.veh.df) <- c("CpG_ID", "SNP_ID", "p-value_pub", "beta_pub", "cistrans", "meQTL_ID")
+colnames(meqtl.veh.df)                    <- c("rsSNP", "CpG_ID", "beta_veh", "t-stat_veh",  "p-value_veh", "FDR_veh", "CHR_SNP", "POS_SNP", "SNP_ID")
+
+pub.meqtl.intersect.with.veh.df <- left_join(pub.meqtl.intersect.with.veh.df, meqtl.veh.df, by = c("CpG_ID", "SNP_ID")) # 2'851'678 x 13
+```
+
+### Check the FC directions and save results
+
+```{r}
+pub.meqtl.intersect.with.veh.df[, FC_direction := sign(beta_pub * beta_veh)]
+
+fwrite(pub.meqtl.intersect.with.veh.df, 
+       "data/public_data/GoDMC_mQTL/godmc_veh_olap_meqtl_df.csv",
+       quote = F, row.names = F, sep = ";")
+```
+
+```{r}
+fc.dir.tbl <- table(pub.meqtl.intersect.with.veh.df$FC_direction)
+fc.dir.tbl 
+#     -1       1 
+# 2768486   83192
+```
+
+```{r}
+fc.dir.tbl <- table(pub.meqtl.intersect.with.veh.df$FC_direction)
+
+print(paste0("% of meQTLs with opposite allelic durections: ", signif(fc.dir.tbl["-1"] / sum(fc.dir.tbl), 4) * 100, " %")) # 97.08%
+print(paste0("% of meQTLs with parallel allelic durections: ", signif(fc.dir.tbl["1"] / sum(fc.dir.tbl), 4) * 100, " %"))  # 2.92 %
+
+#     -1       1 
+# 2768486   83192
+```
+
+# Overlap at meQTL level: significant veh meQTLs @ FDR <= 0.05 and public meQTL @ p-value < 0.05
+
+```{r}
+pub.meqtl.intersect.with.veh.pubfdr.df <- pub.meqtl.intersect.with.veh.df[`p-value_pub` <= 0.05] # 2'849'887
+
+nrow(pub.meqtl.intersect.with.veh.pubfdr.df) / length(meqtl.veh.lst) # 95.44 %
 ```

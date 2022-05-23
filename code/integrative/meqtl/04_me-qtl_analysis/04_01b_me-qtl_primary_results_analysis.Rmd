@@ -70,12 +70,12 @@ cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7"
 ```
 
 ```{r, include = F, eval = T}
-src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/ensg_locations.csv"
+src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/"
 
 cpg.loc.fn  <- paste0(src.dir.pre, "cpg_locations.csv")
 snp.loc.fn  <- paste0(src.dir.pre, "snp_locations.csv")
-# ensg.loc.fn <- paste0(src.dir.pre, "ensg_locations.csv")
+ensg.loc.fn <- paste0(src.dir.pre, "ensg_locations.csv")
 
 cpg.loc  <- fread(cpg.loc.fn)
 snp.loc  <- fread(snp.loc.fn)

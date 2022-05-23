@@ -3,11 +3,6 @@
 # Load packages
 #
 
-library(ggplot2)
-library(ggpubr)
-library(pracma)
-library(matrixStats)
-
 library(data.table)
 library(dplyr) 
 
@@ -64,7 +59,7 @@ tca.mdl <- tca(
   parallel = T,
   num_cores = round(detectCores() / 2, 0),
   max_iters = 3,
-  log_file = paste0("code/integrative/meqtl/05_cell_type_enrichment/tca_logs/", treatment, "_chr_", chr.i, ".txt"))
+  log_file = paste0("output/data/integrative/cell_type_enrichment/tca_logs/", treatment, "_chr_", chr.i, ".txt"))
 
 out.fn <- paste0("output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_", treatment, "_chr_", chr.i, ".RDS") # "_chr_22.RDS")
 saveRDS(tca.mdl, file = out.fn)

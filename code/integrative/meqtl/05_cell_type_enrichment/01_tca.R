@@ -63,6 +63,3 @@ tca.mdl <- tca(
 
 out.fn <- paste0("output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_", treatment, "_chr_", chr.i, ".RDS") # "_chr_22.RDS")
 saveRDS(tca.mdl, file = out.fn)
-
-
-

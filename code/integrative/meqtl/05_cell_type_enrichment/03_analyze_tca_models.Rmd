@@ -1,0 +1,167 @@
+---
+title: "Cell-type specific enrichment analysis"
+subtitle: Dexamethasone-Stimulated Human Array Project
+output:
+  html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+```{r include = F}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(factoextra)
+library(viridis)
+```
+
+Load groups
+
+```{r}
+setwd("~/bio/code/mpip/dex-stim-human-array/")
+# opposite.fc.df <- fread("output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_opposite_fc_gr_df.csv")
+# 
+# opposite.fc.cpg.ids <- opposite.fc.df$CpG_ID %>% unique()
+# 
+# parallel.fc.delta.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_delta_df.csv")
+# 
+# parallel.fc.veh.dex.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_veh_dex_df.csv")
+
+opposite.fc.cpg.ids     <- fread("output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_opposite_fc_gr_cpg_list.csv")
+parallel.fc.delta.ids   <- fread("output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_delta_cpg_lst.csv")
+parallel.fc.veh.dex.ids <- fread("output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_veh_dex_cpg_lst.csv")
+```
+
+Read TCA models
+
+```{r}
+fn.lst <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment", 
+                      pattern = "*.RDS", full.names = TRUE)
+
+tca.mdl <- lapply(fn.lst[-23], readRDS)
+```
+
+```{r}
+tca.mu.df <- lapply(tca.mdl, function(mdl) mdl$mus_hat)
+tca.mu.df <- do.call(rbind, tca.mu.df) # mean of each BCC type in each CpG
+
+dim(tca.mu.df)
+```
+
+```{r}
+tca.pval.df <- lapply(tca.mdl, function(mdl) mdl$gammas_hat_pvals.joint)
+tca.pval.df <- do.call(rbind, tca.pval.df) # mean of each BCC type in each CpG
+
+dim(tca.pval.df)
+```
+
+Chromosome 22
+
+```{r eval = F}
+tca.mdl.chr.22 <- tca.mdl[[12]]
+
+dim(tca.mdl.chr.22$W)
+dim(tca.mdl.chr.22$mus_hat)
+dim(tca.mdl.chr.22$sigmas_hat)
+dim(tca.mdl.chr.22$tau_hat)
+dim(tca.mdl.chr.22$gammas_hat)
+dim(tca.mdl.chr.22$gammas_hat_pvals)
+dim(tca.mdl.chr.22$gammas_hat_pvals.joint)
+```
+
+```{r}
+tca.opposite.mu.df <- data.frame(tca.mu.df[rownames(tca.mu.df) %in% opposite.fc.cpg.ids$CpG_ID,],
+                                 Model = "opposite_fc")
+
+head(tca.opposite.mu.df)
+summary(tca.opposite.mu.df)
+```
+```{r}
+tca.parallel.delta.mu.df <- data.frame(tca.mu.df[rownames(tca.mu.df) %in% parallel.fc.delta.ids$CpG_ID,],
+                                       Model = "parallel_fc_delta")
+
+head(tca.parallel.delta.mu.df)
+summary(tca.parallel.delta.mu.df)
+```
+
+```{r}
+tca.parallel.veh.dex.mu.df <- data.frame(tca.mu.df[rownames(tca.mu.df) %in% parallel.fc.veh.dex.ids$CpG_ID,],
+                                         Model = "parallel_fc_veh_dex")
+
+head(tca.parallel.veh.dex.mu.df)
+summary(tca.parallel.veh.dex.mu.df)
+```
+
+
+```{r  out.width = "95%", fig.cap = "Box-plots showing distribution of estimates for the mean of each blood cell type in each CpG", incldue = T, eval = T}
+
+tca.mu.df <- rbind(tca.opposite.mu.df,
+                   tca.parallel.delta.mu.df,
+                   tca.parallel.veh.dex.mu.df)
+
+tca.mu.df[["CpG_ID"]] <- rownames(tca.mu.df)
+
+melt.df   <- tca.mu.df %>% reshape2::melt(id.vars = c("CpG_ID", "Model")) 
+
+ggplot(melt.df, aes(y = value, x = Model, fill = variable)) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha = 0.3, option = "C") +
+  labs(title = " ", y = "Mean estimates", x = " ") + 
+  facet_wrap(~ variable, ncol = 6, nrow = 2) +
+  theme(legend.position = "none", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 25, hjust = 0.5))
+```
+
+```{r boxplot, out.width = "95%", fig.cap = "Box-plots showing distribution of estimates for the mean of each blood cell type in each CpG", incldue = T, eval = T}
+
+ggplot(melt.df[melt.df$Model == "opposite_fc",], aes(y = value, x = variable, fill = variable)) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha = 0.3, option = "C") +
+  labs(title = " ", y = "Mean estimates, opposite FC", x = " ") + 
+  theme(legend.position = "none", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 25, hjust = 0.5))
+```
+
+```{r out.width = "95%", fig.cap = "Box-plots showing distribution of estimates for the mean of each blood cell type in each CpG", incldue = T, eval = T}
+
+ggplot(melt.df[melt.df$Model == "parallel_fc_delta",], aes(y = value, x = variable, fill = variable)) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha = 0.3, option = "C") +
+  labs(title = " ", y = "Mean estimates, parallel FC delta", x = " ") + 
+  theme(legend.position = "none", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 25, hjust = 0.5))
+```
+
+```{r out.width = "95%", fig.cap = "Box-plots showing distribution of estimates for the mean of each blood cell type in each CpG", incldue = T, eval = T}
+
+ggplot(melt.df[melt.df$Model == "parallel_fc_veh_dex",], aes(y = value, x = variable, fill = variable)) +
+  geom_boxplot() +
+  scale_fill_viridis(discrete = TRUE, alpha = 0.3, option = "C") +
+  labs(title = " ", y = "Mean estimates, parallel FC veh + dex", x = " ") + 
+  theme(legend.position = "none", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.title.x = element_blank(),
+        axis.text.x = element_text(angle = 25, hjust = 0.5))
+```

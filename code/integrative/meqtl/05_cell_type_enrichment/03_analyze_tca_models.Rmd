@@ -67,6 +67,9 @@ dim(tca.mdl.chr.22$tau_hat)
 dim(tca.mdl.chr.22$gammas_hat)
 dim(tca.mdl.chr.22$gammas_hat_pvals)
 dim(tca.mdl.chr.22$gammas_hat_pvals.joint)
+
+tca.mdl.chr.22$gammas_hat_pvals[1:10, 1:8]
+tca.mdl.chr.22$gammas_hat_pvals.joint[1:10,]
 ```
 
 ```{r}
@@ -90,6 +93,31 @@ tca.parallel.veh.dex.mu.df <- data.frame(tca.mu.df[rownames(tca.mu.df) %in% para
 
 head(tca.parallel.veh.dex.mu.df)
 summary(tca.parallel.veh.dex.mu.df)
+```
+
+```{r}
+tca.mu.median.df <- aggregate(tca.mu.df[, 1:12], list(tca.mu.df$Model), median)
+head(tca.mu.median.df)
+
+
+melt.df   <- tca.mu.median.df %>% reshape2::melt() 
+colnames(melt.df) <- c("Model", "Type", "value")
+
+ggplot(melt.df, aes(y = value, x = Model, fill = Model)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_fill_viridis(discrete = TRUE, alpha = 0.7, option = "D") +
+  facet_wrap(~ Type, ncol = 12) +
+  labs(title = " ", y = "Median of estimates for the mean of each blood cell type in each CpG", x = " ") + 
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 11),
+        axis.title.x = element_blank(),
+        axis.text.x =  element_blank())
+
+
 ```
 
 

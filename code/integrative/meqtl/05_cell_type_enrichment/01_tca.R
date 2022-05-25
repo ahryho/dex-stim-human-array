@@ -41,7 +41,7 @@ cols   <- colnames(bcc.epidish.rpc.salas)[2:13]
 bcc.df <- data.frame(pheno[, ..cols], row.names = pheno$DNA_ID) # W
 
 cov.lst <- c(
-  "Sex", "Status", "Age", "BMI_D1", "DNAm_SmokingScore",
+  "Sex", "Age", "BMI_D1", "DNAm_SmokingScore",
   "PC1", "PC2")
 
 cov.df <- data.frame(pheno[, ..cov.lst], row.names = pheno$DNA_ID)
@@ -55,11 +55,20 @@ tca.mdl <- tca(
   X = methyl.mtrx,
   W = bcc.df,
   C1 = cov.df,
-  refit_W = T,
+ # refit_W = T,
   parallel = T,
   num_cores = round(detectCores() / 2, 0),
   max_iters = 3,
   log_file = paste0("output/data/integrative/cell_type_enrichment/tca_logs/", treatment, "_chr_", chr.i, ".txt"))
 
+tcareg.mdl <- tcareg(
+  X = methyl.mtrx,
+  tca.mdl = tca.mdl,
+  y =  data.frame(pheno[, Status], row.names = pheno$DNA_ID),
+  C3 = cov.df,
+  test = "joint"
+)
+
+result <- list(tca_mdl = tca.mdl, tcareg_mdl = tcareg.mdl)
 out.fn <- paste0("output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_", treatment, "_chr_", chr.i, ".RDS") # "_chr_22.RDS")
-saveRDS(tca.mdl, file = out.fn)
+saveRDS(result, file = out.fn)

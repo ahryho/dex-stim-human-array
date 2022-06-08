@@ -35,29 +35,74 @@ parallel.fc.veh.dex.ids <- fread("output/data/integrative/matrixEQTL/meqtls/meqt
 Read TCA models
 
 ```{r}
-fn.lst <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/tcareg/cell_type_enrichment/", 
-                      pattern = "*.RDS", full.names = TRUE)
+fn.lst  <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment", 
+                     pattern = "*RDS", full.names = TRUE)
 
-tca.mdl <- lapply(fn.lst[-23], readRDS)
+tca.mdls <- lapply(fn.lst[-3], readRDS)
 ```
 
 ```{r}
+tca.mdl   <- lapply(tca.mdls, function(mdl) mdl$tca_mdl)
 tca.mu.df <- lapply(tca.mdl, function(mdl) mdl$mus_hat)
-tca.mu.df <- do.call(rbind, tca.mu.df) # mean of each BCC type in each CpG
+tca.mu.df <- do.call(rbind, tca.mu.df) %>% data.frame() %>% setDT(keep.rownames = T) # mean of each BCC type in each CpG
 
 dim(tca.mu.df)
 ```
 
 ```{r}
-tca.pval.df <- lapply(tca.mdl, function(mdl) mdl$gammas_hat_pvals.joint)
-tca.pval.df <- do.call(rbind, tca.pval.df) # mean of each BCC type in each CpG
+tcareg.mdl     <- lapply(tca.mdls, function(mdl) mdl$tcareg_mdl)
+tcareg.pval.df <- lapply(tcareg.mdl, function(mdl) mdl$pvals)
+tcareg.pval.df <- do.call(rbind, tcareg.pval.df) %>% data.frame() %>% setDT(keep.rownames = T) # mean of each BCC type in each CpG
 
-dim(tca.pval.df)
+dim(tcareg.pval.df)
+
+head(tcareg.pval.df)
 ```
 
-Chromosome 22
+```{r}
+tcareg.sign.pval.df <- tcareg.pval.df %>% reshape2::melt() %>% setDT()
+colnames(tcareg.sign.pval.df) <- c("CpG_ID", "Type", "pval")
+tcareg.sign.pval.df <- tcareg.sign.pval.df[pval <= 0.05]
 
-```{r eval = F}
+tcareg.sign.pval.df[CpG_ID %in% opposite.fc.cpg.ids$CpG_ID, Model := "opposite_fc"]
+tcareg.sign.pval.df[CpG_ID %in% parallel.fc.delta.ids$CpG_ID, Model := "parallel_fc_delta"]
+tcareg.sign.pval.df[CpG_ID %in% parallel.fc.veh.dex.ids$CpG_ID, Model := "parallel_fc_veh_dex"]
+
+tcareg.sign.pval.df <- na.omit(tcareg.sign.pval.df)
+
+tca.mu.sign.df <- tca.mu.df[rn %in% tcareg.sign.pval.df$CpG_ID]
+tca.mu.sign.df <- tca.mu.sign.df %>% reshape2::melt() 
+colnames(tca.mu.sign.df) <- c("CpG_ID", "Type", "tca_mu_val")
+
+tca.sign.mu.pval.df <- left_join(tcareg.sign.pval.df, tca.mu.sign.df)
+
+dim(tca.sign.mu.pval.df)
+head(tca.sign.mu.pval.df)
+```
+
+```{r}
+tca.sign.mu.median.df <- aggregate(tca_mu_val ~ Model + Type, tca.sign.mu.pval.df, median)
+(tca.sign.mu.median.df)
+
+ggplot(tca.sign.mu.median.df, aes(y = tca_mu_val, x = Model, fill = Model)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_fill_viridis(discrete = TRUE, alpha = 0.7, option = "D") +
+  facet_wrap(~ Type, ncol = 12) +
+  labs(title = " ", y = "Median of estimates for the mean of each blood cell type in each CpG", x = " ") + 
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 11),
+        axis.title.x = element_blank(),
+        axis.text.x =  element_blank())
+```
+
+```{r eval = F, include = F}
+
+# Chromosome 22
+
 tca.mdl.chr.22 <- tca.mdl[[12]]
 
 dim(tca.mdl.chr.22$tca_mdl$gammas_hat_pvals)
@@ -74,7 +119,26 @@ tca.mdl.chr.22$gammas_hat_pvals[1:10, 1:8]
 tca.mdl.chr.22$gammas_hat_pvals.joint[1:10,]
 ```
 
-```{r}
+```{r eval = F, include = F}
+# Chromosome 22
+
+tca.mdl.chr.22 <- tca.mdl[[12]]
+
+head(tca.mdl.chr.22$tcareg_mdl$
+
+dim(tca.mdl.chr.22$W)
+dim(tca.mdl.chr.22$mus_hat)
+dim(tca.mdl.chr.22$sigmas_hat)
+dim(tca.mdl.chr.22$tau_hat)
+dim(tca.mdl.chr.22$gammas_hat)
+dim(tca.mdl.chr.22$gammas_hat_pvals)
+dim(tca.mdl.chr.22$gammas_hat_pvals.joint)
+
+tca.mdl.chr.22$gammas_hat_pvals[1:10, 1:8]
+tca.mdl.chr.22$gammas_hat_pvals.joint[1:10,]
+```
+
+```{r eval = F}
 x <- lapply(tca.mdl, function(mdl){
   pval.joint <- mdl$gammas_hat_pvals.joint[, "Age"]
   pvals.marg_cond <- mdl$gammas_hat_pvals[, paste(colnames(mdl$W), ".Age", sep = "")]
@@ -106,9 +170,15 @@ summary(tca.parallel.veh.dex.mu.df)
 ```
 
 ```{r}
+tca.mu.df <- rbind(tca.opposite.mu.df,
+                   tca.parallel.delta.mu.df,
+                   tca.parallel.veh.dex.mu.df)
+
+tca.mu.df[["CpG_ID"]] <- rownames(tca.mu.df)
+
+
 tca.mu.median.df <- aggregate(tca.mu.df[, 1:12], list(tca.mu.df$Model), median)
 head(tca.mu.median.df)
-
 
 melt.df   <- tca.mu.median.df %>% reshape2::melt() 
 colnames(melt.df) <- c("Model", "Type", "value")
@@ -126,8 +196,6 @@ ggplot(melt.df, aes(y = value, x = Model, fill = Model)) +
         axis.title = element_text(size = 11),
         axis.title.x = element_blank(),
         axis.text.x =  element_blank())
-
-
 ```
 
 

@@ -66,7 +66,10 @@ tcareg.mdl <- tcareg(
   tca.mdl = tca.mdl,
   y =  data.frame(pheno[, Status], row.names = pheno$DNA_ID),
   C3 = cov.df,
-  test = "joint"
+  test = "marginal_conditional",
+  fast_mode = T,
+  parallel = T,
+  num_cores = round(detectCores() / 2, 0),
 )
 
 result <- list(tca_mdl = tca.mdl, tcareg_mdl = tcareg.mdl)

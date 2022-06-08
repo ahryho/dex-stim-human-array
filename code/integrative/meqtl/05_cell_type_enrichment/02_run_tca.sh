@@ -4,7 +4,7 @@
 #SBATCH --output=err_out/tca_%A_%a.out
 #SBATCH --error=err_out/tca_%A_%a.err
 #SBATCH --mem-per-cpu=100Gb 
-#SBATCH --array=3-4%2    # Submit 20 tasks. Run max 20 concurrently
+#SBATCH --array=2-22%22    # Submit 20 tasks. Run max 20 concurrently
 #SBATCH --part=pe,hp
 #SBATCH --exclude=pe9
 

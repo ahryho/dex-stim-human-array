@@ -35,7 +35,7 @@ parallel.fc.veh.dex.ids <- fread("output/data/integrative/matrixEQTL/meqtls/meqt
 Read TCA models
 
 ```{r}
-fn.lst <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment", 
+fn.lst <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/tcareg/cell_type_enrichment/", 
                       pattern = "*.RDS", full.names = TRUE)
 
 tca.mdl <- lapply(fn.lst[-23], readRDS)
@@ -60,6 +60,8 @@ Chromosome 22
 ```{r eval = F}
 tca.mdl.chr.22 <- tca.mdl[[12]]
 
+dim(tca.mdl.chr.22$tca_mdl$gammas_hat_pvals)
+
 dim(tca.mdl.chr.22$W)
 dim(tca.mdl.chr.22$mus_hat)
 dim(tca.mdl.chr.22$sigmas_hat)
@@ -70,6 +72,14 @@ dim(tca.mdl.chr.22$gammas_hat_pvals.joint)
 
 tca.mdl.chr.22$gammas_hat_pvals[1:10, 1:8]
 tca.mdl.chr.22$gammas_hat_pvals.joint[1:10,]
+```
+
+```{r}
+x <- lapply(tca.mdl, function(mdl){
+  pval.joint <- mdl$gammas_hat_pvals.joint[, "Age"]
+  pvals.marg_cond <- mdl$gammas_hat_pvals[, paste(colnames(mdl$W), ".Age", sep = "")]
+  hits.joint <- names(which(pval.joint < 0.05/nrow(mdl$X)))
+})
 ```
 
 ```{r}

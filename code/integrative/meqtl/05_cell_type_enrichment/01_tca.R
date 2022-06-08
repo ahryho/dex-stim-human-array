@@ -55,7 +55,7 @@ tca.mdl <- tca(
   X = methyl.mtrx,
   W = bcc.df,
   C1 = cov.df,
-  refit_W = T,
+  # refit_W = T,
   parallel = T,
   num_cores = round(detectCores() / 2, 0),
   max_iters = 3,

@@ -38,7 +38,7 @@ Read TCA models
 fn.lst  <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment", 
                      pattern = "*RDS", full.names = TRUE)
 
-tca.mdls <- lapply(fn.lst[-3], readRDS)
+tca.mdls <- lapply(fn.lst[-23], readRDS)
 ```
 
 ```{r}
@@ -82,7 +82,7 @@ head(tca.sign.mu.pval.df)
 
 ```{r}
 tca.sign.mu.median.df <- aggregate(tca_mu_val ~ Model + Type, tca.sign.mu.pval.df, median)
-(tca.sign.mu.median.df)
+# (tca.sign.mu.median.df)
 
 ggplot(tca.sign.mu.median.df, aes(y = tca_mu_val, x = Model, fill = Model)) +
   geom_bar(stat = "identity", position = position_dodge()) +

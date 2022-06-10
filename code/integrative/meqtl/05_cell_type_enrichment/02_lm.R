@@ -46,6 +46,7 @@ cov.df <- cbind(bcc.df[, -1], pheno[, c("Sex", "Age", "BMI_D1", "Status", "DNAm_
 
 # 2. Making sure about samples in the same order for all dfs
 
+samples.ids <- as.character(pheno$DNA_ID)
 table(colnames(beta.mtrx) %in% samples.ids)
 all(samples.ids == colnames(beta.mtrx))
 

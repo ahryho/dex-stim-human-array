@@ -19,6 +19,7 @@ setwd("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/")
 args            <- commandArgs(T)
 treatment       <- as.character(args[1])
 chr.i           <- as.character(args[2])
+tca.reg         <- as.character(args[3])
 # methyl.mtrx.fn  <- as.character(args[3])
 # out.fn          <- as.character(args[4])
 
@@ -44,6 +45,8 @@ cov.lst <- c(
   "Sex", "Age", "BMI_D1", "DNAm_SmokingScore",
   "PC1", "PC2")
 
+if (tca.reg == F) cov.lst <- c(cov.lst, "Status")
+
 cov.df <- data.frame(pheno[, ..cov.lst], row.names = pheno$DNA_ID)
 
 methyl.mtrx <- data.frame(methyl.mtrx.veh, row.names = methyl.mtrx.veh$CpG_ID) %>% select(-CpG_ID)
@@ -61,17 +64,21 @@ tca.mdl <- tca(
   max_iters = 3,
   log_file = paste0("output/data/integrative/cell_type_enrichment/tca_logs/", treatment, "_chr_", chr.i, ".txt"))
 
-tcareg.mdl <- tcareg(
-  X = methyl.mtrx,
-  tca.mdl = tca.mdl,
-  y =  data.frame(pheno[, Status], row.names = pheno$DNA_ID),
-  C3 = cov.df,
-  test = "marginal_conditional",
-  fast_mode = T,
-  parallel = T,
-  num_cores = round(detectCores() / 2, 0)
-)
+if (tca.reg == F){
+  tcareg.mdl <- NULL} else{
+    tcareg.mdl <- tcareg(
+      X = methyl.mtrx,
+      tca.mdl = tca.mdl,
+      y =  data.frame(pheno[, Status], row.names = pheno$DNA_ID),
+      C3 = cov.df,
+      test = "marginal_conditional",
+      fast_mode = T,
+      parallel = T,
+      num_cores = round(detectCores() / 2, 0)
+    )
+    
+  }
 
 result <- list(tca_mdl = tca.mdl, tcareg_mdl = tcareg.mdl)
-out.fn <- paste0("output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_", treatment, "_chr_", chr.i, ".RDS") # "_chr_22.RDS")
+out.fn <- paste0("output/data/integrative/cell_type_enrichment/", treatment, "/dnam_cell_type_enrichment_", treatment, "_chr_", chr.i, ".RDS") # "_chr_22.RDS")
 saveRDS(result, file = out.fn)

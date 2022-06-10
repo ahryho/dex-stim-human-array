@@ -48,6 +48,7 @@ knit_print.data.frame <- function(x, ...) {
 
 registerS3method("knit_print", "data.frame", knit_print.data.frame)
 
+# load packages
 library(data.table)
 library(dplyr)
 library(ggplot2)

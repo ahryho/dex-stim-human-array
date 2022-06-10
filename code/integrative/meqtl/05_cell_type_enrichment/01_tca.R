@@ -20,11 +20,9 @@ args            <- commandArgs(T)
 treatment       <- as.character(args[1])
 chr.i           <- as.character(args[2])
 tca.reg         <- as.character(args[3])
-# methyl.mtrx.fn  <- as.character(args[3])
-# out.fn          <- as.character(args[4])
 
 # Beta mtrx
-# 
+# ####
 methyl.mtrx.fn  <- paste0("data/methylation/beta_mtrx_by_chrom/methyl_beta_mtrx_", treatment, "_chr_", chr.i, ".csv")
 methyl.mtrx.veh <- fread(methyl.mtrx.fn) 
 

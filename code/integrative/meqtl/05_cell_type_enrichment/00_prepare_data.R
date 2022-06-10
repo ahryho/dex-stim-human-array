@@ -5,7 +5,7 @@ library(dplyr)
 
 setwd("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/")
 
-treatment <- "veh"
+treatment <- "dex"
 
 # Beta mtrx
 # 

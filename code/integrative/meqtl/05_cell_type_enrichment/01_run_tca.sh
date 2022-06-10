@@ -8,10 +8,11 @@
 #SBATCH --part=pe,hp
 #SBATCH --exclude=pe9
 
-if [ $# -ne 2 ]; then
+if [ $# -ne 3 ]; then
     echo "$0: usage: Not enough arguments
           First argument: treatment (veh, dex)
-          Second argument: path to the R Script"
+          Second argument: path to the R Script
+          Third argument: a logical vlue indicating where to use tcareg function 
     exit 1
 fi
 
@@ -19,7 +20,8 @@ module load R
 
 treatment=$1
 r_script=$2
+tca_reg=$3
 
 chr=$SLURM_ARRAY_TASK_ID
 
-Rscript --vanilla $r_script $treatment $chr
+Rscript --vanilla $r_script $treatment $chr $tca_reg

@@ -35,10 +35,10 @@ parallel.fc.veh.dex.ids <- fread("output/data/integrative/matrixEQTL/meqtls/meqt
 Read TCA models
 
 ```{r}
-fn.lst  <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment", 
+fn.lst  <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/veh/", 
                      pattern = "*RDS", full.names = TRUE)
 
-tca.mdls <- lapply(fn.lst[-23], readRDS)
+tca.mdls <- lapply(fn.lst, readRDS)
 ```
 
 ```{r}

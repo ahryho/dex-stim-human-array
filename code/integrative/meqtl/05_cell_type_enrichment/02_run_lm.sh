@@ -21,4 +21,4 @@ out_fn=cell_type_lm_$1.out
 
 sbatch --job-name=$job_name --part=$partition \
   --nodelist=$partition$node --mem=$memory --output=$out_fn \
-  --wrap="Rscript --vanilla /home/ahryhorzhevska/mpip/projects/dex-stim-human-array/code/integrative/meqtl/05_cell_type_enrichment/02_run_lm.R $treatment"
+  --wrap="Rscript --vanilla /home/ahryhorzhevska/mpip/projects/dex-stim-human-array/code/integrative/meqtl/05_cell_type_enrichment/02_lm.R $treatment"

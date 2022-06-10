@@ -12,7 +12,7 @@ if [ $# -ne 3 ]; then
     echo "$0: usage: Not enough arguments
           First argument: treatment (veh, dex)
           Second argument: path to the R Script
-          Third argument: a logical vlue indicating where to use tcareg function 
+          Third argument: a logical vlue indicating where to use tcareg function" 
     exit 1
 fi
 

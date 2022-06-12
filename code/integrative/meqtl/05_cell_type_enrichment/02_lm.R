@@ -59,7 +59,7 @@ registerDoParallel(cl)
 
 # res <- foreach(cpg = 1:3, .combine = rbind) %dopar% {
 res <- foreach(cpg =  1:nrow(beta.mtrx), .combine = rbind) %dopar% {
-  lm.model <- lm(beta.mtrx[cpg, ] ~ ., data = cov.df)
+  lm.model <- lm(beta.mtrx[cpg, ] ~ (. - 1), data = cov.df)
   mdl.coef <- summary(lm.model)$coefficients
   pvals <- sapply(colnames(cov.df), function(x){
     if (x %in% rownames(mdl.coef)){

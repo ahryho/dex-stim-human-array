@@ -1,0 +1,103 @@
+---
+title: "Cell-type specific enrichment analysis"
+subtitle: Dexamethasone-Stimulated Human Array Project
+output:
+  html_notebook
+editor_options: 
+  chunk_output_type: inline
+---
+```{r include = F}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(factoextra)
+library(viridis)
+```
+
+Load groups
+
+```{r}
+setwd("~/bio/code/mpip/dex-stim-human-array/")
+# opposite.fc.df <- fread("output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_opposite_fc_gr_df.csv")
+# 
+# opposite.fc.cpg.ids <- opposite.fc.df$CpG_ID %>% unique()
+# 
+# parallel.fc.delta.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_delta_df.csv")
+# 
+# parallel.fc.veh.dex.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_veh_dex_df.csv")
+
+opposite.fc.cpg.ids     <- fread("output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_opposite_fc_gr_cpg_list.csv")
+parallel.fc.delta.ids   <- fread("output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_delta_cpg_lst.csv")
+parallel.fc.veh.dex.ids <- fread("output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_veh_dex_cpg_lst.csv")
+```
+
+Read TCA models
+
+```{r}
+fn.lst  <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/veh/", 
+                     pattern = "*RDS", full.names = TRUE)
+
+tca.mdls <- lapply(fn.lst, readRDS)
+```
+
+```{r}
+tca.mdl   <- lapply(tca.mdls, function(mdl) mdl$tca_mdl)
+tca.mu.df <- lapply(tca.mdl, function(mdl) mdl$mus_hat)
+tca.mu.df <- do.call(rbind, tca.mu.df) %>% data.frame() %>% setDT(keep.rownames = T) # mean of each BCC type in each CpG
+
+dim(tca.mu.df)
+```
+
+```{r}
+pval.veh.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_pvals_veh.csv"
+pval.veh.df <- fread(pval.veh.fn)
+
+dim(pval.veh.df)
+
+pval.veh.bcc.df <- pval.veh.df[, 1:13]
+
+head(pval.veh.bcc.df)
+```
+
+```{r}
+sign.pval.df <- pval.veh.bcc.df %>% reshape2::melt(measure.vars = colnames(pval.veh.df)[2:13]) %>% setDT()
+colnames(sign.pval.df) <- c("CpG_ID", "Type", "pval")
+sign.pval.df <- sign.pval.df[pval <= 0.05]
+
+sign.pval.df[CpG_ID %in% opposite.fc.cpg.ids$CpG_ID, Model := "opposite_fc"]
+sign.pval.df[CpG_ID %in% parallel.fc.delta.ids$CpG_ID, Model := "parallel_fc_delta"]
+sign.pval.df[CpG_ID %in% parallel.fc.veh.dex.ids$CpG_ID, Model := "parallel_fc_veh_dex"]
+
+sign.pval.df <- na.omit(sign.pval.df)
+
+tca.mu.sign.df <- tca.mu.df[rn %in% sign.pval.df$CpG_ID]
+tca.mu.sign.df <- tca.mu.sign.df %>% reshape2::melt() 
+colnames(tca.mu.sign.df) <- c("CpG_ID", "Type", "tca_mu_val")
+
+sign.pval.df[, Type := paste0("salas.", Type)]
+
+tca.sign.mu.pval.df <- left_join(sign.pval.df, tca.mu.sign.df)
+
+dim(tca.sign.mu.pval.df)
+head(tca.sign.mu.pval.df)
+```
+
+```{r}
+tca.sign.mu.median.df <- aggregate(tca_mu_val ~ Model + Type, tca.sign.mu.pval.df, median)
+# (tca.sign.mu.median.df)
+
+ggplot(tca.sign.mu.median.df, aes(y = tca_mu_val, x = Model, fill = Model)) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  scale_fill_viridis(discrete = TRUE, alpha = 0.7, option = "D") +
+  facet_wrap(~ Type, ncol = 12) +
+  labs(title = " ", y = "Median of estimates for the mean of each blood cell type in each CpG", x = " ") + 
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 11),
+        axis.title.x = element_blank(),
+        axis.text.x =  element_blank())
+```

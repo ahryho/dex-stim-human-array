@@ -29,6 +29,7 @@ beta.mtrx       <- as.matrix(beta.mtrx)
 # Load and prepare pheno data
 
 pheno           <- read.csv2(pheno.fn) #, na.strings = "#N/A") 
+dnam.veh.ids    <- pheno[pheno$Include == 1 & pheno$Group == "veh", "DNAm_ID"]
 pheno           <- pheno[pheno$Include == 1 & pheno$Group == treatment, ]
 
 pheno$Sample_ID         <- as.factor(pheno$Sample_ID)
@@ -41,7 +42,7 @@ pheno$DNAm_SmokingScore <- as.numeric(pheno$DNAm_SmokingScore)
 # BCC
 
 bcc.df <- read.csv2(bcc.fn)
-bcc.df <- bcc.df[match(pheno$DNAm_ID, bcc.df$DNAm_ID,), ] # put in the same order bcc df as pheno df
+bcc.df <- bcc.df[match(dnam.veh.ids, bcc.df$DNAm_ID,), ] # put in the same order bcc df as pheno df
 cov.df <- cbind(bcc.df[, -1], pheno[, c("Sex", "Age", "BMI_D1", "Status", "DNAm_SmokingScore", "PC1", "PC2")])
 
 # 2. Making sure about samples in the same order for all dfs

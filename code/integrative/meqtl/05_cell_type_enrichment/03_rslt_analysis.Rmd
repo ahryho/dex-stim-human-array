@@ -53,13 +53,22 @@ head(pval.veh.bcc.df)
 ```
 
 ```{r}
-sign.pval.df <- pval.veh.bcc.df %>% reshape2::melt(measure.vars = colnames(pval.veh.df)[2:13]) %>% setDT()
-colnames(sign.pval.df) <- c("CpG_ID", "Type", "pval")
-sign.pval.df <- sign.pval.df[pval <= 0.05]
+fdr.bcc.df <- matrix(p.adjust(as.vector(as.matrix(pval.veh.bcc.df[, 2:13])), method='fdr'), 
+                     ncol=12) %>%
+  data.frame()
+
+fdr.bcc.df <- cbind(pval.veh.bcc.df$CpG_ID, fdr.bcc.df)
+colnames(fdr.bcc.df) <- colnames(pval.veh.bcc.df)
+```
+
+```{r}
+sign.pval.df <- fdr.bcc.df %>% reshape2::melt(measure.vars = colnames(fdr.bcc.df)[2:13]) %>% setDT()
+colnames(sign.pval.df) <- c("CpG_ID", "Type", "fdr")
+sign.pval.df <- sign.pval.df[fdr <= 0.05]
 
 sign.pval.df[CpG_ID %in% opposite.fc.cpg.ids$CpG_ID, Model := "opposite_fc"]
 sign.pval.df[CpG_ID %in% parallel.fc.delta.ids$CpG_ID, Model := "parallel_fc_delta"]
-sign.pval.df[CpG_ID %in% parallel.fc.veh.dex.ids$CpG_ID, Model := "parallel_fc_veh_dex"]
+sign.pval.df[CpG_ID %in% parallel.fc.veh.dex.ids$CpG_ID, Model := "parallel_fc_veh_dex"] 
 
 sign.pval.df <- na.omit(sign.pval.df)
 
@@ -123,9 +132,18 @@ head(pval.dex.bcc.df)
 ```
 
 ```{r}
-sign.pval.df <- pval.dex.bcc.df %>% reshape2::melt(measure.vars = colnames(pval.dex.df)[2:13]) %>% setDT()
-colnames(sign.pval.df) <- c("CpG_ID", "Type", "pval")
-sign.pval.df <- sign.pval.df[pval <= 0.05]
+fdr.bcc.df <- matrix(p.adjust(as.vector(as.matrix(pval.dex.bcc.df[, 2:13])), method='fdr'), 
+                     ncol=12) %>%
+  data.frame()
+
+fdr.bcc.df <- cbind(pval.dex.bcc.df$CpG_ID, fdr.bcc.df)
+colnames(fdr.bcc.df) <- colnames(pval.dex.bcc.df)
+```
+
+```{r}
+sign.pval.df <- fdr.bcc.df %>% reshape2::melt(measure.vars = colnames(fdr.bcc.df)[2:13]) %>% setDT()
+colnames(sign.pval.df) <- c("CpG_ID", "Type", "fdr")
+sign.pval.df <- sign.pval.df[fdr <= 0.05]
 
 sign.pval.df[CpG_ID %in% opposite.fc.cpg.ids$CpG_ID, Model := "opposite_fc"]
 sign.pval.df[CpG_ID %in% parallel.fc.delta.ids$CpG_ID, Model := "parallel_fc_delta"]

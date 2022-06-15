@@ -24,23 +24,6 @@ parallel.fc.delta.ids   <- fread("~/bio/code/mpip/dex-stim-human-array/output/da
 parallel.fc.veh.dex.ids <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_veh_dex_cpg_lst.csv")
 ```
 
-Read TCA baseline models
-
-```{r}
-fn.lst  <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/veh/", 
-                     pattern = "*RDS", full.names = TRUE)
-
-tca.mdls <- lapply(fn.lst, readRDS)
-```
-
-```{r}
-tca.mdl   <- lapply(tca.mdls, function(mdl) mdl$tca_mdl)
-tca.mu.df <- lapply(tca.mdl, function(mdl) mdl$mus_hat)
-tca.mu.df <- do.call(rbind, tca.mu.df) %>% data.frame() %>% setDT(keep.rownames = T) # mean of each BCC type in each CpG
-
-dim(tca.mu.df)
-```
-
 ```{r}
 pval.veh.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_pvals_veh.csv"
 pval.veh.df <- fread(pval.veh.fn)
@@ -71,7 +54,89 @@ sign.pval.df[CpG_ID %in% parallel.fc.delta.ids$CpG_ID, Model := "parallel_fc_del
 sign.pval.df[CpG_ID %in% parallel.fc.veh.dex.ids$CpG_ID, Model := "parallel_fc_veh_dex"] 
 
 sign.pval.df <- na.omit(sign.pval.df)
+sign.pval.df
+```
 
+```{r fig.width = 7, fig.height = 4}
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+
+ggplot(sign.pval.df, aes(x = Type, fill = Model)) +
+  facet_wrap(~ Model, nrow = 3, scales = "free") +
+  geom_histogram(stat = "count", alpha = 1, position = "dodge") +
+  #  geom_density(alpha = 0.2, aes(color = Model)) + 
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8), 
+        axis.title = element_text(size = 8)) + 
+  labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types ",
+       x = "Blood cell type", y = "") +
+   scale_fill_brewer(palette = "Paired")
+```
+
+
+```{r fig.width = 7, fig.height = 5}
+ggplot(sign.pval.df, aes(x = Type, group = Model)) + 
+  facet_wrap(~ Model, nrow = 3, scales = "free") +
+  geom_bar(aes(y = ..prop.., fill = Model), 
+           stat = "count",
+          # width = 1,
+           position = position_dodge()) + 
+  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), 
+                y = ..prop..), 
+            stat = "count", vjust = -0.5, position = position_dodge(1), size = 3) + 
+  scale_y_continuous(labels = scales::percent) + 
+  labs(x = "Blood cell type", y = "Frequency", 
+       title = " ") + 
+  theme(legend.title = element_blank(), 
+        legend.position = "bottom", 
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(), 
+        plot.title = element_text(size = 8), 
+        axis.title = element_text(size = 8), 
+        axis.text.x = element_text(angle = 45, hjust = 0.5)) + 
+  scale_fill_manual(values = cbPalette[6:8])
+
+```
+
+```{r}
+ggplot(sign.pval.df, aes(x = Type, group = Model, fill = Model)) + 
+  geom_density(aes(y = ..prop.., color = Model), 
+           stat = "count",
+           alpha = 0.2) + 
+  scale_y_continuous(labels = scales::percent) + 
+  labs(x = "Blood cell type", y = "Frequency", 
+       title = " ") + 
+  theme(legend.title = element_blank(), 
+        legend.position = "bottom", 
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(), 
+        plot.title = element_text(size = 8), 
+        axis.title = element_text(size = 8), 
+        axis.text.x = element_text(angle = 45, hjust = 0.5)) 
+
+```
+
+
+Read TCA baseline models
+
+```{r}
+fn.lst  <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/veh/", 
+                     pattern = "*RDS", full.names = TRUE)
+
+tca.mdls <- lapply(fn.lst, readRDS)
+```
+
+```{r}
+tca.mdl   <- lapply(tca.mdls, function(mdl) mdl$tca_mdl)
+tca.mu.df <- lapply(tca.mdl, function(mdl) mdl$mus_hat)
+tca.mu.df <- do.call(rbind, tca.mu.df) %>% data.frame() %>% setDT(keep.rownames = T) # mean of each BCC type in each CpG
+
+dim(tca.mu.df)
+```
+
+```{r}
 tca.mu.sign.df <- tca.mu.df[rn %in% sign.pval.df$CpG_ID]
 tca.mu.sign.df <- tca.mu.sign.df %>% reshape2::melt() 
 colnames(tca.mu.sign.df) <- c("CpG_ID", "Type", "tca_mu_val")
@@ -181,4 +246,3 @@ ggplot(tca.sign.mu.median.df, aes(y = tca_mu_val, x = Model, fill = Model)) +
         axis.title.x = element_blank(),
         axis.text.x =  element_blank())
 ```
-

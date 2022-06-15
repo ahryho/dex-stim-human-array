@@ -1,0 +1,79 @@
+---
+title: "Over-represenattion analysis"
+subtitle: "Dexamethasone-Stimulated Human Array Project"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+knitr::opts_knit$set(root.dir = "~/bio/code/mpip/dex-stim-human-array/")
+getwd()
+```
+```{r load packages, warning=FALSE, echo=FALSE}
+invisible(library(data.table))
+library(clusterProfiler)
+library(org.Hs.eg.db)
+library(enrichplot)
+```
+
+```{r}
+go.dir      <- "/Users/anastasiia_hry/bio/code/mpip/dex-stim-human-array/data/ora/go/"
+do.dir      <- "/Users/anastasiia_hry/bio/code/mpip/dex-stim-human-array/data/ora/do/"
+pathway.dir <- "/Users/anastasiia_hry/bio/code/mpip/dex-stim-human-array/data/ora/pathway/"
+```
+
+```{r go}
+go.opposite.fc         <- fread(paste0(go.dir, "ora_go_opposite_fc_greater.csv"))
+go.parallel.fc.delta   <- fread(paste0(go.dir, "ora_go_parallel_fc_delta_greater.csv"))
+go.parallel.fc.veh.dex <- fread(paste0(go.dir, "ora_go_parallel_fc_veh_dex_greater.csv"))
+```
+
+```{r}
+go.opposite.fc[..FDR <= 0.05]
+```
+
+```{r}
+go.parallel.fc.delta#[..FDR <= 0.05]
+```
+
+```{r}
+go.parallel.fc.veh.dex#..FDR <= 0.05]
+```
+
+```{r}
+genes.bg <- read.csv2("~/bio/code/mpip/dex-stim-human-array/output/data/gene_expression/02_gene_lists_for_pathway_analysis/ensg_lst_bkgr.csv", header = F)
+```
+
+```{r include = T, eval = F}
+genes.target <- read.csv2("~/bio/code/mpip/dex-stim-human-array/output/data/gene_expression/02_gene_lists_for_pathway_analysis/ensg_lst_opposite_fc_grp.csv", header = F)
+
+ego <- enrichGO(gene          = genes.target$V1,
+                universe      = genes.bg$V1,   
+                OrgDb         = org.Hs.eg.db,
+                keyType       = 'ENSEMBL',
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                minGSSize     = 1,
+                maxGSSize     = 500,
+                pvalueCutoff  = 0.1,
+                qvalueCutoff  = 0.1)
+
+head(ego@result[ego@result$p.adjust <= 0.05, ])
+```
+
+```{r include = T, eval = F}
+genes.target <- read.csv2("~/bio/code/mpip/dex-stim-human-array/output/data/gene_expression/02_gene_lists_for_pathway_analysis/ensg_lst_parallel_fc_grp_veh_dex.csv", header = F)
+
+ego <- enrichGO(gene          = genes.target$V1,
+                universe      = genes.bg$V1,   
+                OrgDb         = org.Hs.eg.db,
+                keyType       = 'ENSEMBL',
+                ont           = "BP",
+                pAdjustMethod = "BH",
+                minGSSize     = 1,
+                maxGSSize     = 500,
+                pvalueCutoff  = 0.1,
+                qvalueCutoff  = 0.1)
+
+head(ego@result[ego@result$p.adjust <= 0.1, ])
+```

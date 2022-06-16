@@ -32,7 +32,7 @@ LoadGenotype <- function(){
 }
 
 LoadOmics <- function(treatment, is.methyl.df = T, is.gex.df = T, is.snp.df = T){
-
+  
   if(is.methyl.df == T) 
     methyl.df <- LoadMethylBeta(treatment)
   
@@ -45,6 +45,41 @@ LoadOmics <- function(treatment, is.methyl.df = T, is.gex.df = T, is.snp.df = T)
   return(methyl.df, gex.df, snp.df)
 }
 
+LoadPheno <- function(treatment = ""){
+  dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/pheno/"
+  df.fn    <- paste0(dir.pre, "pheno_full_for_kimono.csv")
+  
+  print("Loading Phenotype data: \n")
+
+  df      <- read.csv2(df.fn)
+  
+  if (treatment == "") 
+    df <- df[df$Include == 1,] else 
+      df <- df[df$Include == 1 & df$Group == treatment, ]
+  
+  df$Sample_ID         <- as.factor(df$Sample_ID)
+  df$Status            <- as.factor(df$Status)
+  df$Dex               <- as.factor(df$Dex)
+  df$Age               <- as.numeric(df$Age)
+  df$BMI_D1            <- as.numeric(df$BMI_D1)
+  df$PC1               <- as.numeric(df$PC1)
+  df$PC2               <- as.numeric(df$PC2)  
+  df$DNAm_SV1          <- as.numeric(df$DNAm_SV1)
+  df$DNAm_SV2          <- as.numeric(df$DNAm_SV2) 
+  df$DNAm_SV3          <- as.numeric(df$DNAm_SV3) 
+  df$DNAm_SmokingScore <- as.numeric(df$DNAm_SmokingScore)
+  
+  return(df)
+}
+
+LoadBCC <- function(){
+  df.fn    <- "output/data/methylation/dex_stim_array_human_epidish_salas_bcc_rpc.csv"
+  
+  print("Loading Salas BCCs data: \n")
+  df       <- read.csv2(df.fn) 
+  
+  return(df)
+}
 
 GetVennPlt <- function(meqtl.df, eqtm.df, plot.title = NULL, cbPal.col = "#0072B2" ){
   meqtl.cpgs <- meqtl.df$CpG_ID %>% unique()

@@ -1,0 +1,372 @@
+---
+title: "Cell-type specific enrichment analysis"
+subtitle: "Dexamethasone-Stimulated Human Array Project"
+author: 
+  - name: Anastasiia Hryhorzhevska
+    email: anastasiia_hry@psych.mpg.de
+    url: https://github.com/ahryho
+    affiliation: Max Planck Institute of Psychiatry
+    affiliation_url: https://www.psych.mpg.de/2664393/medizinische-genomforschung
+date: "Last compiled on `r format(Sys.time(), '%d %B, %Y')`"
+output:
+  html_document:
+    toc: TRUE
+    toc_float: TRUE
+    df_print: paged
+    css: ../../../style.css
+    code_folding: hide
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r include=FALSE}
+knitr::opts_knit$set(root.dir = '~/bio/code/mpip/dex-stim-human-array/')
+
+options(digits = 4, width = 100, stringsAsFactors = T)
+knitr::opts_chunk$set(echo = TRUE,
+                      tidy.opts = list(width.cutoff = 100),
+                      tidy=TRUE,
+                      fig.pos = "H",
+                      dpi = 200,
+                      warning = FALSE, 
+                      message = FALSE, 
+                      cache = TRUE, 
+                      cache.lazy = FALSE)
+
+# define DT as the standard printing method for data.frame
+library(knitr)
+library(DT)
+
+knit_print.data.frame <- function(x, ...) {
+  knit_print(DT::datatable(x,
+                           filter="top",
+                           rownames = FALSE,
+                           extensions = "FixedColumns",
+                           options = list(
+                             scrollX = TRUE,
+                             pageLength = 5
+                             
+                           )), ...)
+}
+
+registerS3method("knit_print", "data.frame", knit_print.data.frame)
+```
+
+```{r}
+source("code/integrative/util.R")
+```
+
+```{r include=FALSE}
+library(data.table)
+library(dplyr)
+
+library(ggplot2)
+library(corrplot)
+library(factoextra)
+library(viridis)
+```
+
+```{r include = F}
+opposite.fc.cpg.ids     <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_opposite_fc_gr_cpg_list.csv")
+parallel.fc.delta.ids   <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_delta_cpg_lst.csv")
+parallel.fc.veh.dex.ids <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_veh_dex_cpg_lst.csv")
+```
+
+## Baseline
+
+```{r}
+treatment  <- "veh"
+fdr.bcc.df <- fread(paste0("output/data/public_data/Provencal2019_Hipocampal_CpGs/mpip_dnam_cell_type_enrichment_fdr_",                            treatment, ".csv"))
+```
+
+```{r}
+sign.pval.df <- fdr.bcc.df %>% reshape2::melt(measure.vars = colnames(fdr.bcc.df)[2:13]) %>% setDT()
+colnames(sign.pval.df) <- c("CpG_ID", "Type", "fdr")
+sign.pval.df <- sign.pval.df[fdr <= 0.05]
+
+sign.pval.df[CpG_ID %in% opposite.fc.cpg.ids$CpG_ID, Model := "opposite_fc"]
+sign.pval.df[CpG_ID %in% parallel.fc.delta.ids$CpG_ID, Model := "parallel_fc_delta"]
+sign.pval.df[CpG_ID %in% parallel.fc.veh.dex.ids$CpG_ID, Model := "parallel_fc_veh_dex"] 
+
+sign.pval.df <- na.omit(sign.pval.df)
+
+veh.sign.pval.df <- sign.pval.df
+veh.sign.pval.df[["Treatment"]] <- treatment
+```
+
+```{r include = F, fig.width = 7}
+ggplot(sign.pval.df, aes(x = Type, fill = Model)) +
+  facet_wrap(~ Model, nrow = 3, scales = "free") +
+  geom_histogram(stat = "count", alpha = 1, position = "dodge") +
+  #  geom_density(alpha = 0.2, aes(color = Model)) + 
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8), 
+        axis.title = element_text(size = 8)) + 
+  labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
+       x = "Blood cell type", y = "") +
+   scale_fill_brewer(palette = "Dark2")
+```
+
+Read TCA baseline models
+
+```{r}
+tca.mu.df <- fread(paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/1_tca/dnam_cell_type_tca_mu_chr_all_", treatment, ".csv"))
+```
+
+```{r}
+tca.mu.sign.df <- tca.mu.df[rn %in% sign.pval.df$CpG_ID]
+tca.mu.sign.df <- tca.mu.sign.df %>% reshape2::melt() 
+colnames(tca.mu.sign.df) <- c("CpG_ID", "Type", "tca_mu_val")
+
+tca.mu.sign.df$Type <- sub("salas.", "", tca.mu.sign.df$Type)
+tca.sign.mu.pval.df <- left_join(sign.pval.df, tca.mu.sign.df)
+```
+
+```{r}
+tca.sign.mu.median.veh.df <- aggregate(tca_mu_val ~ Model + Type, tca.sign.mu.pval.df, median)
+tca.sign.mu.median.veh.df[["Treatment"]] <- treatment
+```
+
+## DEX 
+
+```{r}
+treatment  <- "dex"
+fdr.bcc.df <- fread(paste0("output/data/public_data/Provencal2019_Hipocampal_CpGs/mpip_dnam_cell_type_enrichment_fdr_",                            treatment, ".csv")) # FDR was calculated only for 442 CpGs 
+```
+
+```{r}
+sign.pval.df <- fdr.bcc.df %>% reshape2::melt(measure.vars = colnames(fdr.bcc.df)[2:13]) %>% setDT() # 5304
+colnames(sign.pval.df) <- c("CpG_ID", "Type", "fdr")
+sign.pval.df <- sign.pval.df[fdr <= 0.05] # 4'212
+
+sign.pval.df[CpG_ID %in% opposite.fc.cpg.ids$CpG_ID, Model := "opposite_fc"]
+sign.pval.df[CpG_ID %in% parallel.fc.delta.ids$CpG_ID, Model := "parallel_fc_delta"]
+sign.pval.df[CpG_ID %in% parallel.fc.veh.dex.ids$CpG_ID, Model := "parallel_fc_veh_dex"] 
+
+sign.pval.df <- na.omit(sign.pval.df)
+
+dex.sign.pval.df <- sign.pval.df
+dex.sign.pval.df[["Treatment"]] <- treatment
+```
+
+Read TCA baseline models
+
+```{r}
+tca.mu.df <- fread(paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/1_tca/dnam_cell_type_tca_mu_chr_all_", treatment, ".csv"))
+```
+
+```{r}
+tca.mu.sign.df <- tca.mu.df[rn %in% sign.pval.df$CpG_ID]
+tca.mu.sign.df <- tca.mu.sign.df %>% reshape2::melt() 
+colnames(tca.mu.sign.df) <- c("CpG_ID", "Type", "tca_mu_val")
+
+tca.mu.sign.df$Type <- sub("salas.", "", tca.mu.sign.df$Type)
+tca.sign.mu.pval.df <- left_join(sign.pval.df, tca.mu.sign.df)
+```
+
+```{r}
+tca.sign.mu.median.dex.df <- aggregate(tca_mu_val ~ Model + Type, tca.sign.mu.pval.df, median)
+tca.sign.mu.median.dex.df[["Treatment"]] <- treatment
+```
+
+## Distribution plots
+
+```{r}
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+```
+
+```{r}
+sign.pval.df <- rbind(veh.sign.pval.df, dex.sign.pval.df)
+```
+
+```{r fig.width = 8}
+# perc.labels <- (table(sign.pval.df$Type) / nrow(fdr.bcc.df)) %>% as.numeric() %>% scales::percent()
+
+ggplot(sign.pval.df, aes(x = Type, fill = Treatment)) +
+  facet_wrap(~ Model, nrow = 3, scales = "free") +
+  geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
+  # geom_text(aes(label =  scales::percent(prop.table(stat(count)))), 
+  geom_text(aes(label = scales::percent(stat(count) / nrow(fdr.bcc.df))), 
+            stat = "count", vjust = -0.5, size = 3, position = position_dodge(width = .9)) + 
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10), 
+        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10)) + 
+  labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
+       x = "", y = "") +
+  scale_fill_manual(values = cbPalette[2:3]) 
+```
+
+```{r}
+ggplot(sign.pval.df, aes(x = Type, group = Treatment, fill = Treatment)) + 
+  geom_density(aes(y = stat(count) / nrow(fdr.bcc.df), color = Treatment), 
+           stat = "count",
+           alpha = 0.2) + 
+  scale_y_continuous(labels = scales::percent) + 
+  labs(x = " ", y = "", 
+       title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types") + 
+  theme(legend.title = element_blank(), 
+        legend.position = "bottom", 
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(), 
+        plot.title = element_text(size = 8), 
+        axis.title = element_text(size = 8), 
+        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+  scale_color_manual(values = cbPalette[2:3]) +
+  scale_fill_manual(values = cbPalette[2:3]) 
+```
+
+```{r fig.width = 7, fig.height = 7}
+tca.sign.mu.median.df <- rbind(tca.sign.mu.median.veh.df, tca.sign.mu.median.dex.df)
+
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+ggplot(tca.sign.mu.median.df, aes(y = tca_mu_val, x = Type, fill = Treatment)) +
+  facet_wrap(~ Model, nrow = 3) +
+  geom_bar(stat = "identity", position = position_dodge()) +
+  labs(title = " ", y = "Median of all estimates for the mean of each blood cell type in each CpG", x = " ") + 
+  theme(legend.position = "bottom", 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 20, hjust = 0.5))+
+  scale_fill_manual(values = cbPalette[2:3]) 
+```
+
+## EpiStress Score
+
+```{r}
+epistress.score.df <- fread("output/data/public_data/Provencal2019_Hipocampal_CpGs/mpip_epistress_score.csv")
+bcc.df             <- LoadBCC()
+pheno              <- LoadPheno()
+pheno              <- pheno[pheno$Dex == 0,]
+
+df <- left_join(left_join(pheno[, c("DNA_ID", "DNAm_ID")], bcc.df), epistress.score.df)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Bas,
+  bf.message = FALSE
+)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Bmem,
+  bf.message = FALSE
+)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Bnv,
+  bf.message = FALSE
+)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD4mem,
+  bf.message = FALSE
+)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD4nv,
+  bf.message = FALSE
+)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD8mem,
+  bf.message = FALSE
+)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD8nv,
+  bf.message = FALSE
+)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Eos,
+  bf.message = FALSE
+)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Mono,
+  bf.message = FALSE
+)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Neu,
+  bf.message = FALSE
+)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = NK,
+  bf.message = FALSE
+)
+```
+
+```{r}
+library(ggstatsplot)
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Treg,
+  bf.message = FALSE
+)
+```

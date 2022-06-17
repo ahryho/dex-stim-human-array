@@ -16,6 +16,10 @@ library(factoextra)
 library(viridis)
 ```
 
+```{r}
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+```
+
 Load groups
 
 ```{r}
@@ -25,14 +29,11 @@ parallel.fc.veh.dex.ids <- fread("~/bio/code/mpip/dex-stim-human-array/output/da
 ```
 
 ```{r}
-pval.veh.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_pvals_veh.csv"
-pval.veh.df <- fread(pval.veh.fn)
+treatment   <- "veh"
 
-dim(pval.veh.df)
+pval.veh.df <- fread(paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_pvals_",treatment, ".csv"))
 
 pval.veh.bcc.df <- pval.veh.df[, 1:13]
-
-head(pval.veh.bcc.df)
 ```
 
 ```{r}
@@ -57,49 +58,61 @@ sign.pval.df <- na.omit(sign.pval.df)
 sign.pval.df
 ```
 
-```{r fig.width = 7, fig.height = 7}
-ggplot(sign.pval.df, aes(x = Type, fill = Model)) +
-  facet_wrap(~ Model, nrow = 3, scales = "free") +
-  geom_histogram(stat = "count", alpha = 1, position = "dodge") +
-  #  geom_density(alpha = 0.2, aes(color = Model)) + 
+```{r}
+veh.sign.pval.df <- sign.pval.df
+veh.sign.pval.df[["Treatment"]] <- treatment
+```
+
+```{r include = F}
+ggplot(sign.pval.df, aes(x = Type)) +
+  geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9), fill = cbPalette[3]) +
+  # geom_text(aes(label =  scales::percent(prop.table(stat(count)))), 
+  # geom_text(aes(label = scales::percent(stat(count) / length(unique(sign.pval.df$CpG_ID)))), 
+  geom_text(aes(label = scales::percent(stat(count) / nrow(fdr.bcc.df))), 
+            stat = "count", vjust = -0.5, size = 3, position = position_dodge(width = .9)) + 
   theme(legend.position = "bottom", # c(0.9, 0.9), 
         legend.title = element_blank(), 
         panel.grid.major = element_blank(), 
         panel.background = element_blank(),
-        plot.title = element_text(size = 8), 
-        axis.title = element_text(size = 8)) + 
+        plot.title = element_text(size = 10), 
+        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 8)) + 
   labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
-       x = "Blood cell type", y = "") +
-   scale_fill_brewer(palette = "Dark2")
+       x = "Blood cell type", y = "")
 ```
 
+```{r fig.width = 7, fig.height = 8}
+sign.pval.df[Model == "opposite_fc", CpG_ID] %>% unique() %>% length()
+sign.pval.df[Model == "parallel_fc_delta", CpG_ID] %>% unique() %>% length()
+sign.pval.df[Model == "parallel_fc_veh_dex", CpG_ID] %>% unique() %>% length()
 
-```{r fig.width = 7, fig.height = 12}
-ggplot(sign.pval.df, aes(x = Type, group = Model)) + 
+stats <- sign.pval.df %>% group_by(Model, Type) %>% count() %>% data.frame() %>% setDT()
+stats[Model == "opposite_fc", percent := scales::percent(n / nrow(opposite.fc.cpg.ids))]
+stats[Model == "parallel_fc_delta", percent := scales::percent(n / nrow(parallel.fc.delta.ids))]
+stats[Model == "parallel_fc_veh_dex", percent := scales::percent(n / nrow(parallel.fc.veh.dex.ids))]
+
+stats %>% 
+  ggplot(aes(x = Type, y = n, fill = Model)) +
+  geom_bar(stat = "identity", alpha = 1, position = "dodge") +
   facet_wrap(~ Model, nrow = 3, scales = "free") +
-  geom_bar(aes(y = ..prop.., fill = Model), 
-           stat = "count",
-          # width = 1,
-           position = position_dodge()) + 
-  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), 
-                y = ..prop..), 
-            stat = "count", vjust = -0.5, position = position_dodge(1), size = 3) + 
-  scale_y_continuous(labels = scales::percent) + 
-  labs(x = "Blood cell type", y = "Frequency", 
-       title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types, %") + 
-  theme(legend.title = element_blank(), 
-        legend.position = "bottom", 
+  geom_text(aes(label = percent), vjust = -0.5, size = 5, position = position_dodge(width = .9)) +
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
         panel.grid.major = element_blank(), 
-        panel.background = element_blank(), 
-        plot.title = element_text(size = 8), 
-        axis.title = element_text(size = 8), 
-        axis.text.x = element_text(angle = 45, hjust = 0.5)) + 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 12), 
+        axis.title = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        strip.text = element_text(size=12)) + 
+  labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
+       x = "Blood cell type", y = "") +
   scale_fill_brewer(palette = "Dark2")
-
 ```
 
 ```{r}
 ggplot(sign.pval.df, aes(x = Type, group = Model, fill = Model)) + 
+  # geom_density(aes(y = stat(count) / nrow(fdr.bcc.df), color = Model),
   geom_density(aes(y = ..prop.., color = Model), 
            stat = "count",
            alpha = 0.2) + 
@@ -115,23 +128,12 @@ ggplot(sign.pval.df, aes(x = Type, group = Model, fill = Model)) +
         axis.text.x = element_text(angle = 0, hjust = 0.5)) +
    scale_fill_brewer(palette = "Dark2") +
    scale_color_brewer(palette = "Dark2")
-
-```
-Read TCA baseline models
-
-```{r}
-fn.lst  <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/veh/", 
-                     pattern = "*RDS", full.names = TRUE)
-
-tca.mdls <- lapply(fn.lst, readRDS)
 ```
 
-```{r}
-tca.mdl   <- lapply(tca.mdls, function(mdl) mdl$tca_mdl)
-tca.mu.df <- lapply(tca.mdl, function(mdl) mdl$mus_hat)
-tca.mu.df <- do.call(rbind, tca.mu.df) %>% data.frame() %>% setDT(keep.rownames = T) # mean of each BCC type in each CpG
+Baseline TCA models
 
-dim(tca.mu.df)
+```{r}
+tca.mu.df <- fread(paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/1_tca/dnam_cell_type_tca_mu_chr_all_", treatment, ".csv"))
 ```
 
 ```{r}
@@ -139,30 +141,23 @@ tca.mu.sign.df <- tca.mu.df[rn %in% sign.pval.df$CpG_ID]
 tca.mu.sign.df <- tca.mu.sign.df %>% reshape2::melt() 
 colnames(tca.mu.sign.df) <- c("CpG_ID", "Type", "tca_mu_val")
 
-sign.pval.df[, Type := paste0("salas.", Type)]
-
+tca.mu.sign.df$Type <- sub("salas.", "", tca.mu.sign.df$Type)
 tca.sign.mu.pval.df <- left_join(sign.pval.df, tca.mu.sign.df)
-
-dim(tca.sign.mu.pval.df)
-head(tca.sign.mu.pval.df)
 ```
 
 ```{r}
 tca.sign.mu.median.veh.df <- aggregate(tca_mu_val ~ Model + Type, tca.sign.mu.pval.df, median)
-tca.sign.mu.median.veh.df[["Treatment"]] <- "veh"
+tca.sign.mu.median.veh.df[["Treatment"]] <- treatment
 ```
 
 DEX 
 
 ```{r}
-pval.dex.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_pvals_dex.csv"
-pval.dex.df <- fread(pval.dex.fn)
+treatment   <- "dex"
 
-dim(pval.dex.df)
+pval.dex.df <- fread(paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_pvals_",treatment, ".csv"))
 
 pval.dex.bcc.df <- pval.dex.df[, 1:13]
-
-head(pval.dex.bcc.df)
 ```
 
 ```{r}
@@ -186,47 +181,40 @@ sign.pval.df[CpG_ID %in% parallel.fc.veh.dex.ids$CpG_ID, Model := "parallel_fc_v
 sign.pval.df <- na.omit(sign.pval.df)
 sign.pval.df
 ```
+```{r}
+dex.sign.pval.df <- sign.pval.df
+dex.sign.pval.df[["Treatment"]] <- treatment
+```
 
-```{r fig.width = 7, fig.height = 7}
-ggplot(sign.pval.df, aes(x = Type, fill = Model)) +
+```{r fig.width = 7, fig.height = 8}
+sign.pval.df[Model == "opposite_fc", CpG_ID] %>% unique() %>% length()
+sign.pval.df[Model == "parallel_fc_delta", CpG_ID] %>% unique() %>% length()
+sign.pval.df[Model == "parallel_fc_veh_dex", CpG_ID] %>% unique() %>% length()
+
+stats <- sign.pval.df %>% group_by(Model, Type) %>% count() %>% data.frame() %>% setDT()
+stats[Model == "opposite_fc", percent := scales::percent(n / nrow(opposite.fc.cpg.ids))]
+stats[Model == "parallel_fc_delta", percent := scales::percent(n / nrow(parallel.fc.delta.ids))]
+stats[Model == "parallel_fc_veh_dex", percent := scales::percent(n / nrow(parallel.fc.veh.dex.ids))]
+
+stats %>% 
+  ggplot(aes(x = Type, y = n, fill = Model)) +
+  geom_bar(stat = "identity", alpha = 1, position = "dodge") +
   facet_wrap(~ Model, nrow = 3, scales = "free") +
-  geom_histogram(stat = "count", alpha = 1, position = "dodge") +
-  #  geom_density(alpha = 0.2, aes(color = Model)) + 
+  geom_text(aes(label = percent), vjust = -0.5, size = 5, position = position_dodge(width = .9)) +
   theme(legend.position = "bottom", # c(0.9, 0.9), 
         legend.title = element_blank(), 
         panel.grid.major = element_blank(), 
         panel.background = element_blank(),
-        plot.title = element_text(size = 8), 
-        axis.title = element_text(size = 8)) + 
+        plot.title = element_text(size = 12), 
+        axis.title = element_text(size = 12),
+        axis.text.x = element_text(size = 12),
+        axis.text.y = element_text(size = 12),
+        strip.text = element_text(size=12)) + 
   labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
        x = "Blood cell type", y = "") +
-   scale_fill_brewer(palette = "Dark2")
-```
-
-
-```{r fig.width = 7, fig.height = 12}
-ggplot(sign.pval.df, aes(x = Type, group = Model)) + 
-  facet_wrap(~ Model, nrow = 3, scales = "free") +
-  geom_bar(aes(y = ..prop.., fill = Model), 
-           stat = "count",
-          # width = 1,
-           position = position_dodge()) + 
-  geom_text(aes(label = scales::percent(..prop.., accuracy = 0.1), 
-                y = ..prop..), 
-            stat = "count", vjust = -0.5, position = position_dodge(1), size = 3) + 
-  scale_y_continuous(labels = scales::percent) + 
-  labs(x = "Blood cell type", y = "Frequency", 
-       title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types, %") + 
-  theme(legend.title = element_blank(), 
-        legend.position = "bottom", 
-        panel.grid.major = element_blank(), 
-        panel.background = element_blank(), 
-        plot.title = element_text(size = 8), 
-        axis.title = element_text(size = 8), 
-        axis.text.x = element_text(angle = 45, hjust = 0.5)) + 
   scale_fill_brewer(palette = "Dark2")
-
 ```
+
 
 ```{r}
 ggplot(sign.pval.df, aes(x = Type, group = Model, fill = Model)) + 
@@ -251,47 +239,23 @@ ggplot(sign.pval.df, aes(x = Type, group = Model, fill = Model)) +
 Read TCA dex models
 
 ```{r}
-fn.lst  <- list.files("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/dex/", 
-                     pattern = "*RDS", full.names = TRUE)
-
-tca.mdls <- lapply(fn.lst, readRDS)
+tca.mu.df <- fread(paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/1_tca/dnam_cell_type_tca_mu_chr_all_", treatment, ".csv"))
 ```
 
 ```{r}
-tca.mdl   <- lapply(tca.mdls, function(mdl) mdl$tca_mdl)
-tca.mu.df <- lapply(tca.mdl, function(mdl) mdl$mus_hat)
-tca.mu.df <- do.call(rbind, tca.mu.df) %>% data.frame() %>% setDT(keep.rownames = T) # mean of each BCC type in each CpG
-
-dim(tca.mu.df)
-```
-
-```{r}
-sign.pval.df <- fdr.bcc.df %>% reshape2::melt(measure.vars = colnames(fdr.bcc.df)[2:13]) %>% setDT()
-colnames(sign.pval.df) <- c("CpG_ID", "Type", "fdr")
-sign.pval.df <- sign.pval.df[fdr <= 0.05]
-
-sign.pval.df[CpG_ID %in% opposite.fc.cpg.ids$CpG_ID, Model := "opposite_fc"]
-sign.pval.df[CpG_ID %in% parallel.fc.delta.ids$CpG_ID, Model := "parallel_fc_delta"]
-sign.pval.df[CpG_ID %in% parallel.fc.veh.dex.ids$CpG_ID, Model := "parallel_fc_veh_dex"]
-
-sign.pval.df <- na.omit(sign.pval.df)
-
 tca.mu.sign.df <- tca.mu.df[rn %in% sign.pval.df$CpG_ID]
 tca.mu.sign.df <- tca.mu.sign.df %>% reshape2::melt() 
 colnames(tca.mu.sign.df) <- c("CpG_ID", "Type", "tca_mu_val")
 
-sign.pval.df[, Type := paste0("salas.", Type)]
-
+tca.mu.sign.df$Type <- sub("salas.", "", tca.mu.sign.df$Type)
 tca.sign.mu.pval.df <- left_join(sign.pval.df, tca.mu.sign.df)
-
-dim(tca.sign.mu.pval.df)
-head(tca.sign.mu.pval.df)
 ```
 
 ```{r}
 tca.sign.mu.median.dex.df <- aggregate(tca_mu_val ~ Model + Type, tca.sign.mu.pval.df, median)
-tca.sign.mu.median.dex.df[["Treatment"]] <- "dex"
+tca.sign.mu.median.dex.df[["Treatment"]] <- treatment
 ```
+
 ```{r fig.width = 7, fig.height = 7}
 tca.sign.mu.median.df <- rbind(tca.sign.mu.median.veh.df, tca.sign.mu.median.dex.df)
 
@@ -308,6 +272,52 @@ ggplot(tca.sign.mu.median.df, aes(y = tca_mu_val, x = Type, fill = Treatment)) +
         plot.title = element_text(size = 10),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(angle = 20, hjust = 0.5))+
+  scale_fill_manual(values = cbPalette[2:3]) 
+```
+
+## Distribution plots for Basleine and Dex together
+
+```{r}
+sign.pval.df <- rbind(veh.sign.pval.df, dex.sign.pval.df)
+```
+
+```{r}
+# perc.labels <- (table(sign.pval.df$Type) / nrow(fdr.bcc.df)) %>% as.numeric() %>% scales::percent()
+
+ggplot(sign.pval.df, aes(x = Type, fill = Treatment)) +
+  geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
+  # geom_text(aes(label =  scales::percent(prop.table(stat(count)))), 
+  # geom_text(aes(label = scales::percent(stat(count) / length(unique(sign.pval.df$CpG_ID)))), 
+  geom_text(aes(label = scales::percent(stat(count) / nrow(fdr.bcc.df), accuracy = 0.01)), 
+            stat = "count", vjust = -0.5, size = 3, position = position_dodge(width = .9)) + 
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10), 
+        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10)) + 
+  labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
+       x = "", y = "") +
+  scale_fill_manual(values = cbPalette[2:3]) 
+```
+
+```{r}
+ggplot(sign.pval.df, aes(x = Type, group = Treatment, fill = Treatment)) + 
+  geom_density(aes(y = stat(count) / nrow(fdr.bcc.df), color = Treatment), 
+           stat = "count",
+           alpha = 0.2) + 
+  scale_y_continuous(labels = scales::percent) + 
+  labs(x = " ", y = "", 
+       title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types") + 
+  theme(legend.title = element_blank(), 
+        legend.position = "bottom", 
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(), 
+        plot.title = element_text(size = 8), 
+        axis.title = element_text(size = 8), 
+        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+  scale_color_manual(values = cbPalette[2:3]) +
   scale_fill_manual(values = cbPalette[2:3]) 
 ```
 

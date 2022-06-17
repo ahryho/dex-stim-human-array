@@ -97,7 +97,7 @@ veh.sign.pval.df[["Treatment"]] <- treatment
 ```{r include = F, fig.width = 7}
 ggplot(sign.pval.df, aes(x = Type, fill = Model)) +
   facet_wrap(~ Model, nrow = 3, scales = "free") +
-  geom_histogram(stat = "count", alpha = 1, position = "dodge") +
+  geom_bar(stat = "count", alpha = 1, position = "dodge") +
   #  geom_density(alpha = 0.2, aes(color = Model)) + 
   theme(legend.position = "bottom", # c(0.9, 0.9), 
         legend.title = element_blank(), 
@@ -189,6 +189,7 @@ ggplot(sign.pval.df, aes(x = Type, fill = Treatment)) +
   facet_wrap(~ Model, nrow = 3, scales = "free") +
   geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
   # geom_text(aes(label =  scales::percent(prop.table(stat(count)))), 
+  # geom_text(aes(label = scales::percent(stat(count) / length(unique(sign.pval.df$CpG_ID)))), 
   geom_text(aes(label = scales::percent(stat(count) / nrow(fdr.bcc.df))), 
             stat = "count", vjust = -0.5, size = 3, position = position_dodge(width = .9)) + 
   theme(legend.position = "bottom", # c(0.9, 0.9), 

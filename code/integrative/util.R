@@ -72,8 +72,10 @@ LoadPheno <- function(treatment = ""){
   return(df)
 }
 
-LoadBCC <- function(){
-  df.fn    <- "output/data/methylation/dex_stim_array_human_epidish_salas_bcc_rpc.csv"
+LoadBCC <- function(is.dex = F){
+  if(is.dex == T)
+    df.fn    <- "output/data/methylation/dex_stim_array_human_epidish_salas_bcc_rpc_dex.csv" else
+      df.fn    <- "output/data/methylation/dex_stim_array_human_epidish_salas_bcc_rpc.csv"
   
   print("Loading Salas BCCs data: \n")
   df       <- read.csv2(df.fn) 

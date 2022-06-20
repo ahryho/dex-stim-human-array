@@ -321,3 +321,10 @@ ggplot(sign.pval.df, aes(x = Type, group = Treatment, fill = Treatment)) +
   scale_fill_manual(values = cbPalette[2:3]) 
 ```
 
+```{r}
+veh.sign.pval.df$CpG_ID %>% unique() %>% length()
+dex.sign.pval.df$CpG_ID %>% unique() %>% length()
+
+olap <- intersect(veh.sign.pval.df$CpG_ID %>% unique(), dex.sign.pval.df$CpG_ID %>% unique())
+```
+

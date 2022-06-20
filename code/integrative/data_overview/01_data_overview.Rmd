@@ -55,6 +55,8 @@ library(ggplot2)
 library(corrplot)
 library(factoextra)
 library(viridis)
+library(janitor)
+library(GenomicFeatures)
 ```
 
 # Introduction
@@ -522,6 +524,122 @@ ggplot(plt.df, aes(x = DNAm_SmokingScore, fill = Status)) +
         plot.title = element_text(size = 10),
         axis.title = element_text(size = 10)) +
   labs(x = "DNAm Elliot Smoking Score", y = "") 
+```
+
+## CpGs distribution accross chromosome {.tabset .tabset-fade .tabset-pills}
+
+```{r incldue = F, eval = T}
+epic.anno.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated.csv"
+dex.anno.df  <- fread(epic.anno.fn)
+
+# Load Groups
+
+opposite.fc.cpg.ids     <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_opposite_fc_gr_cpg_list.csv")
+parallel.fc.delta.ids   <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_delta_cpg_lst.csv")
+parallel.fc.veh.dex.ids <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_veh_dex_cpg_lst.csv")
+```
+
+```{r incldue = F, eval = T}
+chr.length.tbl <- getChromInfoFromUCSC("hg19")[, c(1, 2)] %>% setDT()
+colnames(chr.length.tbl) <- c("chr", "chr_size")
+chr.length.tbl$chr <- as.factor(chr.length.tbl$chr)
+chr.order <- paste("chr", 1:22, sep = "")
+```
+
+### Opposite group
+
+```{r}
+meth <- dex.anno.df[Name %in% opposite.fc.cpg.ids$CpG_ID, .(Name, chr)]
+
+meth$chr  <- factor(meth$chr,levels = chr.order)
+meth      <- left_join(meth, chr.length.tbl)
+
+chr.cpgs.cnt <- tabyl(meth$chr, sort = T)
+colnames(chr.cpgs.cnt) <- c("chr", "cnt_cpg", "freq_cpg")
+
+chr.cpgs.cnt <- left_join(chr.cpgs.cnt, chr.length.tbl, by = "chr")
+chr.cpgs.cnt$chr  <- factor(chr.cpgs.cnt$chr,levels = chr.order)
+chr.cpgs.cnt[["freq_chr"]] <- chr.cpgs.cnt$chr_size / sum(chr.cpgs.cnt$chr_size)
+chr.cpgs.cnt[["cpg_chr_cnt"]] <- chr.cpgs.cnt$cnt_cpg / chr.cpgs.cnt$freq_chr
+chr.cpgs.cnt[["cpg_chr_freq"]] <- chr.cpgs.cnt$cpg_chr_cnt / sum(chr.cpgs.cnt$cpg_chr_cnt)
+
+ggplot(chr.cpgs.cnt, aes(x = chr, y = cpg_chr_freq, fill = chr)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label = scales::percent(cpg_chr_freq, accuracy = 0.1), y = cpg_chr_freq), 
+            stat = "identity", vjust = -.5, size = 3) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "DMPs distribution across the chromosomes wieghted by the chromosomes' length",
+       x = "Chromosome",
+       y = "Relative frequency") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 8),
+         axis.title = element_text(size = 8),
+         axis.text.x = element_text(angle = 20, hjust = 0.5),
+         legend.position = "none")
+```
+
+### Parallel delta
+
+```{r}
+meth <- dex.anno.df[Name %in% parallel.fc.delta.ids$CpG_ID, .(Name, chr)]
+meth$chr  <- factor(meth$chr,levels = chr.order)
+meth      <- left_join(meth, chr.length.tbl)
+
+chr.cpgs.cnt <- tabyl(meth$chr, sort = T)
+colnames(chr.cpgs.cnt) <- c("chr", "cnt_cpg", "freq_cpg")
+
+chr.cpgs.cnt <- left_join(chr.cpgs.cnt, chr.length.tbl, by = "chr")
+chr.cpgs.cnt$chr  <- factor(chr.cpgs.cnt$chr,levels = chr.order)
+chr.cpgs.cnt[["freq_chr"]] <- chr.cpgs.cnt$chr_size / sum(chr.cpgs.cnt$chr_size)
+chr.cpgs.cnt[["cpg_chr_cnt"]] <- chr.cpgs.cnt$cnt_cpg / chr.cpgs.cnt$freq_chr
+chr.cpgs.cnt[["cpg_chr_freq"]] <- chr.cpgs.cnt$cpg_chr_cnt / sum(chr.cpgs.cnt$cpg_chr_cnt)
+
+ggplot(chr.cpgs.cnt, aes(x = chr, y = cpg_chr_freq, fill = chr)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label = scales::percent(cpg_chr_freq, accuracy = 0.1), y = cpg_chr_freq), 
+            stat = "identity", vjust = -.5, size = 3) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "DMPs distribution across the chromosomes wieghted by the chromosomes' length",
+       x = "Chromosome",
+       y = "Relative frequency") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 8),
+         axis.title = element_text(size = 8),
+         axis.text.x = element_text(angle = 20, hjust = 0.5),
+         legend.position = "none")
+
+```
+
+### Parallel veh+dex
+
+```{r out.width = "90%", fig.cap = "DMPs distribution across chromosomes", include = T, eval = T}
+meth <- dex.anno.df[Name %in% parallel.fc.veh.dex.ids$CpG_ID, .(Name, chr)]
+meth$chr  <- factor(meth$chr,levels = chr.order)
+meth      <- left_join(meth, chr.length.tbl)
+
+chr.cpgs.cnt <- tabyl(meth$chr, sort = T)
+colnames(chr.cpgs.cnt) <- c("chr", "cnt_cpg", "freq_cpg")
+
+chr.cpgs.cnt <- left_join(chr.cpgs.cnt, chr.length.tbl, by = "chr")
+chr.cpgs.cnt$chr  <- factor(chr.cpgs.cnt$chr,levels = chr.order)
+chr.cpgs.cnt[["freq_chr"]] <- chr.cpgs.cnt$chr_size / sum(chr.cpgs.cnt$chr_size)
+chr.cpgs.cnt[["cpg_chr_cnt"]] <- chr.cpgs.cnt$cnt_cpg / chr.cpgs.cnt$freq_chr
+chr.cpgs.cnt[["cpg_chr_freq"]] <- chr.cpgs.cnt$cpg_chr_cnt / sum(chr.cpgs.cnt$cpg_chr_cnt)
+
+ggplot(chr.cpgs.cnt, aes(x = chr, y = cpg_chr_freq, fill = chr)) + 
+  geom_bar(stat = "identity", position = position_dodge()) +
+  geom_text(aes(label = scales::percent(cpg_chr_freq, accuracy = 0.1), y = cpg_chr_freq), 
+            stat = "identity", vjust = -.5, size = 3) +
+  scale_y_continuous(labels = scales::percent) +
+  labs(title = "DMPs distribution across the chromosomes wieghted by the chromosomes' length",
+       x = "Chromosome",
+       y = "Relative frequency") +
+  theme( panel.background = element_blank(),
+         plot.title = element_text(size = 8),
+         axis.title = element_text(size = 8),
+         axis.text.x = element_text(angle = 20, hjust = 0.5),
+         legend.position = "none")
+  
 ```
 
 # Gene-expression
@@ -1079,3 +1197,5 @@ ggplot(bcc.melt.df, aes(y = value, x = variable, fill = Status)) +
         axis.title.x = element_blank(),
         axis.text.x = element_text(angle = 25, hjust = 0.5))
 ```
+
+

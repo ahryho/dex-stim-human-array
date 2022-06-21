@@ -171,9 +171,10 @@ GetFulleQTMdf <- function(df, cpg.loc = NULL, ensg.loc = NULL, fdr.thr = 0.05, t
 
 # function for Scatter Plot
 
-GetScatterPlot2 <- function(df, selected.meqtl = NULL, fdr.thr = 0.05, plot.title = NULL){
+GetScatterPlot2 <- function(df, selected.meqtl = NULL, fdr.thr = 0.05, plot.title = NULL, cbPalette = NULL){
   
-  cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+  if (is.integer(cbPalette))
+    cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
   
   ggplot(df, aes(x = beta, y = -log10(fdr), shape = treatment, color = treatment)) +
     geom_vline(xintercept = 0, colour = "#990000", linetype = "dashed") + 

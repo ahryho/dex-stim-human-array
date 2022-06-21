@@ -1,0 +1,682 @@
+***
+# __Significant independent meQTLs by region-wise approach. Visualisation__
+***
+
+```{r, include = F, eval = T}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(ggrepel)
+library(scales)
+library(factoextra)
+library(viridis)
+library(knitr)
+
+source("~/bio/code/mpip/dex-stim-human-array/code/integrative/eqtl/04_me-qtl_analysis/util.R")
+```
+
+```{r eval = F, include = F}
+
+### Independent SNPs
+library(dplyr)
+
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_result_dex_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_result_veh_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_result_delta_fdr_005.csv")
+
+col.names <-  c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
+
+meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
+meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
+meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)
+
+meqtl.delta.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_delta_ind_cpg_snp_associations.txt")
+meqtl.delta.cpg.snp.ass.lst <- fread(meqtl.delta.cpg.snp.ass) 
+
+meqtl.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_veh_ind_cpg_snp_associations.txt")
+meqtl.cpg.snp.ass.lst <- fread(meqtl.cpg.snp.ass, fill = T, header = F, col.names = c("CpG_ID", "SNP")) 
+meqtl.cpg.snp.ass.lst <- meqtl.cpg.snp.ass.lst[ SNP != ""]
+meqtl.cpg.snp.ass.lst <- rbind(meqtl.cpg.snp.ass.lst, meqtl.delta.cpg.snp.ass.lst) %>% unique()
+meqtl.veh.ind.rw.df   <- left_join(meqtl.cpg.snp.ass.lst, meqtl.veh.df)
+
+fwrite(meqtl.veh.ind.rw.df,
+       paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_indp_rw_veh_with_delta_fdr_005.csv"),
+       quote = F, row.names = F, sep = ";")
+
+meqtl.cpg.snp.ass     <- paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_dex_ind_cpg_snp_associations.txt")
+meqtl.cpg.snp.ass.lst <- fread(meqtl.cpg.snp.ass, header = F, col.names = c("CpG_ID", "SNP")) 
+meqtl.cpg.snp.ass.lst <- meqtl.cpg.snp.ass.lst[ SNP != ""]
+meqtl.cpg.snp.ass.lst <- rbind(meqtl.cpg.snp.ass.lst, meqtl.delta.cpg.snp.ass.lst) %>% unique()
+meqtl.dex.ind.rw.df <- left_join(meqtl.cpg.snp.ass.lst, meqtl.dex.df)
+
+fwrite(meqtl.dex.ind.rw.df,
+       paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_indp_rw_dex_with_delta_fdr_005.csv"),
+       quote = F, row.names = F, sep = ";")
+```
+
+```{r include = F, eval = T}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/region_wise_independent_snps/"
+
+# meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_dex_fdr_005.csv")
+# meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_veh_fdr_005.csv")
+# meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_delta_fdr_005.csv")
+
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_dex_with_delta_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_veh_with_delta_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_delta_fdr_005.csv")
+
+col.names <-  c("CpG_ID", "SNP", "beta", "t-stat", "p-value", "fdr")
+
+ind.meqtl.dex.df   <- fread(meqtl.dex.fn)
+ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
+ind.meqtl.delta.df <- fread(meqtl.delta.fn) #, col.names = col.names)
+```
+
+```{r, include = F, eval = T}
+meqtl.all.full.df <- rbind(ind.meqtl.dex.df[, treatment := "dex"],
+                           ind.meqtl.veh.df[, treatment := "veh"],
+                           ind.meqtl.delta.df[, treatment := "delta"])
+
+meqtl.all.full.df <- meqtl.all.full.df[!is.na(meqtl.all.full.df$fdr),]
+meqtl.all.full.df[["meQTL_ID"]] <- paste(meqtl.all.full.df$SNP, meqtl.all.full.df$CpG_ID, sep = "-")
+
+
+```
+
+```{r, include=F, eval=T}
+eqtm.in.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+
+snp.df.fn <- paste0(eqtm.in.pre, "snp_mtrx.csv")
+snp.df    <- fread(snp.df.fn)
+
+methyl.beta.df.fn   <- paste0(eqtm.in.pre, "methyl_beta_mtrx_dex.csv")
+methyl.beta.dex.df  <- fread(methyl.beta.df.fn) 
+
+methyl.beta.df.fn   <- paste0(eqtm.in.pre, "methyl_beta_mtrx_veh.csv")
+methyl.beta.veh.df  <- fread(methyl.beta.df.fn) 
+
+all(colnames(snp.df)[-1] == colnames(methyl.beta.dex.df)[-1])
+all(colnames(snp.df)[-1] == colnames(methyl.beta.veh.df)[-1])
+```
+
+## DELTA: minimum FDR
+***
+
+```{r include = T, eval = T}
+# paste0("Scatter plot for the independent significant at FDR <= ", fdr.thr, " meQTLs")
+meqtl.id       <- meqtl.all.full.df[treatment == "delta"][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID %in% meqtl.id] # beta == max(beta)
+
+kable(selected.meqtl %>% 
+        dplyr::select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant across DELTA meQTLs: ",
+                     "FC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl[1], fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## DELTA: maximum positive FC
+***
+
+```{r include = T, eval = T}
+meqtl.id <-  meqtl.all.full.df[treatment == "delta"][beta == max(beta), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id]
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "meQTL with the maximum FC across DELTA meQTLs: ",
+                     "FC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl[1], fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## DELTA: minimum FC
+***
+
+```{r include = T, eval = T}
+meqtl.id       <- meqtl.all.full.df[treatment == "delta"][beta == min(beta), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id]
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "meQTL with the minimum FC across DELTA meQTLs: ",
+                     "FC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## DELTA: minimum absolute FC
+***
+
+```{r include = T, eval = T}
+meqtl.id       <- meqtl.all.full.df[treatment == "delta"][abs(beta) == min(abs(beta)), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id]
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "meQTL with the minimum absolute FC across DELTA meQTLs: ",
+                     "FC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## DELTA \\\ (VEH + DEX): min FDR
+***
+
+```{r include = T, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+only.delta.meqtls <- setdiff(meqtl.all.full.df[treatment == "delta", meQTL_ID], 
+                             union(meqtl.all.full.df[treatment == "dex", meQTL_ID],
+                                   meqtl.all.full.df[treatment == "veh", meQTL_ID]))
+meqtl.id       <- meqtl.all.full.df[meQTL_ID %in% only.delta.meqtls][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id]
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0("The most significant meQTL across the DELTA meQTLs which don't intersect with eiher VEH or DEX. ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## DEX \\\ (VEH + DELTA): min FDR
+***
+
+```{r include = T, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+only.dex.meqtls <- setdiff(meqtl.all.full.df[treatment == "dex", meQTL_ID], 
+                             union(meqtl.all.full.df[treatment == "delta", meQTL_ID],
+                                   meqtl.all.full.df[treatment == "veh", meQTL_ID]))
+meqtl.id       <- meqtl.all.full.df[meQTL_ID %in% only.dex.meqtls][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id]
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0("The most significant meQTL across the DEX meQTLs which don't intersect with either VEH or DELTA. ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## VEH \\\ (DEX + DELTA): min FDR
+***
+
+```{r include = T, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+only.veh.meqtls <- setdiff(meqtl.all.full.df[treatment == "veh", meQTL_ID], 
+                           union(meqtl.all.full.df[treatment == "delta", meQTL_ID],
+                                 meqtl.all.full.df[treatment == "dex", meQTL_ID]))
+selected.meqtl  <- meqtl.all.full.df[meQTL_ID %in% only.veh.meqtls][fdr == min(fdr)] # beta == max(beta)
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL across the VEH meQTLs which don't intersect with either DELTA or DEX. ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## (DEX + DELTA) \\\ VEH: min FDR
+***
+
+```{r include = F, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+not.veh.meqtls <- setdiff(intersect(meqtl.all.full.df[treatment == "delta", meQTL_ID],
+                                    meqtl.all.full.df[treatment == "dex", meQTL_ID]),
+                          meqtl.all.full.df[treatment == "veh", meQTL_ID])
+```
+
+### min DEX FDR
+***
+
+```{r include = T, eval = T}
+meqtl.id       <- meqtl.all.full.df[meQTL_ID %in% not.veh.meqtls][treatment == "dex"][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id] # beta == max(beta)
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL across the DEX meQTLs which are present in DELTA but not in VEH ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+### min DELTA FDR
+***
+
+```{r include = T, eval = T}
+meqtl.id       <- meqtl.all.full.df[meQTL_ID %in% not.veh.meqtls][treatment == "delta"][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id] # beta == max(beta)
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL across the DELTA meQTLs which are present in DELTA but not in VEH ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## (DEX + VEH) \\\ DELTA: min FDR
+***
+
+```{r include = T, eval = T}
+# summary(meqtl.all.full.df[treatment == "dex"])
+not.delta.meqtls <- setdiff(intersect(meqtl.all.full.df[treatment == "veh", meQTL_ID],
+                                    meqtl.all.full.df[treatment == "dex", meQTL_ID]),
+                          meqtl.all.full.df[treatment == "delta", meQTL_ID])
+```
+
+### min DEX FDR
+***
+
+```{r include = T, eval = T}
+meqtl.id       <- meqtl.all.full.df[meQTL_ID %in% not.delta.meqtls][treatment == "dex"][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id] # beta == max(beta)
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL across the DEX meQTLs which are present in VEH but not in DELTA ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+### min VEH FDR
+***
+
+```{r include = T, eval = T}
+meqtl.id       <- meqtl.all.full.df[meQTL_ID %in% not.delta.meqtls][treatment == "veh"][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id] # beta == max(beta)
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL across the VEH meQTLs which are present in DEX but not in DELTA ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## (VEH + DELTA) \\\ DEX: min FDR
+***
+
+```{r include = T, eval = T}
+not.delta.meqtls <- setdiff(intersect(meqtl.all.full.df[treatment == "veh", meQTL_ID],
+                                    meqtl.all.full.df[treatment == "delta", meQTL_ID]),
+                          meqtl.all.full.df[treatment == "dex", meQTL_ID])
+```
+
+### min VEH FDR
+***
+
+```{r include = T, eval = T}
+meqtl.id       <- meqtl.all.full.df[meQTL_ID %in% not.delta.meqtls][treatment == "veh"][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id] # beta == max(beta)
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL across the VEH meQTLs which are present in DELTA but not in DEX ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+### min DELTA FDR
+***
+
+```{r include = T, eval = T}
+meqtl.id       <- meqtl.all.full.df[meQTL_ID %in% not.delta.meqtls][treatment == "delta"][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id] # beta == max(beta)
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL across the DELTA meQTLs which are present in VEH but not in DEX ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## Maximum absolute FC 
+***
+
+```{r include = T, eval = T}
+meqtl.id       <- meqtl.all.full.df[abs(beta) == max(abs(beta)), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id]
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "meQTL with the maximum absolute FC across all meQTLs: ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## Maximum FC 
+***
+
+```{r include = T, eval = T}
+meqtl.id       <- meqtl.all.full.df[beta == max(beta), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id]
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "meQTL with the maximum FC across all meQTLs: ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## meQTL with FC <= 0.02
+***
+
+```{r include = T, eval = T}
+
+fc.thr <- 0.02
+
+meqtl.id       <- meqtl.all.full.df[abs(beta) <= fc.thr][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID %in%  meqtl.id ]
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL with FC <= ", fc.thr, " across all meQTLs: ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## VEH meQTL with FC <= 0.02
+***
+
+```{r include = T, eval = T}
+
+fc.thr <- 0.02
+
+meqtl.id       <- meqtl.all.full.df[treatment == "veh"][abs(beta) <= fc.thr][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID %in%  meqtl.id ]
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL with FC <= ", fc.thr, " across VEH meQTLs: ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## DELTA meQTL with FC <= 0.02
+***
+
+```{r include = T, eval = T}
+
+fc.thr <- 0.02
+
+meqtl.id       <- meqtl.all.full.df[treatment == "delta"][abs(beta) <= fc.thr][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID %in%  meqtl.id ]
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL with FC <= ", fc.thr, " across DELTA meQTLs: ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## DELTA meQTL with FC <= 0.015
+***
+
+```{r include = T, eval = T}
+
+fc.thr <- 0.015
+
+meqtl.id       <- meqtl.all.full.df[treatment == "delta"][abs(beta) <= fc.thr][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID %in%  meqtl.id ]
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL with FC <= ", fc.thr, " across DELTA meQTLs: ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
+## DELTA meQTL with FC <= 0.01
+***
+
+```{r include = T, eval = T}
+
+fc.thr <- 0.01
+
+meqtl.id       <- meqtl.all.full.df[treatment == "delta"][abs(beta) <= fc.thr][fdr == min(fdr), meQTL_ID]
+selected.meqtl <- meqtl.all.full.df[meQTL_ID %in%  meqtl.id ]
+
+kable(selected.meqtl %>% 
+        select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "The most significant meQTL with FC <= ", fc.thr, " across DELTA meQTLs: ",
+                     "\nFC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl, fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```

@@ -57,6 +57,32 @@ meqtl.all.full.df[["meQTL_ID"]] <- paste(meqtl.all.full.df$SNP, meqtl.all.full.d
 meqtl.all.full.df <- setDT(meqtl.all.full.df)
 ```
 
+<!-- # MANHATTAN PLOT -->
+```{r, include = F, eval = F}
+library(stringr)
+library(QCEWAS)
+
+a <- str_split_fixed(me.add.cis$gene, "-", 2)
+me.add.cis$chr <- substring(a[,1],4,length(a[,1]))
+me.add.cis$POS <- a[,2]
+colnames(me.add.cis) <- c("snps" ,'gene',"stats" ,"P_VAL" , "fdr", 'beta',"CHR", 'POS')
+me.add.cis$CHR <- as.numeric(me.add.cis$CHR)
+me.add.cis$POS <- as.numeric(me.add.cis$POS)
+
+trace("EWAS_plots",edit=TRUE)
+meqtl.delta.no.fdr.df[, P_VAL := `p-value`]
+meqtl.delta.no.fdr.df[, CHR := chr]
+meqtl.delta.no.fdr.df[, MAPINFO := pos_cpg]
+EWAS_plots(meqtl.delta.no.fdr.df,
+           plot_QQ = FALSE,
+           plot_Man = TRUE,
+           plot_cutoff_p = 1,
+           plot_QQ_bands = FALSE,
+           high_quality_plots = FALSE,
+           save_name = paste("~/bio/code/mpip/dex-stim-human-array/output/plots/meqtl_delta_mth_plt")
+           )
+```
+
 ## Significant Hits, FDR < 0.05
 
 Check the number of found eQTLs, unique CpGs and SNPs in all datasets.
@@ -176,6 +202,23 @@ GetScatterPlot2(meqtl.all.full.df, plot.title = plot.title)
 ```
 
 ## Distances
+
+```{r out.width = "95%", include = T, eval = T}
+ggplot(meqtl.all.full.df, aes(x = dist, fill = treatment)) + 
+  geom_density(alpha = 0.2, aes(color = treatment)) +
+  theme(legend.position = c(.9,.9), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 10)) +
+  scale_x_continuous(breaks = c(0, 1e2, 1e3, 1e4, 1e5, 1e6), labels = scientific) +
+  scale_y_continuous(labels = scientific) +
+  labs(title = paste0("Distribution of cis-meQTLs, FDR = ", fdr.thr), 
+       x = "Distance of CpG meQTL to SNP", 
+       y = "Density") +
+  scale_fill_manual(values = cbPalette)
+```
 
 ```{r out.width = "100%", include = T, eval = T}
 library(mltools)

@@ -28,3 +28,19 @@ GetFDRSubset <- function(treatment, public.data){
   
   return(fdr.bcc.df)
 }
+
+GetEpiStressScore <- function(public.data, beta.mtrx, treatment){
+  public.data <- public.data[public.data$CpG_ID %in%  beta.mtrx$CpG_ID, ]
+  public.data <- public.data[match(beta.mtrx$CpG_ID, public.data$CpG_ID,), ]
+  
+  epistress.score <- apply(beta.mtrx[, -1], 2, function(sample){
+    sum(sample * public.data$Weights)
+  })
+  
+  epistress.score.df <- data.frame( DNA_ID = colnames(beta.dex.sub.mtrx[, -1]), EpiStressScore = epistress.score)
+  
+  fwrite(epistress.score.df, 
+         paste0("output/data/public_data/Provencal2019_Hipocampal_CpGs/mpip_epistress_score_", treatment, ".csv"),
+         quote = F, row.names = F, sep = ";")
+  
+}

@@ -2,8 +2,12 @@ Sys.setenv(BIOMART_CACHE="~/bio/caches/biomaRt")
 Sys.setenv(ANNOTATION_HUB_CACHE="~/bio/caches/AnnotationHub")
 
 LoadMethylBeta <- function(treatment){
-  dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
-  df.fn    <- paste0(dir.pre, "methyl_beta_mtrx_", treatment ,".csv")
+  
+  if (treatment == "delta")
+    df.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/dnam_residuals/methyl_beta_mtrx_delta.csv" else{
+    dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+    df.fn    <- paste0(dir.pre, "methyl_beta_mtrx_", treatment ,".csv")
+  }
   
   print("Loading DNAm data: \n")
   df       <- fread(df.fn)

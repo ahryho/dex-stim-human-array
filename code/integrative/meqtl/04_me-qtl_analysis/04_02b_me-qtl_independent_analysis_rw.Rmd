@@ -49,7 +49,7 @@ fwrite(meqtl.dex.ind.rw.df,
 
 ```{r, include = F, eval = T}
 library(data.table)
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/region_wise_independent_snps/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/"
 
 meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_dex_fdr_005.csv")
 meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_veh_fdr_005.csv")

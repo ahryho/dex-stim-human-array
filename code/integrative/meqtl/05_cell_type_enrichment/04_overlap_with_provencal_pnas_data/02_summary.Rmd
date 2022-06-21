@@ -29,7 +29,8 @@ knitr::opts_chunk$set(echo = TRUE,
                       fig.pos = "H",
                       dpi = 200,
                       warning = FALSE, 
-                      message = FALSE, 
+                      message = FALSE,
+                      include = FALSE,
                       cache = TRUE, 
                       cache.lazy = FALSE)
 
@@ -56,7 +57,7 @@ registerS3method("knit_print", "data.frame", knit_print.data.frame)
 source("code/integrative/util.R")
 ```
 
-```{r include=FALSE}
+```{r}
 library(data.table)
 library(dplyr)
 
@@ -64,9 +65,10 @@ library(ggplot2)
 library(corrplot)
 library(factoextra)
 library(viridis)
+library(ggstatsplot)
 ```
 
-```{r include = F}
+```{r}
 opposite.fc.cpg.ids     <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_opposite_fc_gr_cpg_list.csv")
 parallel.fc.delta.ids   <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_delta_cpg_lst.csv")
 parallel.fc.veh.dex.ids <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/meqtl_parallel_fc_gr_veh_dex_cpg_lst.csv")
@@ -182,7 +184,7 @@ cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7"
 sign.pval.df <- rbind(veh.sign.pval.df, dex.sign.pval.df)
 ```
 
-```{r fig.width = 8}
+```{r include = T, fig.width = 8}
 # perc.labels <- (table(sign.pval.df$Type) / nrow(fdr.bcc.df)) %>% as.numeric() %>% scales::percent()
 
 ggplot(sign.pval.df, aes(x = Type, fill = Treatment)) +
@@ -204,7 +206,7 @@ ggplot(sign.pval.df, aes(x = Type, fill = Treatment)) +
   scale_fill_manual(values = cbPalette[2:3]) 
 ```
 
-```{r}
+```{r include = T}
 ggplot(sign.pval.df, aes(x = Type, group = Treatment, fill = Treatment)) + 
   geom_density(aes(y = stat(count) / nrow(fdr.bcc.df), color = Treatment), 
            stat = "count",
@@ -223,7 +225,7 @@ ggplot(sign.pval.df, aes(x = Type, group = Treatment, fill = Treatment)) +
   scale_fill_manual(values = cbPalette[2:3]) 
 ```
 
-```{r fig.width = 7, fig.height = 7}
+```{r include = T, fig.width = 7, fig.height = 7}
 tca.sign.mu.median.df <- rbind(tca.sign.mu.median.veh.df, tca.sign.mu.median.dex.df)
 
 cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
@@ -241,10 +243,12 @@ ggplot(tca.sign.mu.median.df, aes(y = tca_mu_val, x = Type, fill = Treatment)) +
   scale_fill_manual(values = cbPalette[2:3]) 
 ```
 
-## EpiStress Score (comparison with vex BCC)
+## EpiStress Score
+
+### Baseline
 
 ```{r}
-epistress.score.df <- fread("output/data/public_data/Provencal2019_Hipocampal_CpGs/mpip_epistress_score.csv")
+epistress.score.df <- fread("output/data/public_data/Provencal2019_Hipocampal_CpGs/mpip_epistress_score_veh.csv")
 bcc.df             <- LoadBCC()
 pheno              <- LoadPheno()
 pheno              <- pheno[pheno$Dex == 0,]
@@ -252,8 +256,7 @@ pheno              <- pheno[pheno$Dex == 0,]
 df <- left_join(left_join(pheno[, c("DNA_ID", "DNAm_ID")], bcc.df), epistress.score.df)
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -262,8 +265,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -272,8 +274,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -282,8 +283,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -292,8 +292,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -302,8 +301,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -312,8 +310,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -322,8 +319,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -332,8 +328,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -342,8 +337,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -352,8 +346,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -362,8 +355,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -372,18 +364,17 @@ ggscatterstats(
 )
 ```
 
-## EpiStress Score (comparison with dex BCC)
+### Dex
 
 ```{r}
+epistress.score.df <- fread("output/data/public_data/Provencal2019_Hipocampal_CpGs/mpip_epistress_score_dex.csv")
 bcc.df             <- LoadBCC(is.dex = T)
 pheno              <- LoadPheno()
 pheno              <- pheno[pheno$Dex == 1,]
 
 df <- left_join(left_join(pheno[, c("DNA_ID", "DNAm_ID")], bcc.df), epistress.score.df)
 ```
-
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -392,8 +383,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -402,8 +392,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -412,8 +401,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -422,8 +410,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -432,8 +419,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -442,8 +428,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -452,8 +437,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -462,8 +446,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -472,8 +455,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -482,8 +464,7 @@ ggscatterstats(
 )
 ```
 
-```{r}
-library(ggstatsplot)
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,
@@ -492,8 +473,256 @@ ggscatterstats(
 )
 ```
 
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Treg,
+  bf.message = FALSE
+)
+```
+
+### Delta Score vs veh BBCs
+
+Delta = DEX - Baseline
+
 ```{r}
-library(ggstatsplot)
+epistress.score.df <- fread("output/data/public_data/Provencal2019_Hipocampal_CpGs/mpip_epistress_score_delta.csv")
+bcc.df             <- LoadBCC(is.dex = F)
+pheno              <- LoadPheno()
+pheno              <- pheno[pheno$Dex == 0,]
+
+df <- left_join(left_join(pheno[, c("DNA_ID", "DNAm_ID")], bcc.df), epistress.score.df)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Bas,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Bmem,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Bnv,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD4mem,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD4nv,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD8mem,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD8nv,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Eos,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Mono,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Neu,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = NK,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Treg,
+  bf.message = FALSE
+)
+```
+
+### Delta Score vs delta BBCs
+
+Delta = DEX - Baseline
+
+```{r}
+epistress.score.df <- fread("output/data/public_data/Provencal2019_Hipocampal_CpGs/mpip_epistress_score_delta.csv")
+
+pheno              <- LoadPheno()
+
+bcc.dex.df   <- LoadBCC(is.dex = T)
+bcc.veh.df   <- LoadBCC(is.dex = F)
+bcc.dex.df   <- left_join(pheno[pheno$Dex == 1, c("DNA_ID", "DNAm_ID")], bcc.dex.df)
+bcc.veh.df   <- left_join(pheno[pheno$Dex == 0, c("DNA_ID", "DNAm_ID")], bcc.veh.df)
+bcc.delta.df <- bcc.dex.df[, -c(1,2)] - bcc.veh.df[, -c(1,2)]
+bcc.delta.df <- cbind(bcc.veh.df[, "DNA_ID"], bcc.delta.df)
+colnames(bcc.delta.df)[1] <- "DNA_ID"
+
+df <- left_join( bcc.delta.df, epistress.score.df)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Bas,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Bmem,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Bnv,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD4mem,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD4nv,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD8mem,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = CD8nv,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Eos,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Mono,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = Neu,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
+ggscatterstats(
+  data = df,
+  x = EpiStressScore,
+  y = NK,
+  bf.message = FALSE
+)
+```
+
+```{r include = T}
 ggscatterstats(
   data = df,
   x = EpiStressScore,

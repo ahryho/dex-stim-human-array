@@ -46,7 +46,7 @@ LoadOmics <- function(treatment, is.methyl.df = T, is.gex.df = T, is.snp.df = T)
   if(is.snp.df == T) 
     snp.df <- LoadGenotype()
   
-  return(methyl.df, gex.df, snp.df)
+  return(c(methyl.df, gex.df, snp.df))
 }
 
 LoadPheno <- function(treatment = ""){
@@ -75,6 +75,17 @@ LoadPheno <- function(treatment = ""){
   
   return(df)
 }
+
+LoadBio <- function(treatment){
+  dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+  df.fn    <- paste0(dir.pre, "bio_mtrx_methyl_", treatment ,".csv")
+  
+  print("Loading GEX data: \n")
+  df       <- fread(df.fn) 
+  
+  return(df)
+}
+
 
 LoadBCC <- function(is.dex = F){
   if(is.dex == T)

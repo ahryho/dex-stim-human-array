@@ -34,3 +34,78 @@ write.table(ensg.ids,
 
 write.table(snp.ids,
             "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/parmegene_biomax/opposite_fc_intersect_meqtl_eqtm_snps.csv", row.names = F, col.names = F, quote = F)
+
+
+### Load data
+### 
+meth.veh <- LoadMethylBeta("veh")
+meth.dex <- LoadMethylBeta("dex")
+
+gex.veh <- LoadGEX("veh")
+gex.dex <- LoadGEX("dex")
+
+bio.veh <- fread( "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/bio_mtrx_methyl_gex_veh.csv")
+bio.dex <- fread( "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/bio_mtrx_methyl_gex_dex.csv")
+
+snps    <- LoadGenotype()
+
+pheno   <- LoadPheno()
+sample.veh.ids <- pheno[pheno$Dex == 0, c("DNA_ID", "RNA_ID", "DNAm_ID")]
+sample.veh.ids <- sample.veh.ids[match(sample.veh.ids$DNA_ID, colnames(meth.veh)[-1]), ]
+
+sample.dex.ids <- pheno[pheno$Dex == 1, c("DNA_ID", "RNA_ID", "DNAm_ID")]
+sample.dex.ids <- sample.dex.ids[match(sample.dex.ids$DNA_ID, colnames(meth.dex)[-1]), ]
+
+
+### Subset baseline
+### 
+meth.sub.veh <- meth.veh[CpG_ID %in% cpg.ids]
+gex.sub.veh  <- gex.veh[ENSG_ID %in% ensg.ids]
+snps.sub     <- snps[SNP %in% snp.ids]
+
+### Save 
+### 
+out.dir.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/parmegene_biomax/"
+
+fwrite(meth.sub.veh, 
+       paste0(out.dir.pre, "veh_analysis/methyl_beta_mtrx_veh.csv"),
+       quote = F, row.names = F, sep = ";")
+
+fwrite(gex.sub.veh, 
+       paste0(out.dir.pre, "veh_analysis/gex_mtrx_veh.csv"),
+       quote = F, row.names = F, sep = ";")
+
+fwrite(snps.sub, 
+       paste0(out.dir.pre, "veh_analysis/snp_mtrx.csv"),
+       quote = F, row.names = F, sep = ";")
+
+### Subset dex
+### 
+meth.sub.dex <- meth.dex[CpG_ID %in% cpg.ids]
+gex.sub.dex  <- gex.dex[ENSG_ID %in% ensg.ids]
+
+
+### Veh + dex mtrx
+### 
+meth.sub.veh.dex <- cbind(meth.sub.veh, meth.sub.dex[, -1])
+colnames(meth.sub.veh.dex) <- c("CpG_ID", sample.veh.ids$DNAm_ID, sample.dex.ids$DNAm_ID)
+
+fwrite(meth.sub.veh.dex, 
+       paste0(out.dir.pre, "veh_dex_analysis/methyl_beta_mtrx_veh_dex.csv"),
+       quote = F, row.names = F, sep = ";")
+
+### 
+gex.sub.veh.dex <- cbind(gex.sub.veh, gex.sub.dex[, -1])
+colnames(gex.sub.veh.dex) <- c("CpG_ID", sample.veh.ids$RNA_ID, sample.dex.ids$RNA_ID)
+
+fwrite(gex.sub.veh.dex, 
+       paste0(out.dir.pre, "veh_dex_analysis/gex_mtrx_veh_dex.csv"),
+       quote = F, row.names = F, sep = ";")
+
+###
+bio.dex.veh     <- fread(paste0(out.dir.pre, "veh_analysis/bio_mtrx_gex_veh.csv"))
+bio.sub.dex.veh <- bio.dex.veh[Feature %in% c("DNAm_SV1", "DNAm_SV2", "DNAm_SV3", "V1", "V2", "V3")]
+
+fwrite(gex.sub.veh.dex, 
+       paste0(out.dir.pre, "veh_dex_analysis/bio_mtrx_gex_veh_svs_only.csv"),
+       quote = F, row.names = F, sep = ";")

@@ -101,6 +101,33 @@ all(colnames(snp.df)[-1] == colnames(methyl.beta.dex.df)[-1])
 all(colnames(snp.df)[-1] == colnames(methyl.beta.veh.df)[-1])
 ```
 
+## rs2074989-cg20347269
+***
+
+```{r include = T, eval = T}
+# paste0("Scatter plot for the independent significant at FDR <= ", fdr.thr, " meQTLs")
+meqtl.id       <- "rs2074989-cg20347269"
+selected.meqtl <- meqtl.all.full.df[meQTL_ID %in% meqtl.id] # beta == max(beta)
+
+kable(selected.meqtl %>% 
+        dplyr::select(SNP, CpG_ID, FC = beta, `t-stat`, `p-value`, FDR = fdr, Treatment = treatment) %>% 
+        mutate_if(is.numeric, funs(as.character(signif(., 3)))))
+```
+```{r, eval = T, include = F}
+plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
+                     "rs2074989-cg20347269 meQTLs: ",
+                     "FC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
+```
+```{r out.width = "95%", include = T, eval = T}
+GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+               plot.title = plot.title)
+```
+```{r out.width = "95%", include = T, eval = T}
+ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl[1], fdr.thr = 0.05, 
+                  plot.title = plot.title)
+```
+
+***
 ## DELTA: minimum FDR
 ***
 

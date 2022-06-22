@@ -148,16 +148,11 @@ upset(fromList(meqtls.cpg),
 
 ## Scatter plot
 
-```{r include = F, eval = T}
-source("~/bio/code/mpip/dex-stim-human-array/code/integrative/eqtl/04_me-qtl_analysis/util.R")
-cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
-```
-
 ```{r out.width = "95%", include = T, eval = T}
 fdr.thr <- 0.05
 plot.title <- paste0("Independent and significant at FDR <= ", fdr.thr, " meQTLs.",
                      "\nResult of MatrixEQTL")
-GetScatterPlot2(meqtl.all.full.df, plot.title = plot.title)
+GetScatterPlot2(meqtl.all.full.df, plot.title = plot.title, cbPalette = cbPalette)
 ```
 
 ```{r out.width = "95%", include = T, eval = T}

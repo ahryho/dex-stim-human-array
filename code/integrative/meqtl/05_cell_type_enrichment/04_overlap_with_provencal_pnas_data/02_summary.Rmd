@@ -730,3 +730,16 @@ ggscatterstats(
   bf.message = FALSE
 )
 ```
+
+### Delta Score vs veh BBCs: check
+
+Delta = DEX - Baseline
+
+```{r}
+epistress.score.df <- fread("output/data/public_data/Provencal2019_Hipocampal_CpGs/mpip_epistress_score_delta.csv")
+bcc.df             <- LoadBCC(is.dex = F)
+pheno              <- LoadPheno()
+pheno              <- pheno[pheno$Dex == 0,]
+
+df <- left_join(left_join(pheno[, c("DNA_ID", "DNAm_ID")], bcc.df), epistress.score.df)
+```

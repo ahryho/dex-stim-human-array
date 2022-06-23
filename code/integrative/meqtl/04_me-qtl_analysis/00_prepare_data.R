@@ -50,3 +50,19 @@ meqtl.dex.ind.rw.df          <- meqtl.dex.ind.rw.df[fdr <= 0.05]
 fwrite(meqtl.dex.ind.rw.df,
        paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_indp_rw_dex_fdr_005.csv"),
        quote = F, row.names = F, sep = ";")
+
+
+### Calculate distances SNP to CpG
+src.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/data/integrative/matrixEQTL/"
+
+cpg.loc.fn  <- paste0(src.dir.pre, "cpg_locations.csv")
+snp.loc.fn  <- paste0(src.dir.pre, "snp_locations.csv")
+
+cpg.loc  <- fread(cpg.loc.fn)
+snp.loc  <- fread(snp.loc.fn)
+
+meqtl.delta.full.df   <- GetFullmeQTLdf(ind.meqtl.delta.df, snp.loc = snp.loc, cpg.loc = cpg.loc, fdr.thr = 0.05)
+
+fwrite(meqtl.delta.full.df,
+       paste0(out.dir.pre, "region_wise_independent_snps/me-qtl_cis_indp_rw_delta_fdr_005_with_distances.csv"),
+       quote = F, row.names = F, sep = ";")

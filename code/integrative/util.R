@@ -142,14 +142,13 @@ GetVennPlt <- function(meqtl.df, eqtm.df, plot.title = NULL, cbPal.col = "#0072B
   return(list(cpgs = intersect.cpgs, venn.plot = p))
 }
 
-
-GetFullmeQTLdf <- function(meqtl.df, fdr.thr = 0.05){
+GetFullmeQTLdf <- function(meqtl.df, snp.loc, cpg.loc, fdr.thr = 0.05){
   colnames(meqtl.df) <- c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
   
   meqtl.fltr.df <- meqtl.df[fdr < fdr.thr, ] %>% unique()
   
-  meqtl.full.df <- left_join(meqtl.fltr.df, snp.bim) %>% mutate(pos_snp = pos) %>% 
-    dplyr::select(-c(pos, pos_morgans))
+  meqtl.full.df <- left_join(meqtl.fltr.df, snp.loc) %>% mutate(pos_snp = pos) %>% 
+    dplyr::select(-c(pos))
   meqtl.full.df <- left_join(meqtl.full.df, cpg.loc[, .(CpG_ID, chr, pos)]) %>% 
     mutate(pos_cpg = pos) %>% 
     dplyr::select(-pos)

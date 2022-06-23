@@ -18,9 +18,9 @@ ensg.loc.fn <- paste0(src.dir.pre, "ensg_locations.csv")
 cpg.loc  <- fread(cpg.loc.fn)
 snp.loc  <- fread(snp.loc.fn)
 
-# snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/final_imputed_qc_snps/mtrx/dex_geno_imputed_ld.bim")
-snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/Dex_genoData_SNPs.bim")
-colnames(snp.bim) <- c("chr", "SNP", "pos_morgans", "pos", "snp_allele1", "snp_allele2")
+# # snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/final_imputed_qc_snps/mtrx/dex_geno_imputed_ld.bim")
+# snp.bim  <- fread("~/bio/code/mpip/dex-stim-human-array/data/snps/imputed_qc/from_janine/qc/Dex_genoData_SNPs.bim")
+# colnames(snp.bim) <- c("chr", "SNP", "pos_morgans", "pos", "snp_allele1", "snp_allele2")
 
 meqtl.dex.fn   <- paste0(out.dir.pre, "me-eqtl_cis_results_06122021/me-qtl_cis_result_dex_fdr_005.csv")  # "me-qtl_cis_result_dex_fdr_005.csv")
 meqtl.veh.fn   <- paste0(out.dir.pre, "me-eqtl_cis_results_06122021/me-qtl_cis_result_veh_fdr_005.csv") # "me-qtl_cis_result_veh_fdr_005.csv")
@@ -44,9 +44,9 @@ plot(meqtl.rds)
 # head(meqtl.df)
 fdr.thr  <- 0.05
 
-meqtl.delta.full.df <- GetFullmeQTLdf(meqtl.delta.df, fdr.thr)
-meqtl.dex.full.df   <- GetFullmeQTLdf(meqtl.dex.df, fdr.thr)
-meqtl.veh.full.df   <- GetFullmeQTLdf(meqtl.veh.df, fdr.thr)
+meqtl.delta.full.df <- GetFullmeQTLdf(meqtl.delta.df, snp.loc = snp.loc, cpg.loc = cpg.loc, fdr.thr)
+meqtl.dex.full.df   <- GetFullmeQTLdf(meqtl.dex.df, snp.loc = snp.loc, cpg.loc = cpg.loc, fdr.thr)
+meqtl.veh.full.df   <- GetFullmeQTLdf(meqtl.veh.df,snp.loc = snp.loc, cpg.loc = cpg.loc, fdr.thr)
 ```
 
 ```{r, include = F, eval = T}

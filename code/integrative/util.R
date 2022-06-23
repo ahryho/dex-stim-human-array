@@ -143,8 +143,6 @@ GetVennPlt <- function(meqtl.df, eqtm.df, plot.title = NULL, cbPal.col = "#0072B
 }
 
 GetFullmeQTLdf <- function(meqtl.df, snp.loc, cpg.loc, fdr.thr = 0.05){
-  colnames(meqtl.df) <- c("SNP", "CpG_ID", "beta", "t-stat", "p-value", "fdr")
-  
   meqtl.fltr.df <- meqtl.df[fdr < fdr.thr, ] %>% unique()
   
   meqtl.full.df <- left_join(meqtl.fltr.df, snp.loc) %>% mutate(pos_snp = pos) %>% 
@@ -154,7 +152,7 @@ GetFullmeQTLdf <- function(meqtl.df, snp.loc, cpg.loc, fdr.thr = 0.05){
     dplyr::select(-pos)
   meqtl.full.df <- meqtl.full.df[, dist := pos_snp - pos_cpg]  
   meqtl.full.df <- meqtl.full.df[, strand := ifelse(dist < 0, "-", "+")]
-  meqtl.full.df <- meqtl.full.df[, dist := abs(dist)]
+  meqtl.full.df <- meqtl.full.df[, abs_dist := abs(dist)]
   
   meqtl.full.df
 }

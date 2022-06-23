@@ -14,7 +14,7 @@ The number of independent SNPs per cis-region was identified by LD pruning and c
 All meQTLs passed the significance threshold of FDR = 0.05. 
 
 ```{r include = F, eval = T}
-cbPalette <- c( "#0072B2", "#009E73", "#E69F00")
+cbPalette <- c( dex = "#0072B2", "#009E73", "#E69F00")
 ```
 
 ```{r, include = F, eval = T}
@@ -276,7 +276,7 @@ ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl
 ## Only veh and delta
 
 ```{r include = F, eval = T}
-cbPalette <- c( "#E69F00",  "#0072B2")
+cbPalette <- c(baseline = "#E69F00", delta = "#0072B2")
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
@@ -544,12 +544,11 @@ library(ggrepel)
 
 meqtl.delta.full.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/me-qtl_cis_indp_rw_delta_fdr_005_with_distances.csv")
 
-bins.df <- data.frame(DistanceInterval = bin_data(data.table::data.table(meqtl.delta.full.df), binCol = "dist", bins = c(0, 1, 200, 1e3, 1e4+1, 1e5+1, 1e6+1, 1e7+1, Inf), returnDT = F))
-levels(bins.df$DistanceInterval) <- c("0", "(0; 200]", "(200; 1e3]", "(1e3; 1e4]", "(1e4; 1e5]", "(1e5; 1e6]", "(1e6; 1e7]", "[1e7; Inf)")
-bins.df <- cbind(bins.df, treatment = meqtl.all.full.df$treatment)
+bins.df <- data.frame(DistanceInterval = bin_data(data.table::data.table(meqtl.delta.full.df), binCol = "dist", bins = c(-1e6 - 1, -1e-1, -1e4 0, 1, 1e3, 1e4+1, 1e5+1, 1e6+1), returnDT = F))
+levels(bins.df$DistanceInterval) <- c("0", "(200; 1e3]", "(1e3; 1e4]", "(1e4; 1e5]", "(1e5; 1e6]")
 
-ggplot(bins.df, aes(DistanceInterval, fill = treatment)) + 
-  geom_bar(position = position_dodge()) +
+ggplot(bins.df, aes(DistanceInterval)) + 
+  geom_density(position = position_dodge()) +
   stat_count(geom = "text", 
              aes(label = comma(..count.., accuracy = 1L)),
              position = position_dodge(1),  vjust = -1, colour = "black", cex = 2) +
@@ -563,5 +562,52 @@ ggplot(bins.df, aes(DistanceInterval, fill = treatment)) +
   labs(title = paste0("Distribution of cis-meQTLs, FDR = ", fdr.thr), 
        x = "Distance Interval, bp", 
        y = "No. cis-meQTLs") + 
-  scale_fill_manual(values = cbPalette)
+  scale_fill_manual(values = cbPalette[["delta"]])
+```
+
+```{r, include = F, eval = T}
+meqtl.delta.full.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/me-qtl_cis_indp_rw_delta_fdr_005_with_distances.csv")
+```
+
+```{r out.width = "100%", include = T, eval = T}
+ggplot(meqtl.delta.full.df, aes(x = dist)) + 
+  geom_density(position = position_dodge(), ) +
+  theme(legend.position = c(.1,.9), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  labs(title = paste0("Distribution of cis-meQTLs, FDR = ", fdr.thr), 
+       x = "Distance from SNP, bp", 
+       y = "No. cis-meQTLs")
+```
+
+```{r out.width = "100%", include = T, eval = T}
+ggplot(meqtl.delta.full.df, aes(x = dist, y = fdr)) + 
+  geom_point(position = position_dodge()) +
+  scale_y_continuous(trans = "log10") + 
+  theme(legend.position = c(.1,.9), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  labs(title = "", 
+       x = "Distance from SNP, bp", 
+       y = "")
+```
+
+```{r out.width = "100%", include = T, eval = T}
+ggplot(meqtl.delta.full.df, aes(x = dist, y = beta)) + 
+  geom_point(position = position_dodge()) +
+  theme(legend.position = c(.1,.9), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  labs(title = "", 
+       x = "Distance from SNP, bp", 
+       y = "Effect size")
 ```

@@ -14,7 +14,7 @@ The number of independent SNPs per cis-region was identified by LD pruning and c
 All meQTLs passed the significance threshold of FDR = 0.05. 
 
 ```{r include = F, eval = T}
-cbPalette <- c( dex = "#0072B2", "#009E73", "#E69F00")
+cbPalette <- c(delta = "#0072B2", dex = "#009E73", baseline = "#E69F00")
 ```
 
 ```{r, include = F, eval = T}
@@ -275,8 +275,8 @@ ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl
 
 ## Only veh and delta
 
-```{r include = F, eval = T}
-cbPalette <- c(baseline = "#E69F00", delta = "#0072B2")
+```{r include = F}
+cbPalette <-c(baseline = "#E69F00", delta = "#0072B2")
 ```
 
 ```{r out.width = "95%", include = T, eval = T}
@@ -571,7 +571,7 @@ meqtl.delta.full.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/i
 
 ```{r out.width = "100%", include = T, eval = T}
 ggplot(meqtl.delta.full.df, aes(x = dist)) + 
-  geom_density(position = position_dodge(), ) +
+  geom_density(aes(y = ..count..), colour = cbPalette[["delta"]]) +
   theme(legend.position = c(.1,.9), 
         legend.title = element_blank(),
         panel.grid.major = element_blank(),
@@ -584,9 +584,9 @@ ggplot(meqtl.delta.full.df, aes(x = dist)) +
 ```
 
 ```{r out.width = "100%", include = T, eval = T}
-ggplot(meqtl.delta.full.df, aes(x = dist, y = fdr)) + 
-  geom_point(position = position_dodge()) +
-  scale_y_continuous(trans = "log10") + 
+ggplot(meqtl.delta.full.df, aes(x = dist, y = -log10(fdr))) + 
+  geom_point(colour = cbPalette[["delta"]]) +
+  # scale_y_continuous(trans = "log10") + 
   theme(legend.position = c(.1,.9), 
         legend.title = element_blank(),
         panel.grid.major = element_blank(),
@@ -595,12 +595,12 @@ ggplot(meqtl.delta.full.df, aes(x = dist, y = fdr)) +
         axis.title = element_text(size = 8)) +
   labs(title = "", 
        x = "Distance from SNP, bp", 
-       y = "")
+       y = "-log10 FDR")
 ```
 
 ```{r out.width = "100%", include = T, eval = T}
 ggplot(meqtl.delta.full.df, aes(x = dist, y = beta)) + 
-  geom_point(position = position_dodge()) +
+  geom_point(colour = cbPalette[["delta"]]) +
   theme(legend.position = c(.1,.9), 
         legend.title = element_blank(),
         panel.grid.major = element_blank(),

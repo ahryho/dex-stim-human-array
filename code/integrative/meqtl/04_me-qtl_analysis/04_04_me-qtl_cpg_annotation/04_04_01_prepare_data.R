@@ -109,9 +109,9 @@ dex.cpg.all.coord.gr   <- GenomicRanges::GRanges(seqnames = input$chr,
 names(dex.cpg.all.coord.gr) <- input$Name
 
 saveRDS(dex.cpg.all.coord.gr,
-        paste0(out.dir.pre, "meqtl_all_cpgs_gr.rds"))
+        paste0(out.dir.pre, "all_cpgs_gr.rds"))
 
-# 6. Annotation from UCSC Genome Browser
+# 7. Annotation from UCSC Genome Browser
 
 library(annotatr)
 library(AnnotationHub)
@@ -149,7 +149,16 @@ meqtls.cpg.annotated <- annotate_regions(
 
 meqtls.cpg.annotated.df <- data.frame(meqtls.cpg.annotated) %>% setDT()
 
-## 6.2 Annotation with ChipSeeker
+## 7.2 Annotation with ChipSeeker
+
+# ALL
+# 
+all.cpg.anno <- annotatePeak(unique(dex.cpg.all.coord.gr), 
+                               TxDb = TxDb.Hsapiens.UCSC.hg19.knownGene, 
+                               annoDb = "org.Hs.eg.db")
+
+saveRDS(all.cpg.anno,
+        paste0(out.dir.pre, "cpg_annotated_withChIPseeker_all.rds"))
 
 # DELTA
 # 
@@ -178,7 +187,7 @@ dex.cpg.anno <- annotatePeak(unique(meqtls.cpg.dex.coord.gr),
 saveRDS(dex.cpg.anno,
         paste0(out.dir.pre, "meqtls_cpg_annotated_withChIPseeker_dex.rds"))
 
-## 7. Chromatin annotation
+## 8. Chromatin annotation
 
 chromhmm.all.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_all_states.Rds")
 colnames(values(chromhmm.all.states))[1] <- "type"

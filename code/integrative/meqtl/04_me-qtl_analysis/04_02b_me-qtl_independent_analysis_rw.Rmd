@@ -439,13 +439,13 @@ allel.dir.fc.delta.meqtls <- rbind(opposite.fc.delta.meqtls, parallel.fc.delta.m
 ```
 
 ```{r}
-ggplot(allel.dir.fc.delta.meqtls, aes(x = Group, fill = Group, colour = Group)) + 
-  geom_bar(stat = "count", alpha = 0.5) + 
+ggplot(allel.dir.fc.delta.meqtls, aes( x = 1, fill = Group, colour = Group)) + 
+  geom_bar(position = "fill", stat = "count", alpha = 0.5) + 
   coord_flip() +
-  stat_count(geom = "text", 
+  stat_count(geom = "text",
              aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1)),
              angle = 0,  vjust = 0.5, hjust = 1.1, colour = "black", cex = 3) +
-  stat_count(geom = "text", 
+  stat_count(geom = "text",
              aes(label = ..count..),
              angle = 0,  vjust = -1, hjust = 1.5, colour = "black", cex = 3) +
   theme(legend.position = "bottom", 

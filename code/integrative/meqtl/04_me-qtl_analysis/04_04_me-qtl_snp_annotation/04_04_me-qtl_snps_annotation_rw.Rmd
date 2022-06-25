@@ -349,21 +349,21 @@ head(meqtls.snp.chromhmm.annotated.plt.df %>% dplyr::select(SNP, everything()), 
 
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in 15 chromatin states from 127 cell types", include = T, eval = T}
 
-df <- meqtls.snp.chromhmm.annotated.plt.df[, .(SNP, annot.type, Model)] %>% unique()
+df <- meqtls.snp.chromhmm.annotated.plt.df[, .(SNP, annot.name, Model)] %>% unique()
 
 plot.title <- "15 chromatin states from 127 cell types"
 
 # GetChromHMMPlotAll(df, cbPalette, plot.title)
 # 
-df$annot.type <- factor(df$annot.type, levels = chromhmm.states$STATE)
+df$annot.name <- factor(df$annot.name, levels = chromhmm.states$STATE)
 df$Model      <- factor(df$Model, levels = c("Delta", "Baseline", "Dex"))
 
-df.plt <- melt(table(df[, .(annot.type, Model)])) %>% 
-   group_by(annot.type, Model, value) %>%
+df.plt <- melt(table(df[, .(annot.name, Model)])) %>% 
+   group_by(annot.name, Model, value) %>%
    group_by(Model) %>%
    mutate(Prop = round(value / sum(value) * 100, 2))
  
-ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.type )) + 
+ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.name )) + 
     geom_bar( position = "fill",  stat = "identity") + 
     geom_text(data = subset(df.plt, Prop > 1.5),
         aes(label = Prop),
@@ -384,19 +384,19 @@ ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.type )) +
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in 15 chromatin states from 14 blood and T-cell types", include = T, eval = T}
 chromhmm.blood.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Blood & T-cell", "EID"]
 
-df <- meqtls.snp.chromhmm.annotated.plt.df[annot.code %in% chromhmm.blood.eids, .(SNP, annot.type, Model)] %>% unique()
+df <- meqtls.snp.chromhmm.annotated.plt.df[annot.code %in% chromhmm.blood.eids, .(SNP, annot.name, Model)] %>% unique()
 
 plot.title <- "15 chromatin states from 14 blood and T-cell types"
 
-df$annot.type <- factor(df$annot.type, levels = chromhmm.states$STATE)
+df$annot.name <- factor(df$annot.name, levels = chromhmm.states$STATE)
 df$Model      <- factor(df$Model, levels = c("Delta", "Baseline", "Dex"))
 
-df.plt <- melt(table(df[, .(annot.type, Model)])) %>% 
-   group_by(annot.type, Model, value) %>%
+df.plt <- melt(table(df[, .(annot.name, Model)])) %>% 
+   group_by(annot.name, Model, value) %>%
    group_by(Model) %>%
    mutate(Prop = round(value / sum(value) * 100, 2))
  
-ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.type )) + 
+ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.name )) + 
     geom_bar( position = "fill",  stat = "identity") + 
     geom_text(data = subset(df.plt, Prop > 1.5),
         aes(label = Prop),
@@ -419,19 +419,19 @@ ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.type )) +
 ```{r out.width = "90%", fig.cap = "The distribution of CpGs in 15 chromatin states from 10 brain types", include = T, eval = T}
 chromhmm.brain.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Brain", "EID"]
 
-df <- meqtls.snp.chromhmm.annotated.plt.df[annot.code %in% chromhmm.brain.eids, .(SNP, annot.type, Model)] %>% unique()
+df <- meqtls.snp.chromhmm.annotated.plt.df[annot.code %in% chromhmm.brain.eids, .(SNP, annot.name, Model)] %>% unique()
 
 plot.title <- "15 chromatin states from 10 brain types"
 
- df$annot.type <- factor(df$annot.type, levels = chromhmm.states$STATE)
+ df$annot.name <- factor(df$annot.name, levels = chromhmm.states$STATE)
  df$Model      <- factor(df$Model, levels = c("Delta", "Baseline", "Dex"))
 
- df.plt <- melt(table(df[, .(annot.type, Model)])) %>% 
-   group_by(annot.type, Model, value) %>%
+ df.plt <- melt(table(df[, .(annot.name, Model)])) %>% 
+   group_by(annot.name, Model, value) %>%
    group_by(Model) %>%
    mutate(Prop = round(value / sum(value) * 100, 1.5))
  
-ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.type )) + 
+ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.name )) + 
     geom_bar( position = "fill",  stat = "identity") + 
     geom_text(data = subset(df.plt, Prop > 1),
         aes(label = Prop),

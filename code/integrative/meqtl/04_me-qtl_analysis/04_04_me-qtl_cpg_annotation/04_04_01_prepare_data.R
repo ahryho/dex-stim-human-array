@@ -48,11 +48,12 @@ fwrite(meqtls.cpg.anno.df,
        quote = F, row.names = F, sep   = "\t")
 
 
-input <- meqtls.cpg.anno.df[,.(Name, chr, pos)]
+input <- meqtls.cpg.anno.df[,.(Name, chr, pos, Relation_to_Island)]
 meqtls.cpg.delta.coord.gr <- GenomicRanges::GRanges(seqnames = input$chr,
                                                     ranges = IRanges::IRanges(start = as.numeric(as.character(input$pos)),
                                                                               end = as.numeric(as.character(input$pos))),
-                                                    CpG_ID = input$Name)
+                                                    CpG_ID = input$Name,
+                                                    Relation_to_Island = input$Relation_to_Island)
 names(meqtls.cpg.delta.coord.gr) <- input$Name
 
 saveRDS(meqtls.cpg.delta.coord.gr,
@@ -67,11 +68,12 @@ fwrite(meqtls.cpg.anno.df,
        paste0(out.dir.pre, "meqtls_cpg_annotated_veh.csv"),
        quote = F, row.names = F, sep   = "\t")
 
-input <- meqtls.cpg.anno.df[,.(Name, chr, pos)]
+input <- meqtls.cpg.anno.df[,.(Name, chr, pos, Relation_to_Island)]
 meqtls.cpg.veh.coord.gr   <- GenomicRanges::GRanges(seqnames = input$chr,
                                                     ranges = IRanges::IRanges(start = as.numeric(as.character(input$pos)),
                                                                               end = as.numeric(as.character(input$pos))),
-                                                    CpG_ID = input$Name)
+                                                    CpG_ID = input$Name,
+                                                    Relation_to_Island = input$Relation_to_Island)
 names(meqtls.cpg.veh.coord.gr) <- input$Name
 
 saveRDS(meqtls.cpg.veh.coord.gr,
@@ -86,11 +88,12 @@ fwrite(meqtls.cpg.anno.df,
        paste0(out.dir.pre, "meqtls_cpg_annotated_dex.csv"),
        quote = F, row.names = F, sep   = "\t")
 
-input <- meqtls.cpg.anno.df[,.(Name, chr, pos)]
+input <- meqtls.cpg.anno.df[,.(Name, chr, pos, Relation_to_Island)]
 meqtls.cpg.dex.coord.gr   <- GenomicRanges::GRanges(seqnames = input$chr,
                                                     ranges = IRanges::IRanges(start = as.numeric(as.character(input$pos)),
                                                                               end = as.numeric(as.character(input$pos))),
-                                                    CpG_ID = input$Name)
+                                                    CpG_ID = input$Name,
+                                                    Relation_to_Island = input$Relation_to_Island)
 names(meqtls.cpg.dex.coord.gr) <- input$Name
 
 saveRDS(meqtls.cpg.dex.coord.gr,
@@ -99,17 +102,31 @@ saveRDS(meqtls.cpg.dex.coord.gr,
 # 6. Extract and save annotation fro ALL CpGs
 
 dex.cpg.anno.df <- fread("/Users/anastasiia_hry/bio/code/mpip/dex-stim-human-array/data/methylation/dex_cpgs_annotated.csv", 
-                          select = c("Name", "chr", "pos"))
+                          select = c("Name", "chr", "pos", "Relation_to_Island"))
 
-input <- dex.cpg.anno.df[,.(Name, chr, pos)]
+input <- dex.cpg.anno.df[,.(Name, chr, pos, Relation_to_Island)]
 dex.cpg.all.coord.gr   <- GenomicRanges::GRanges(seqnames = input$chr,
                                                  ranges = IRanges::IRanges(start = as.numeric(as.character(input$pos)),
                                                                            end = as.numeric(as.character(input$pos))),
-                                                 CpG_ID = input$Name)
+                                                 CpG_ID = input$Name,
+                                                 Relation_to_Island = input$Relation_to_Island)
 names(dex.cpg.all.coord.gr) <- input$Name
 
 saveRDS(dex.cpg.all.coord.gr,
         paste0(out.dir.pre, "all_cpgs_gr.rds"))
+
+# 7. Extract and save annotation  anno epic CpGs
+
+input <- anno.epic[,c("Name", "chr", "pos", "Relation_to_Island")]
+dex.cpg.all.coord.gr   <- GenomicRanges::GRanges(seqnames = input$chr,
+                                                 ranges = IRanges::IRanges(start = as.numeric(as.character(input$pos)),
+                                                                           end = as.numeric(as.character(input$pos))),
+                                                 CpG_ID = input$Name,
+                                                 Relation_to_Island = input$Relation_to_Island)
+names(dex.cpg.all.coord.gr) <- input$Name
+
+saveRDS(dex.cpg.all.coord.gr,
+        paste0(out.dir.pre, "anno_epic_gr.rds"))
 
 # 7. Annotation from UCSC Genome Browser
 

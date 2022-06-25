@@ -10,7 +10,7 @@ library(org.Hs.eg.db)
 
 library(annotatr)
 
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/" #region_wise_independent_snps/"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/"
 
 system(paste0("ls -lha ", out.dir.pre))
 
@@ -169,7 +169,7 @@ AnnotateChromHMM <- function(snp.coord.range, chromhmm.all.states, out){
   
   meqtls.snp.chromhmm.annotated.df          <- data.frame(meqtls.snp.chromhmm.annotated) %>% setDT()
   meqtls.snp.chromhmm.annotated.df[["SNP"]] <- names(meqtls.snp.chromhmm.annotated)
-  meqtls.snp.chromhmm.annotated.df          <- meqtls.snp.chromhmm.annotated.df[, .(SNP, annot.type, annot.code)] %>% unique()
+  meqtls.snp.chromhmm.annotated.df          <- meqtls.snp.chromhmm.annotated.df[, .(SNP, annot.name, annot.code)] %>% unique()
   
   fwrite(meqtls.snp.chromhmm.annotated.df,
          out,
@@ -177,6 +177,10 @@ AnnotateChromHMM <- function(snp.coord.range, chromhmm.all.states, out){
   
   return(meqtls.snp.chromhmm.annotated.df)
 }
+
+
+chromhmm.blood.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_blood_states.Rds") 
+chromhmm.brain.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_brain_states.Rds") 
 
 # dex
 

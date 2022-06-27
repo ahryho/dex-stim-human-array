@@ -118,7 +118,7 @@ input <- snp.loc
 snp.coord.range <- GenomicRanges::GRanges(seqnames = paste0("chr", input$chr),
                                               ranges = IRanges::IRanges(start = as.numeric(as.character(input$pos)),
                                                                         end = as.numeric(as.character(input$pos))))
-names(veh.snp.coord.range) <- meqtls.snp.veh.coord.df$SNP
+names(snp.coord.range) <- snp.loc$SNP
 
 snp.anno <- annotatePeak(unique(snp.coord.range), 
                              TxDb = TxDb.Hsapiens.UCSC.hg19.knownGene, 
@@ -197,4 +197,7 @@ delta.meqtls.snp.chromhmm.annotated.df <- AnnotateChromHMM(delta.snp.coord.range
 out.fn <- paste0(out.dir.pre, "meqtls_snp_chromhmm_annotated_veh.csv")
 veh.meqtls.snp.chromhmm.annotated.df <- AnnotateChromHMM(veh.snp.coord.range, chromhmm.all.states, out.fn)
 
+# all snps
+out.fn <- paste0(out.dir.pre, "all_snp_chromhmm_annotated.csv")
+all.snp.chromhmm.annotated.df <- AnnotateChromHMM(snp.coord.range, chromhmm.all.states, out.fn)
 

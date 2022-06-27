@@ -77,8 +77,8 @@ library(doParallel)
 
 library(gUtils)
 
-out.dir.pre      <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/region_wise_independent_snps/"
-out.dir.pre.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/"
+out.dir.pre      <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/"
+out.dir.pre.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/"
 
 # meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_with_delta_fdr_005.csv")
 # meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_fdr_005.csv")
@@ -168,7 +168,7 @@ meqtl.snp.anno.stat.df$Feature   <- factor(meqtl.snp.anno.stat.df$Feature)
 meqtl.snp.anno.stat.df$Frequency <- signif(meqtl.snp.anno.stat.df$Frequency, 3)
 ```
 
-```{r out.width = "90%", fig.cap = "Distribution of gene-centric locations of the CpGs based on Illumina EPIC annotation", include = T, eval = T}
+```{r out.width = "90%", fig.cap = "Distribution of gene-centric locations of the SNPs based on Illumina EPIC annotation", include = T, eval = T}
 cbPalette <- c("#88CCEE", "#CC6677", "#DDCC77", "#117733", "#332288", "#AA4499", "#44AA99", "#999933", "#882255", "#661100", "#6699CC", "#888888")
 
 ggplot(meqtl.snp.anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) + 
@@ -188,16 +188,7 @@ ggplot(meqtl.snp.anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
    scale_fill_manual("Feature", values = cbPalette)
 ```
 
-```{r include = F, eval = F}
-# Prepare methyl ranges
 
-cpg.coord.df    <- delta.meqtl.cpg.anno.df[, .(Name, chr, pos)]# %>% dplyr:: mutate(chr = sub("chr", "", chr))
-cpg.coord.range <- makeGRangesFromDataFrame(cpg.coord.df, 
-                                            start.field = "pos", 
-                                            end.field = "pos", 
-                                            seqnames.field = c("chr"))
-names(cpg.coord.range) <- cpg.coord.df$Name
-```
 
 <!-- ```{r include = F, eval = T} -->
 <!-- library(annotatr) -->
@@ -275,15 +266,6 @@ cbPalette <- chromhmm.states$COLOR.NAME
 chromhmm.epigenomes <- read.csv("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/epigenomes.tsv", sep = "\t")
 ```
 
-```{r include = F, eval = F}
-meqtls.cpg.chromhmm.annotated <- readRDS(paste0(out.dir.pre.pre, "global_independent_snps/meqtls_cpg_chromhmm_annotated_all_models.rds"))
-
-meqtls.cpg.chromhmm.annotated.df <- data.frame(meqtls.cpg.chromhmm.annotated) %>% setDT()
-meqtls.cpg.chromhmm.annotated.df[["CpG_ID"]] <- names(meqtls.cpg.chromhmm.annotated)
-
-head(meqtls.cpg.chromhmm.annotated.df %>% dplyr::select(CpG_ID, everything()), 100) 
-# plot_annotation(annotated_regions = delta.meqtls.cpg.chromhmm.annotated)
-```
 
 ```{r func-plot-chromhmm-states, include = F, eval = T}
 GetChromHMMPlotAll <- function(df, cbPalette = NULL, plot.title = NULL){
@@ -312,7 +294,7 @@ GetChromHMMPlotAll <- function(df, cbPalette = NULL, plot.title = NULL){
 ```
 
 ```{r read-chromhmm-anno-delta, eval = T, include = F}
-delta.meqtls.snp.chromhmm.annotated.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/region_wise_independent_snps/meqtls_snp_chromhmm_annotated_delta.csv")
+delta.meqtls.snp.chromhmm.annotated.df <- fread(paste0(out.dir.pre, "meqtls_snp_chromhmm_annotated_delta.csv"))
 
 delta.meqtls.snp.chromhmm.annotated.df[, Model := "Delta"]
 ```
@@ -580,7 +562,7 @@ gwas.enrich.perm.rslt$p_val      <- as.numeric(gwas.enrich.perm.rslt$p_val)
 gwas.enrich.perm.rslt$p_val_emp  <- as.numeric(gwas.enrich.perm.rslt$p_val_emp)
 
 gwas.enrich.perm.rslt$data   <- factor(gwas.enrich.perm.rslt$data)
-levels(gwas.enrich.perm.rslt$data) <- c("ADHD", "ASD", "BMI", "BP", "Cross Disorders", "IBD", "MDD", "Panic Disorders", "SCZ")
+gwas.enrich.perm.rslt$data <- c("Cross Disorders", "ADHD", "ASD", "BP", "MDD", "IBD", "BMI", "SCZ", "PD")
 ```
 
 

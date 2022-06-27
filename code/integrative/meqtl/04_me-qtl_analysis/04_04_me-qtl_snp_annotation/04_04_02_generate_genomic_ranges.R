@@ -53,7 +53,13 @@ GenerateGrangesObject <- function(input, ofile){
 }
 
 
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/region_wise_independent_snps/`"
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/"
+
+# 1. Load data
+
+meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_dex_fdr_005.csv")
+meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_veh_fdr_005.csv")
+meqtl.delta.fn <- paste0(out.dir.pre, "me-qtl_cis_indp_rw_delta_fdr_005.csv")
 
 # background snps (baseline + delta )
 # Read MAF values for each SNP
@@ -76,6 +82,7 @@ background.all.gr <- GenerateGrangesObjecteQTL(input = snps,
 
 background.all.gr <- readRDS( paste0(snps.dir, "dex_geno_snps_with_maf_bins_gr.rds"))
 
+col.names          <-  c("CpG_ID", "SNP", "beta", "t-stat", "p-value", "fdr")
 ind.meqtl.veh.df   <- fread(meqtl.veh.fn, col.names = col.names)
 ind.meqtl.dex.df   <- fread(meqtl.dex.fn, col.names = col.names)
 ind.meqtl.delta.df <- fread(meqtl.delta.fn, col.names = col.names)

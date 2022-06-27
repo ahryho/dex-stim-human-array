@@ -123,6 +123,7 @@ fwrite(public.meqtl.cis.sub.interest.df,
 # Extract baseline meQTLs with overlapped public meQTL CpGs 
 
 ```{r eval = F}
+public.meqtl.cis.sub.interest.df <- fread("data/public_data/GoDMC_mQTL/assoc_meta_cis_meqtl.csv")
 meqtl.veh.df      <- meqtl.veh.df[CpG_ID %in% intersect.all.veh.pub.cpgs, ] # 2'985'831
 ```
 
@@ -139,6 +140,32 @@ rm (snp.loc.df)
 intersect.meqtls <- intersect(meqtl.veh.lst, public.meqtl.cis.sub.interest.df$meQTL_ID) # 2'851'678
 
 length(intersect.meqtls) / length(meqtl.veh.lst) # 95.51 %
+```
+
+```{r out.width = "95%", include = T, eval = T}
+meqtls.meqtls <- list(baseline = meqtl.veh.lst, 
+                      GoDMC = public.meqtl.cis.sub.interest.df$meQTL_ID)
+
+perc.olap <- scales::percent(length(intersect.meqtls) / length(meqtl.veh.lst), accuracy = 0.1)
+
+plot.title <- "Number of intersections between baseline and GoDMC meQTLs"
+
+ggVennDiagram(meqtls.meqtls, 
+              category.names = c(paste0("Baseline, ", perc.olap), 
+                                 paste0("GoDMC")), 
+              label_alpha = 0.7,
+              edge_size = 0,
+              set_geom = "text",
+              set_color = "black",
+              label = "count") +
+    theme(legend.position = "none", 
+          legend.title = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 10, face="italic")) +
+    labs(x = "", y = "",
+         title = plot.title) +
+    scale_color_manual(values = cbPalette) +
+    scale_fill_gradient(low = alpha(cbPalette[2], 0.5), high = alpha(cbPalette[1], 0.5))
 ```
 
 ## Direction of meQTLs: intersection (veh meQTLs; public)
@@ -161,6 +188,8 @@ pub.meqtl.intersect.with.veh.df[, FC_direction := sign(beta_pub * beta_veh)]
 fwrite(pub.meqtl.intersect.with.veh.df, 
        "data/public_data/GoDMC_mQTL/godmc_veh_olap_meqtl_df.csv",
        quote = F, row.names = F, sep = ";")
+
+pub.meqtl.intersect.with.veh.df <- fread("data/public_data/GoDMC_mQTL/godmc_veh_olap_meqtl_df.csv")
 ```
 
 ```{r}

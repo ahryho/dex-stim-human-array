@@ -114,12 +114,41 @@ gen.loc.enrich.perm.rslt
 fwrite(gen.loc.enrich.perm.rslt, 
        file = paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/",  "meqtl_cpgs_relation_to_island_enrichment_perm_veh_vs_all.csv"), 
        row.names = F, quote = F)
-
+###
 # ChIPSeeker 
+###
 
-delta.meqtl.snp.anno.rds <- readRDS(paste0(out.dir.pre, "meqtls_cpg_annotated_withChIPseeker_delta.rds"))
-veh.meqtl.snp.anno.rds   <- readRDS(paste0(out.dir.pre, "meqtls_cpg_annotated_withChIPseeker_veh.rds"))
+delta.meqtl.cpg.anno.gr <- readRDS(paste0(out.dir.pre, "meqtls_cpg_annotated_withChIPseeker_delta_gr.rds"))
+veh.meqtl.cpg.anno.gr  <- readRDS(paste0(out.dir.pre, "meqtls_cpg_annotated_withChIPseeker_veh_gr.rds"))
+all.cpg.anno.gr         <- readRDS(paste0(out.dir.pre, "cpg_annotated_withChIPseeker_all_gr.rds"))
 
-features.lst <- elementMetadata(delta.meqtl.snp.anno.rds@anno)[, "annotation"] %>% unique() %>% sort()
+features.lst <- elementMetadata(delta.meqtl.snp.anno.gr)[, "annotation"] %>% unique() %>% sort()
 
+no.cores <- detectCores() - 2
+cl <- makeCluster(no.cores)
+registerDoParallel(cl)
 
+nperm   <- 5
+
+gen.loc.enrich.perm.rslt <- foreach(i =  seq_along(features.lst), 
+                                    .combine = rbind, 
+                                    .packages =  c("GenomicRanges", "dplyr")) %dopar% {
+                                      feature <- features.lst[i]                                     
+                                      EnrichmentWithPermutationWithoutMAFnoPubData(own = delta.meqtl.cpg.anno.gr,
+                                                                                   background = veh.meqtl.cpg.anno.gr,
+                                                                                   feature = feature,
+                                                                                   nperm = nperm)
+                                    }
+
+stopImplicitCluster()
+
+gen.loc.enrich.perm.rslt <- cbind(gen.loc.enrich.perm.rslt %>% data.frame(row.names = NULL), 
+                                  Feature = features.lst)
+
+gen.loc.enrich.perm.rslt[["n_perm"]] <- nperm
+
+gen.loc.enrich.perm.rslt
+
+fwrite(gen.loc.enrich.perm.rslt, 
+       file = paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/",  "meqtl_cpgs_chipseeker_enrichment_perm_delta_vs_veh.csv"), 
+       row.names = F, quote = F)

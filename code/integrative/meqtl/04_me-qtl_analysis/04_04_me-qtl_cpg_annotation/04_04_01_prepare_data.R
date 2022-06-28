@@ -177,6 +177,21 @@ all.cpg.anno <- annotatePeak(unique(dex.cpg.all.coord.gr),
 saveRDS(all.cpg.anno,
         paste0(out.dir.pre, "cpg_annotated_withChIPseeker_all.rds"))
 
+anno.df <- as.data.frame(as.GRanges(all.cpg.anno))
+anno    <- anno.df$annotation
+
+anno[grep("exon 1 of", anno)]   <- "1st Exon"
+anno[grep("Exon \\(", anno)]    <- "Other Exon"
+anno[grep("intron 1 of", anno)] <- "1st Intron"
+anno[grep("Intron \\(", anno)]  <- "Other Intron"
+anno[grep("Downstream", anno)]  <- "Downstream (<=300)"
+anno[grep("^Distal", anno)]     <- "Distal Intergenic"
+
+all.cpg.anno@anno@elementMetadata[["annotation"]] <- anno
+
+saveRDS(all.cpg.anno@anno,
+        paste0(out.dir.pre, "cpg_annotated_withChIPseeker_all_gr.rds"))
+
 # DELTA
 # 
 delta.cpg.anno <- annotatePeak(unique(meqtls.cpg.delta.coord.gr), 
@@ -186,6 +201,21 @@ delta.cpg.anno <- annotatePeak(unique(meqtls.cpg.delta.coord.gr),
 saveRDS(delta.cpg.anno,
         paste0(out.dir.pre, "meqtls_cpg_annotated_withChIPseeker_delta.rds"))
 
+anno.df <- as.data.frame(as.GRanges(delta.cpg.anno))
+anno    <- anno.df$annotation
+
+anno[grep("exon 1 of", anno)]   <- "1st Exon"
+anno[grep("Exon \\(", anno)]    <- "Other Exon"
+anno[grep("intron 1 of", anno)] <- "1st Intron"
+anno[grep("Intron \\(", anno)]  <- "Other Intron"
+anno[grep("Downstream", anno)]  <- "Downstream (<=300)"
+anno[grep("^Distal", anno)]     <- "Distal Intergenic"
+
+delta.cpg.anno@anno@elementMetadata[["annotation"]] <- anno
+
+saveRDS(delta.cpg.anno@anno,
+        paste0(out.dir.pre, "meqtls_cpg_annotated_withChIPseeker_delta_gr.rds"))
+
 # VEH
 # 
 veh.cpg.anno <- annotatePeak(unique(meqtls.cpg.veh.coord.gr), 
@@ -194,6 +224,21 @@ veh.cpg.anno <- annotatePeak(unique(meqtls.cpg.veh.coord.gr),
 
 saveRDS(veh.cpg.anno,
         paste0(out.dir.pre, "meqtls_cpg_annotated_withChIPseeker_veh.rds"))
+
+anno.df <- as.data.frame(as.GRanges(veh.cpg.anno))
+anno    <- anno.df$annotation
+
+anno[grep("exon 1 of", anno)]   <- "1st Exon"
+anno[grep("Exon \\(", anno)]    <- "Other Exon"
+anno[grep("intron 1 of", anno)] <- "1st Intron"
+anno[grep("Intron \\(", anno)]  <- "Other Intron"
+anno[grep("Downstream", anno)]  <- "Downstream (<=300)"
+anno[grep("^Distal", anno)]     <- "Distal Intergenic"
+
+veh.cpg.anno@anno@elementMetadata[["annotation"]] <- anno
+
+saveRDS(veh.cpg.anno@anno,
+        paste0(out.dir.pre, "meqtls_cpg_annotated_withChIPseeker_veh_gr.rds"))
 
 # DEX
 # 
@@ -218,35 +263,4 @@ meqtls.cpg.chromhmm.annotated <- annotate_regions(
 saveRDS(meqtls.cpg.chromhmm.annotated,
         paste0(out.dir.pre, "meqtls_cpg_chromhmm_annotated_all_models.rds"))
 
-# meqtls.cpg.chromhmm.annotated.df <- data.frame(meqtls.cpg.chromhmm.annotated) %>% setDT()
-# meqtls.cpg.chromhmm.annotated.df[["CpG_ID"]] <- names(meqtls.cpg.chromhmm.annotated)
-# 
-# ### delta
-# 
-# delta.meqtls.cpg.chromhmm.annotated.df <- meqtls.cpg.chromhmm.annotated.df[CpG_ID %in% ind.meqtl.delta.df$CpG_ID,
-#                                                                            .(CpG_ID, annot.type, annot.code)] %>% unique()
-# 
-# fwrite(delta.meqtls.cpg.chromhmm.annotated.df,
-#        paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/",
-#               "meqtls_cpg_chromhmm_annotated_delta.csv"),
-#        quote = F, row.names = F, sep = "\t")
-# 
-# ### baseline
-# 
-# veh.meqtls.cpg.chromhmm.annotated.df <- meqtls.cpg.chromhmm.annotated.df[CpG_ID %in% ind.meqtl.veh.df$CpG_ID,
-#                                                                          .(CpG_ID, annot.type, annot.code)] %>% unique()
-# 
-# fwrite(veh.meqtls.cpg.chromhmm.annotated.df,
-#        paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/",
-#               "meqtls_cpg_chromhmm_annotated_veh.csv"),
-#        quote = F, row.names = F, sep = "\t")
-# 
-# ### dex
-# 
-# dex.meqtls.cpg.chromhmm.annotated.df <- meqtls.cpg.chromhmm.annotated.df[CpG_ID %in% ind.meqtl.dex.df$CpG_ID,
-#                                                                          .(CpG_ID, annot.type, annot.code)] %>% unique()
-# 
-# fwrite(dex.meqtls.cpg.chromhmm.annotated.df,
-#        paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/",
-#               "meqtls_cpg_chromhmm_annotated_dex.csv"),
-#        quote = F, row.names = F, sep = "\t")
+

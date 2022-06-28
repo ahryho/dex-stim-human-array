@@ -437,30 +437,13 @@ ggplot(meqtl.snp.anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
    scale_fill_manual("Feature", values = cbPalette)
 ```
 
-```{r out.width = "90%", fig.cap = "Distribution of gene-centric locations of the meCpGs based on Illumina EPIC annotation", include = T, eval = T}
-ggplot(meqtl.snp.anno.stat.df[meqtl.snp.anno.stat.df$Model %in% c("Delta", "Baseline"),], aes(x = Model, y = Frequency, fill = Feature)) + 
-  geom_bar( position = "fill", stat = "identity") + 
-  geom_text(data = subset(meqtl.snp.anno.stat.df, Frequency > 2),
-            aes(by = Model, label = Frequency), 
-            position = position_fill(vjust = .5), size = 3) +
-  labs(x = "",
-       y = "Percentage of CpGs", 
-       title = "meCpGs annotation from UCSC for the hg19 genome build using TxDb.Hsapiens.UCSC.hg19.knownGene and ChIPseeker Bioconductor R packages") +
-  theme(legend.position = "right",
-        panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
-   scale_fill_manual("Feature", values = cbPalette)
-```
 
 ```{r out.width = "90%", fig.cap = "Distribution of gene-centric locations of the delta meCpGs based on Illumina EPIC annotation", include = T, eval = T}
 ggplot(meqtl.snp.anno.stat.df[meqtl.snp.anno.stat.df$Model == "Delta", ], aes(x = Model, y = Frequency, fill = Feature)) + 
   geom_col() + 
   geom_text(
     data = subset(meqtl.snp.anno.stat.df[meqtl.snp.anno.stat.df$Model == "Delta", ], Frequency > 2),
-    aes(by = Model, label = paste0(Frequency, "%")), position = position_stack(vjust = .5, ), size = 3.5, color = "white") +
+    aes(by = Model, label = paste0(Frequency, "%")), position = position_stack(vjust = 0.9, ), size = 3.5, color = "white") +
   coord_polar(theta = 'y', start = 0) +
   labs(x = " ",
        y = "Percentage of CpGs", 

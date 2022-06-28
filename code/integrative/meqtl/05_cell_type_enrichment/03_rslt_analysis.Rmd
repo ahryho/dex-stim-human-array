@@ -322,9 +322,46 @@ ggplot(sign.pval.df, aes(x = Type, group = Treatment, fill = Treatment)) +
 ```
 
 ```{r}
-veh.sign.pval.df$CpG_ID %>% unique() %>% length()
-dex.sign.pval.df$CpG_ID %>% unique() %>% length()
-
-olap <- intersect(veh.sign.pval.df$CpG_ID %>% unique(), dex.sign.pval.df$CpG_ID %>% unique())
+ind.meqtl.delta.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/me-qtl_cis_result_delta_fdr_005.csv") 
+delta.meqtl.cpgs   <- ind.meqtl.delta.df$gene %>% unique() 
 ```
 
+```{r}
+sign.pval.df[CpG_ID %in% delta.meqtl.cpgs, ] %>%
+  ggplot(aes(x = Type, fill = Treatment)) +
+  geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
+  # geom_text(aes(label =  scales::percent(prop.table(stat(count)))), 
+  # geom_text(aes(label = scales::percent(stat(count) / length(unique(sign.pval.df$CpG_ID)))), 
+  geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 0.01)), 
+            stat = "count", vjust = -0.5, size = 4, position = position_dodge(width = .9)) + 
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10), 
+        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10)) + 
+  labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
+       x = "", y = "") +
+  scale_fill_manual(values = cbPalette[2:3]) 
+```
+
+```{r}
+sign.pval.df[CpG_ID %in% delta.meqtl.cpgs, ] %>%
+  ggplot(aes(x = Type, group = Treatment, fill = Treatment)) + 
+    geom_density(aes(y = stat(count) / length(delta.meqtl.cpgs), color = Treatment), 
+             stat = "count",
+             alpha = 0.2) + 
+    scale_y_continuous(labels = scales::percent) + 
+    labs(x = " ", y = "", 
+         title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types") + 
+    theme(legend.title = element_blank(), 
+          legend.position = "bottom", 
+          panel.grid.major = element_blank(), 
+          panel.background = element_blank(), 
+          plot.title = element_text(size = 8), 
+          axis.title = element_text(size = 8), 
+          axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+    scale_color_manual(values = cbPalette[2:3]) +
+    scale_fill_manual(values = cbPalette[2:3]) 
+```

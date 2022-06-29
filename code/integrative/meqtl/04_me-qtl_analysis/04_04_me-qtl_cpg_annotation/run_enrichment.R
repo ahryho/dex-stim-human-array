@@ -128,7 +128,7 @@ no.cores <- detectCores() - 2
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-nperm   <- 5
+nperm   <- 20
 
 gen.loc.enrich.perm.rslt <- foreach(i =  seq_along(features.lst), 
                                     .combine = rbind, 

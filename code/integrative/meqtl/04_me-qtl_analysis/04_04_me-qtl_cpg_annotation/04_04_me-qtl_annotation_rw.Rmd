@@ -457,7 +457,7 @@ ggplot(meqtl.snp.anno.stat.df[meqtl.snp.anno.stat.df$Model == "Delta", ], aes(x 
   scale_fill_manual("Feature", values = cbPalette)
 ```
 
-# __Enrichment__
+# __Enrichment of genomic locations in relation to island__
 ***
 
 ## Delta vs Baseline
@@ -529,5 +529,31 @@ ggplot(gen.loc.enrich.perm.rslt, aes(x = Feature, y = or.odds.ratio, fill = is_s
         plot.title = element_text(size = 8),
         axis.title = element_text(size = 8),
         axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+   scale_fill_manual("", values = c( "#999999", "#009E73")) 
+```
+
+# __Enrichment of gene-centric locations__
+***
+
+```{r}
+gen.loc.enrich.perm.rslt <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_cpgs_chipseeker_enrichment_perm_delta_vs_veh.csv")
+```
+
+```{r out.width = "90%", fig.cap = "Genomic region enrichment for the delta meCpGs.  The Y-axis denotes the fold enrichment/depletion as compared to baseline meCpGs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permutation Fisher-tests empirical P <= 0.05. ", eval = T, include = T}
+
+gen.loc.enrich.perm.rslt[["is_sign"]] <- ifelse(gen.loc.enrich.perm.rslt$p_val_emp < 0.05, "Significant", "Non-significant")
+
+ggplot(gen.loc.enrich.perm.rslt, aes(x = Feature, y = odds.ratio, fill = is_sign)) + 
+  geom_bar( stat = "identity", position = position_dodge()) +
+  geom_hline(yintercept = 1, color = "red") + 
+  labs(x = "",
+       y = "Odds ratio", 
+       title = "") +
+  theme(legend.position = "bottom",
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 8),
+        axis.title = element_text(size = 8),
+        axis.text.x = element_text(angle = 20, hjust = 0.5)) +
    scale_fill_manual("", values = c( "#999999", "#009E73")) 
 ```

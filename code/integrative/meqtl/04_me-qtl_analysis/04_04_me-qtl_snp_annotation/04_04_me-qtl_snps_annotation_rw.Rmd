@@ -449,8 +449,8 @@ states.lst <- elementMetadata(chromhmm.blood.states)[, "type"] %>% unique() %>% 
 
 ```{r eval = T, include = F}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/"
-chromhmm.blood.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_blood_enrichment_perm_20.csv"))
-chromhmm.brain.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_brain_enrichment_perm_20.csv"))
+chromhmm.blood.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_blood_enrichment.csv"))
+chromhmm.brain.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_brain_enrichment.csv"))
 
 chromhmm.blood.enrich.perm.rslt$state <- factor(chromhmm.blood.enrich.perm.rslt$state, levels = chromhmm.states$STATE)
 levels( chromhmm.blood.enrich.perm.rslt$state) <- chromhmm.states$DESCRIPTION

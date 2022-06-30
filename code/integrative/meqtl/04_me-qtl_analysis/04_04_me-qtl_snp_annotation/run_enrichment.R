@@ -157,8 +157,8 @@ write.csv2(rslt,
 
 # ChromHMM
 
-chromhmm.blood.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_blood_states.Rds") 
-chromhmm.brain.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_brain_states.Rds") 
+chromhmm.blood.states <- readRDS(paste0(out.dir.pre, "data/annotation/chromHMM/chromHMM_blood_states.Rds"))
+chromhmm.brain.states <- readRDS(paste0(out.dir.pre, "data/annotation/chromHMM/chromHMM_brain_states.Rds"))
 
 states.lst <- elementMetadata(chromhmm.blood.states)[, "type"] %>% unique() %>% sort()
 
@@ -168,7 +168,7 @@ no.cores <- detectCores() - 2
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-nperm <- 20
+nperm <- 1000
 
 chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
                                      .combine = rbind, 
@@ -183,7 +183,7 @@ chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst),
                             nperm = nperm) 
 }
 
- stopImplicitCluster()
+stopImplicitCluster()
 
 chromhmm.enrich.perm.rslt <- cbind(chromhmm.enrich.perm.rslt %>% data.frame(row.names = NULL), 
                                    state = states.lst)
@@ -196,7 +196,7 @@ chromhmm.enrich.perm.rslt
 # /05_me-qtl_enrichment/region_wise_independent_snps/
 
 write.csv2(chromhmm.enrich.perm.rslt, 
-           file = paste0(out.dir.pre, "meqtl_snps_chromHMM_blood_enrichment_perm_", nperm, ".csv"), 
+           file = paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/meqtl_snps_chromHMM_blood_enrichment.csv"), 
            row.names = F, quote = F)
 
 # chromHMM Brain
@@ -205,7 +205,7 @@ no.cores <- detectCores() - 3
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-nperm <- 20
+nperm <- 1000
 
 chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
                                      .combine = rbind, 
@@ -233,7 +233,7 @@ chromhmm.enrich.perm.rslt
 # /05_me-qtl_enrichment/region_wise_independent_snps/
 
 write.csv2(chromhmm.enrich.perm.rslt, 
-           file = paste0(out.dir.pre, "meqtl_snps_chromHMM_brain_enrichment_perm_", nperm, ".csv"), 
+           file = paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/meqtl_snps_chromHMM_brain_enrichment.csv"), 
            row.names = F, quote = F)
 
 # delta vs all
@@ -244,7 +244,7 @@ no.cores <- detectCores() - 2
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-nperm <- 20
+nperm <- 1000
 
 chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
                                      .combine = rbind, 
@@ -272,7 +272,7 @@ chromhmm.enrich.perm.rslt
 # /05_me-qtl_enrichment/region_wise_independent_snps/
 
 write.csv2(chromhmm.enrich.perm.rslt, 
-           file = paste0(out.dir.pre, "meqtl_snps_chromHMM_blood_enrichment_veh_vs_all_perm_", nperm, ".csv"), 
+           file = paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/meqtl_snps_chromHMM_blood_enrichment_veh_vs_all.csv"), 
            row.names = F, quote = F)
 
 # chromHMM Brain
@@ -281,7 +281,7 @@ no.cores <- detectCores() - 3
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-nperm <- 20
+nperm <- 1000
 
 chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
                                      .combine = rbind, 
@@ -309,5 +309,5 @@ chromhmm.enrich.perm.rslt
 # /05_me-qtl_enrichment/region_wise_independent_snps/
 
 write.csv2(chromhmm.enrich.perm.rslt, 
-           file = paste0(out.dir.pre, "meqtl_snps_chromHMM_brain_enrichment_veh_vs_all_perm_", nperm, ".csv"), 
+           file = paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/meqtl_snps_chromHMM_brain_enrichment_veh_vs_all.csv"), 
            row.names = F, quote = F)

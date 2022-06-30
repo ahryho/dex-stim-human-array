@@ -59,7 +59,7 @@ names(delta.snp.coord.range) <- meqtls.snp.delta.coord.df$SNP
 
 # Annotate
 
-# delta 
+## delta 
 
 delta.snp.anno <- annotatePeak(unique(delta.snp.coord.range), 
                                TxDb = TxDb.Hsapiens.UCSC.hg19.knownGene, 
@@ -67,7 +67,7 @@ delta.snp.anno <- annotatePeak(unique(delta.snp.coord.range),
 saveRDS(delta.snp.anno,
        paste0(out.dir.pre, "meqtls_snp_annotated_withChIPseeker_delta.rds"))
 
-# baseline
+## baseline
 
 meqtls.snp.lst            <- ind.meqtl.veh.df$SNP %>% unique()
 meqtls.snp.veh.coord.df   <- snp.loc[SNP %in% meqtls.snp.lst, ]
@@ -89,7 +89,7 @@ saveRDS(veh.snp.anno,
         paste0(out.dir.pre, "meqtls_snp_annotated_withChIPseeker_veh.rds"))
 
 
-# dex
+## dex
 
 meqtls.snp.lst            <- ind.meqtl.dex.df$SNP %>% unique()
 meqtls.snp.dex.coord.df   <- snp.loc[SNP %in% meqtls.snp.lst, ]

@@ -78,8 +78,9 @@ library(doParallel)
 
 library(gUtils)
 
-dir.pre      <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/"
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/"
+dir.pre      <- "~/bio/code/mpip/dex-stim-human-array/"
+dir.pre      <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/"        
+out.dir.pre  <- paste0(dir.pre, "output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/")
 
 # meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_with_delta_fdr_005.csv")
 # meqtl.veh.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_veh_fdr_005.csv")
@@ -94,7 +95,7 @@ out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/ma
 
 ```{r include = F, eval = T}
 # code: ../code/methylation/02_dma/01_dmp/03_get_cpg_gene_anno_dist
-cpg.closest.genes.dist.fn <-"~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dex_cpgs_annotated_closest_genes_distances.csv"
+cpg.closest.genes.dist.fn <-paste0(dir.pre, "output/data/methylation/02_dmp/dex_cpgs_annotated_closest_genes_distances.csv")
 cpg.closest.genes.dist.df <- fread(cpg.closest.genes.dist.fn)
 
 delta.meqtl.cpg.anno.df               <- fread(paste0(out.dir.pre, "meqtls_cpg_annotated_delta.csv"), sep = "\t")
@@ -234,7 +235,7 @@ ggplot(meqtl.cpg.anno.df[Model %in% c("Delta")], aes(x = Model, fill = Relation_
   geom_text(aes(by = Model, # scales::percent(..count../tapply(..count.., ..x.., sum), accuracy = 0.1), 
                 label = scales::percent((..count..)/sum(..count..), accuracy = 0.1)), 
                 stat = "prop", 
-                position = position_stack(vjust = .5), size = 3) +
+                position = position_stack(vjust = 0.9, ), size = 3.5, color = "white") +x
   coord_polar(theta = 'y', start = 0) +
   labs(x = " ",
        y = "Percentage of CpGs", 
@@ -421,8 +422,9 @@ ggplot(gen.loc.enrich.perm.rslt, aes(x = Feature, y = or.odds.ratio, fill = is_s
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+        axis.title = element_text(size = 14),
+        axis.text.x = element_text(angle = 0, hjust = 0.5, size = 14),
+        legend.text = element_text(size = 14)) +
    scale_fill_manual("", values = c( "#999999", "#009E73")) 
 ```
 

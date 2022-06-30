@@ -78,6 +78,7 @@ library(doParallel)
 
 library(gUtils)
 
+dir.pre      <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/"
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/"
 
 # meqtl.dex.fn   <- paste0(out.dir.pre, "me-qtl_cis_indp_result_dex_with_delta_fdr_005.csv")
@@ -333,65 +334,6 @@ cpg.coord.range <- makeGRangesFromDataFrame(cpg.coord.df,
 names(cpg.coord.range) <- cpg.coord.df$Name
 ```
 
-```{r include = F, eval = F}
-library(annotatr)
-library(AnnotationHub)
-library(TxDb.Hsapiens.UCSC.hg19.knownGene)
-
-annots <- c('hg19_cpgs', 'hg19_basicgenes') #, 'hg19_genes_intergenic', 'hg19_genes_intronexonboundaries')
-gene.annots <- c('hg19_basicgenes') #, 'hg19_genes_intergenic', 'hg19_genes_intronexonboundaries')
-    
-annotations <- build_annotations(
-  genome = "hg19",
-  annotations = gene.annots
-)
-```
-
-```{r include = F, eval = F}
-delta.meqtls.cpg.annotated <- annotate_regions(
-    regions = cpg.coord.range,
-    annotations = annotations,
-    ignore.strand = TRUE,
-    quiet = FALSE)
-
-# print(delta.meqtls.cpg.annotated)
-# plot_annotation(annotated_regions = delta.meqtls.cpg.annotated)
-
-delta.meqtls.cpg.annotated.df <- data.frame(delta.meqtls.cpg.annotated) %>% setDT()
-
-delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_1to5kb", annot.type := "1-5kb"]
-delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_3UTRs", annot.type := "3UTRs"]
-delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_5UTRs", annot.type := "5UTRs"]
-delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_exons", annot.type := "exons"]
-delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_introns", annot.type := "introns"]
-delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_promoters", annot.type := "promoters"]
-# head(delta.meqtls.cpg.annotated.df)
-
-delta.meqtls.cpg.annotated.df <- delta.meqtls.cpg.annotated.df[, .(seqnames, start, end, annot.type)] %>% unique()
-
-delta.meqtls.cpg.annotated.df$annot.type <- factor(delta.meqtls.cpg.annotated.df$annot.type, 
-                                                              levels = c("1-5kb", "promoters", "5UTRs", "introns", "exons", "3UTRs"))
-```
-
-```{r out.width = "90%", fig.cap = "The distribution of CpGs in different gene regions", include = F, eval = F}
-ggplot(delta.meqtls.cpg.annotated.df, aes(x = annot.type)) + 
-  geom_bar(aes(y = (..count..)/sum(..count..), fill = annot.type), position = position_dodge()) + 
-  geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)), 
-            stat = "count", vjust = -.5,  position = position_dodge(1), size = 3) +
-  scale_y_continuous(labels = scales::percent) +
-  labs(x = "Gene Region",
-       y = "Percentage of CpG", 
-       title = "From UCSC Genome Browser") +
-  theme(legend.title = element_blank(), 
-        legend.position = "none", #c(.1,.8),
-        panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 45, hjust = 0.5)) +
-   scale_fill_manual(values = cbPalette)
-```
-
 Annotation with Chipseeker
 
 ```{r include = F, eval = T}
@@ -462,7 +404,7 @@ ggplot(meqtl.snp.anno.stat.df[meqtl.snp.anno.stat.df$Model == "Delta", ], aes(x 
 
 ## Delta vs Baseline
 ```{r}
-gen.loc.enrich.perm.rslt <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_cpgs_relation_to_island_enrichment_perm.csv")
+gen.loc.enrich.perm.rslt <- fread(paste0(dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_cpgs_relation_to_island_enrichment_perm.csv"))
 ```
 
 ```{r out.width = "90%", fig.cap = "Genomic region enrichment for the delta meCpGs.  The Y-axis denotes the fold enrichment/depletion as compared to baseline meCpGs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permutation Fisher-tests empirical P <= 0.05. ", eval = T, include = T}
@@ -536,7 +478,7 @@ ggplot(gen.loc.enrich.perm.rslt, aes(x = Feature, y = or.odds.ratio, fill = is_s
 ***
 
 ```{r}
-gen.loc.enrich.perm.rslt <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_cpgs_chipseeker_enrichment_perm_delta_vs_veh.csv")
+gen.loc.enrich.perm.rslt <- fread("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_cpgs_chipseeker_enrichment_perm_delta_vs_veh.csv")
 ```
 
 ```{r out.width = "90%", fig.cap = "Genomic region enrichment for the delta meCpGs.  The Y-axis denotes the fold enrichment/depletion as compared to baseline meCpGs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permutation Fisher-tests empirical P <= 0.05. ", eval = T, include = T}

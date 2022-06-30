@@ -8,7 +8,8 @@ library(parallel)
 library(foreach)
 library(doParallel)
 
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/"
+dir.pre      <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/"        
+out.dir.pre  <- paste0(dir.pre, "output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/")
 
 # Relation to island
 
@@ -24,8 +25,7 @@ no.cores <- detectCores() - 2
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-nperm   <- 20
-nsample <- 1000
+nperm   <- 1000
 
 gen.loc.enrich.perm.rslt <- foreach(i =  seq_along(features.lst), 
                                     .combine = rbind, 
@@ -48,7 +48,7 @@ gen.loc.enrich.perm.rslt[["n_perm"]] <- nperm
 gen.loc.enrich.perm.rslt
 
 fwrite(gen.loc.enrich.perm.rslt, 
-       file = paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/",  "meqtl_cpgs_relation_to_island_enrichment_perm.csv"), 
+       file = paste0(dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/",  "meqtl_cpgs_relation_to_island_enrichment_perm.csv"), 
        row.names = F, quote = F)
 
 # Relation to island
@@ -57,7 +57,7 @@ no.cores <- detectCores() - 2
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-nperm   <- 20
+nperm   <- 1000
 
 gen.loc.enrich.perm.rslt <- foreach(i =  seq_along(features.lst), 
                                     .combine = rbind, 
@@ -89,7 +89,7 @@ no.cores <- detectCores() - 2
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-nperm   <- 20
+nperm   <- 1000
 
 gen.loc.enrich.perm.rslt <- foreach(i =  seq_along(features.lst), 
                                     .combine = rbind, 
@@ -122,13 +122,13 @@ delta.meqtl.cpg.anno.gr <- readRDS(paste0(out.dir.pre, "meqtls_cpg_annotated_wit
 veh.meqtl.cpg.anno.gr  <- readRDS(paste0(out.dir.pre, "meqtls_cpg_annotated_withChIPseeker_veh_gr.rds"))
 all.cpg.anno.gr         <- readRDS(paste0(out.dir.pre, "cpg_annotated_withChIPseeker_all_gr.rds"))
 
-features.lst <- elementMetadata(delta.meqtl.snp.anno.gr)[, "annotation"] %>% unique() %>% sort()
+features.lst <- elementMetadata(delta.meqtl.cpg.anno.gr)[, "annotation"] %>% unique() %>% sort()
 
 no.cores <- detectCores() - 2
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
-nperm   <- 20
+nperm   <- 1000
 
 gen.loc.enrich.perm.rslt <- foreach(i =  seq_along(features.lst), 
                                     .combine = rbind, 
@@ -150,5 +150,5 @@ gen.loc.enrich.perm.rslt[["n_perm"]] <- nperm
 gen.loc.enrich.perm.rslt
 
 fwrite(gen.loc.enrich.perm.rslt, 
-       file = paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/",  "meqtl_cpgs_chipseeker_enrichment_perm_delta_vs_veh.csv"), 
+       file = paste0("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/",  "meqtl_cpgs_chipseeker_enrichment_perm_delta_vs_veh.csv"), 
        row.names = F, quote = F)

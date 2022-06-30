@@ -18,7 +18,7 @@ background.all.gr  <- readRDS(paste0(out.dir.pre, "data/snps/imputed_qc/from_jan
 gwas.gr    <- readRDS(paste0(out.dir.pre, "data/public_data/PGC/Cross_Disorder2/pgc_cdg2_meta_no23andMe_oct2019_v2_GR_p005.rds"))
 # gwas.gw.gr <- gwas.gr[elementMetadata(gwas.gr)[, "p_value"] <= 5e-8, ] 
 
-nperm <- 10000
+nperm <- 1000
 
 gwas.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
                                                    background = meqtl.veh.snp.gr, 
@@ -31,7 +31,7 @@ gwas.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gr)
 gwas.cd <- gwas.enrich.perm.rslt
 
 # GWAS ADHD
-gwas.gr    <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/pgc_ADHD_Demontis_2019_GR_p005.rds")
+gwas.gr    <- readRDS(paste0(out.dir.pre, "data/public_data/PGC/pgc_ADHD_Demontis_2019_GR_p005.rds"))
 
 gwas.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
                                                    background = meqtl.veh.snp.gr, 
@@ -44,7 +44,7 @@ gwas.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gr)
 gwas.adhd <- gwas.enrich.perm.rslt
 
 # GWAS ASD
-gwas.gr    <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/pgc_ASD_Grove_2019_GR_p005.rds")
+gwas.gr    <- readRDS(paste0(out.dir.pre, "data/public_data/PGC/pgc_ASD_Grove_2019_GR_p005.rds"))
 
 gwas.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
                                                    background = meqtl.veh.snp.gr, 
@@ -57,7 +57,7 @@ gwas.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gr)
 gwas.asd <- gwas.enrich.perm.rslt
 
 # GWAS BPD
-gwas.gr    <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/pgc_BPD_GR_p005.rds")
+gwas.gr    <- readRDS(paste0(out.dir.pre, "data/public_data/PGC/pgc_BPD_GR_p005.rds"))
 
 gwas.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
                                                    background = meqtl.veh.snp.gr, 
@@ -70,7 +70,7 @@ gwas.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gr)
 gwas.bpd <- gwas.enrich.perm.rslt
 
 # GWAS MDD
-gwas.gr    <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/pgc_MDD_GR_p005.rds")
+gwas.gr    <- readRDS(paste0(out.dir.pre, "data/public_data/PGC/pgc_MDD_GR_p005.rds"))
 
 gwas.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
                                                    background = meqtl.veh.snp.gr, 
@@ -83,7 +83,7 @@ gwas.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gr)
 gwas.mdd <- gwas.enrich.perm.rslt
 
 # GWAS SCZ
-gwas.gr    <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/public_data/PGC/pgc_SCZ_2018_GR_p005.rds")
+gwas.gr    <- readRDS(paste0(out.dir.pre, "data/public_data/PGC/pgc_SCZ_2018_GR_p005.rds"))
 
 gwas.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
                                                    background = meqtl.veh.snp.gr, 
@@ -96,7 +96,7 @@ gwas.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gr)
 gwas.scz <- gwas.enrich.perm.rslt
 
 # GWAS BMI
-gwas.gr    <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/public_data/BMI_GR_p005.rds")
+gwas.gr    <- readRDS(paste0(out.dir.pre, "data/public_data/BMI_GR_p005.rds"))
 
 gwas.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
                                                    background = meqtl.veh.snp.gr, 
@@ -109,7 +109,7 @@ gwas.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gr)
 gwas.bmi <- gwas.enrich.perm.rslt
 
 # GWAS IBD
-gwas.gr    <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/public_data/IBD_GR_p005.rds")
+gwas.gr    <- readRDS(paste0(out.dir.pre, "data/public_data/IBD_GR_p005.rds"))
 
 gwas.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
                                                    background = meqtl.veh.snp.gr, 
@@ -122,7 +122,7 @@ gwas.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gr)
 gwas.ibd <- gwas.enrich.perm.rslt
 
 # GWAS PD
-gwas.gr    <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/public_data/PD_GR_p005.rds")
+gwas.gr    <- readRDS(paste0(out.dir.pre, "data/public_data/PD_GR_p005.rds"))
 
 gwas.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
                                                    background = meqtl.veh.snp.gr, 
@@ -150,7 +150,7 @@ gwas.pd <- gwas.enrich.perm.rslt
 # /05_me-qtl_enrichment/region_wise_independent_snps/
 # 
 write.csv2(rslt, 
-           file = paste0(out.dir.pre, "meqtl_snps_GWAS_enrichment_perm_", nperm, ".csv"), 
+           file = paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_GWAS_enrichment_perm_", nperm, ".csv"), 
            row.names = F, quote = F)
 
 # rslt <- read.csv2(file = paste0(out.dir.pre, "/05_me-qtl_enrichment/meqtl_snps_GWAS_CD_2019_enrichment_perm_", nperm, ".csv"))

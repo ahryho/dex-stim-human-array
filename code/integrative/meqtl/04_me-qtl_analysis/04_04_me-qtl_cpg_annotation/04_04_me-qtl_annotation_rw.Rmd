@@ -235,7 +235,7 @@ ggplot(meqtl.cpg.anno.df[Model %in% c("Delta")], aes(x = Model, fill = Relation_
   geom_text(aes(by = Model, # scales::percent(..count../tapply(..count.., ..x.., sum), accuracy = 0.1), 
                 label = scales::percent((..count..)/sum(..count..), accuracy = 0.1)), 
                 stat = "prop", 
-                position = position_stack(vjust = 0.9, ), size = 3.5, color = "white") +x
+                position = position_stack(vjust = 0.9, ), size = 3.5, color = "white") +
   coord_polar(theta = 'y', start = 0) +
   labs(x = " ",
        y = "Percentage of CpGs", 

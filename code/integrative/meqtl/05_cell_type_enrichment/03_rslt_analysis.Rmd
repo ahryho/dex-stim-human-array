@@ -288,7 +288,7 @@ ggplot(sign.pval.df, aes(x = Type, fill = Treatment)) +
   geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
   # geom_text(aes(label =  scales::percent(prop.table(stat(count)))), 
   # geom_text(aes(label = scales::percent(stat(count) / length(unique(sign.pval.df$CpG_ID)))), 
-  geom_text(aes(label = scales::percent(stat(count) / nrow(fdr.bcc.df), accuracy = 0.01)), 
+  geom_text(aes(label = scales::percent(stat(count) / nrow(fdr.bcc.df), accuracy = 1)), 
             stat = "count", vjust = -0.5, size = 3, position = position_dodge(width = .9)) + 
   theme(legend.position = "bottom", # c(0.9, 0.9), 
         legend.title = element_blank(), 
@@ -332,15 +332,16 @@ sign.pval.df[CpG_ID %in% delta.meqtl.cpgs, ] %>%
   geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
   # geom_text(aes(label =  scales::percent(prop.table(stat(count)))), 
   # geom_text(aes(label = scales::percent(stat(count) / length(unique(sign.pval.df$CpG_ID)))), 
-  geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 0.01)), 
-            stat = "count", vjust = -0.5, size = 4, position = position_dodge(width = .9)) + 
+  geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 1)), 
+            stat = "count", vjust = -0.5, size = 5, position = position_dodge(width = .9)) + 
   theme(legend.position = "bottom", # c(0.9, 0.9), 
         legend.title = element_blank(), 
+        legend.text = element_text(size = 18),
         panel.grid.major = element_blank(), 
         panel.background = element_blank(),
-        plot.title = element_text(size = 10), 
-        axis.title = element_text(size = 10),
-        axis.text = element_text(size = 10)) + 
+        plot.title = element_text(size = 18), 
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18, colour = "black")) + 
   labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
        x = "", y = "") +
   scale_fill_manual(values = cbPalette[2:3]) 

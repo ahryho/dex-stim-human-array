@@ -214,7 +214,7 @@ plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID,
                      "FC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
 ```
 ```{r out.width = "95%", include = T, eval = T}
-GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+GetScatterPlot(meqtl.all.full.df[treatment == "delta"], selected.meqtl, fdr.thr = 0.05,
                plot.title = plot.title)
 ```
 ```{r out.width = "95%", include = T, eval = T}
@@ -224,7 +224,7 @@ ProcessGetBoxPlot(methyl.beta.veh.df, methyl.beta.dex.df, snp.df, selected.meqtl
 ### The most significant GR-meQTL with negative FC
 
 ```{r include = T, eval = T}
-meqtl.id       <-  meqtl.all.full.df[treatment == "delta"][order(fdr, decreasing = T)][3, meQTL_ID]
+meqtl.id       <- meqtl.all.full.df[treatment == "delta"][beta == min(beta)][order(fdr, decreasing = T)][1, meQTL_ID]
 selected.meqtl <- meqtl.all.full.df[meQTL_ID == meqtl.id]
 
 kable(selected.meqtl %>% 
@@ -233,11 +233,11 @@ kable(selected.meqtl %>%
 ```
 ```{r, eval = T, include = F}
 plot.title <- paste0(# "Independent meQTL ", selected.meqtl$meQTL_ID, 
-                     "meQTL with maximum FC across GR-meQTLs: ",
+                     "meQTL with minimum FC across GR-meQTLs: ",
                      "FC = ", signif(selected.meqtl$beta, 2), " and FDR = ", signif(selected.meqtl$fdr, 2))
 ```
 ```{r out.width = "95%", include = T, eval = T}
-GetScatterPlot(meqtl.all.full.df, selected.meqtl, fdr.thr = 0.05,
+GetScatterPlot(meqtl.all.full.df[treatment == "delta"], selected.meqtl[treatment == "delta"], fdr.thr = 0.05,
                plot.title = plot.title)
 ```
 

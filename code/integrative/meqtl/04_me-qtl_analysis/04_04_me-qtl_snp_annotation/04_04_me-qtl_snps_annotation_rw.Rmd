@@ -438,26 +438,20 @@ ggplot(df.plt, aes(x = Model, y = Prop, fill = annot.name )) +
 <!-- {.tabset .tabset-fade .tabset-pills} -->
 
 ```{r eval = T, include = F}
-chromhmm.blood.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_blood_states.Rds") 
-chromhmm.brain.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_brain_states.Rds") 
-
+chromhmm.blood.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_blood_states.Rds") chromhmm.brain.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_brain_states.Rds") 
 states.lst <- elementMetadata(chromhmm.blood.states)[, "type"] %>% unique() %>% sort()
 
-# length(chromhmm.blood.states)
-# length(chromhmm.brain.states)
+epigenome <- fread("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/epigenomes.tsv",
+                   col.names = c("EID", "ORDER", "GROUP", "MNEMONIC", "NAME"))
 ```
 
 ```{r eval = T, include = F}
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/"
 chromhmm.blood.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_blood_enrichment.csv"))
-chromhmm.brain.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_brain_enrichment.csv"))
 
 chromhmm.blood.enrich.perm.rslt$state <- factor(chromhmm.blood.enrich.perm.rslt$state, levels = chromhmm.states$STATE)
-levels( chromhmm.blood.enrich.perm.rslt$state) <- chromhmm.states$DESCRIPTION
-# chromhmm.blood.enrich.perm.rslt$state <- sub("[0-9]*_", "", chromhmm.blood.enrich.perm.rslt$state) 
-
-chromhmm.brain.enrich.perm.rslt$state <- factor(chromhmm.brain.enrich.perm.rslt$state, levels = chromhmm.states$STATE)
-levels(chromhmm.brain.enrich.perm.rslt$state) <- chromhmm.states$DESCRIPTION
+# levels( chromhmm.blood.enrich.perm.rslt$state) <- chromhmm.states$DESCRIPTION
+chromhmm.blood.enrich.perm.rslt$state <- sub("[0-9]*_", "", chromhmm.blood.enrich.perm.rslt$state) 
 ```
 
 ### Permutation results
@@ -466,29 +460,123 @@ levels(chromhmm.brain.enrich.perm.rslt$state) <- chromhmm.states$DESCRIPTION
 rbind(chromhmm.blood.enrich.perm.rslt, chromhmm.brain.enrich.perm.rslt)
 ```
 
+```{r}
+PlotChromHMMEnrichment <- function(enrichment.rslt, plt.title, plt.txt.size = 20){
+  enrichment.rslt$state <- factor(enrichment.rslt$state, levels = chromhmm.states$STATE)
+  levels(enrichment.rslt$state) <- sub("[0-9]*_", "", enrichment.rslt$state)
+  
+  enrichment.rslt["is_sign"] <- ifelse(enrichment.rslt$p_val_emp < 0.05, "Significant", "Non-significant")
+  
+  ggplot(enrichment.rslt, aes(x = state, y = odds.ratio, fill = is_sign)) + 
+    geom_bar( stat = "identity", position = position_dodge()) +
+    geom_hline(yintercept = 1, color = "red") + 
+    labs(x = "",
+         y = "Odds ratio", 
+         title = plt.title) +
+    theme(legend.position = "bottom",
+          legend.text = element_text(size = plt.txt.size, colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 0.75 * plt.txt.size),
+          axis.title = element_text(size = plt.txt.size),
+          axis.text.x = element_text(size = 0.75 * plt.txt.size, angle = 90, colour = "black", hjust = 0.95, vjust = 0.2),
+          axis.text.y = element_text(size = 0.75 * plt.txt.size, angle = 0, colour = "black")) +
+    scale_fill_manual("", values = c( "#999999", "#009E73")) 
+}
+```
+
+
 ### Blood
+
+```{r}
+tissue <- "blood"
+
+enrichment.rslts.fn <- paste0(out.dir.pre, "meqtl_snps_chromHMM_", tissue, "/", list.files(paste0(out.dir.pre, "meqtl_snps_chromHMM_", tissue)))
+
+doc <- read_pptx("~/bio/code/mpip/dex-stim-human-array/output/plots/enrichment/meqtl_snp_chromHMM_enrichment.pptx")
+
+enrichment.all.df <- lapply(seq_along(enrichment.rslts.fn), function(i) {
+  eid   <-  sub(".csv", "", sub(".*_", "", enrichment.rslts.fn[i]))
+  ename <- epigenome[EID == eid, NAME] 
+  plot.title <- paste0("Histone mark enrichment for the delta meSNPs for ", ename)
+  
+  df  <- read.csv2(enrichment.rslts.fn[i])
+  ggp <- PlotChromHMMEnrichment(df, plt.title = plot.title)
+  
+  add_slide(doc,
+            layout = "Plot",
+            master = "Basic") %>%
+    ph_with(
+      value = ggp,
+      location = ph_location_label(ph_label = "Content Placeholder 2")
+    )
+  return(data.frame(df, ename = ename))
+  }) %>%
+  bind_rows()
+
+enrichment.all.df$state <- factor(enrichment.all.df$state, levels = chromhmm.states$STATE)
+levels(enrichment.all.df$state) <- sub("[0-9]*_", "", enrichment.all.df$state)
+
+plt.txt.size <- 20
+ggp.heatmap <- 
+  ggplot(enrichment.all.df, aes(state, ename, fill = p_val_emp)) + 
+    geom_tile(colour = "white", size = 0.25) +
+    theme(legend.position = "right",
+          legend.title = element_text(size = plt.txt.size, colour = "black"),
+          legend.text = element_text(size = plt.txt.size, colour = "black"),
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 0.75 * plt.txt.size),
+          axis.title = element_blank(),
+          axis.text.x = element_text(size = 0.75 * plt.txt.size, angle = 90, colour = "black", hjust = 0.95, vjust = 0.2),
+          axis.text.y = element_text(size = 0.75 * plt.txt.size, angle = 0, colour = "black")) +
+  scale_fill_viridis()
+
+add_slide(doc,
+            layout = "Plot",
+            master = "Basic") %>%
+    ph_with(
+      value = ggp.heatmap,
+      location = ph_location_label(ph_label = "Content Placeholder 2")
+    )
+
+print(doc, target = paste0("~/bio/code/mpip/dex-stim-human-array/output/plots/enrichment/meqtl_snp_chromHMM_", tissue, "_enrichment.pptx"))
+```
+
+
+### Brain
+
+```{r}
+tissue <- "brain"
+
+enrichment.rslts.fn <- paste0(out.dir.pre, "meqtl_snps_chromHMM_", tissue, "/", list.files(paste0(out.dir.pre, "meqtl_snps_chromHMM_", tissue)))
+enrichmnet.rslts.df <- lapply(enrichment.rslts.fn, read.csv2)
+
+doc <- read_pptx("~/bio/code/mpip/dex-stim-human-array/output/plots/enrichment/meqtl_snp_chromHMM_enrichment.pptx")
+
+lapply(seq_along(enrichmnet.rslts.df), function(i) {
+  eid   <-  sub(".csv", "", sub(".*_", "", enrichment.rslts.fn[i]))
+  ename <- epigenome[EID == eid, NAME] 
+  plot.title <- paste0("Histone mark enrichment for the delta meSNPs for ", ename)
+  ggp <- PlotChromHMMEnrichment (enrichmnet.rslts.df[[i]], 
+                                 plt.title = plot.title)
+  
+  add_slide(doc,
+            layout = "Plot",
+            master = "Basic") %>%
+    ph_with(
+      value = ggp,
+      location = ph_location_label(ph_label = "Content Placeholder 2")
+    )
+  })
+
+print(doc, target = paste0("~/bio/code/mpip/dex-stim-human-array/output/plots/enrichment/meqtl_snp_chromHMM_", tissue, "_enrichment.pptx"))
+```
 
 #### Delta vs Baseline
 
 ```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs.  The Y-axis denotes the fold enrichment/depletion as compared to baseline meSNPs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permutation Fisher-tests empirical P <= 0.05. ", eval = T, include = T}
-
-chromhmm.blood.enrich.perm.rslt["is_sign"] <- ifelse(chromhmm.blood.enrich.perm.rslt$p_val_emp < 0.05, "Significant", "Non-significant")
-
-ggplot(chromhmm.blood.enrich.perm.rslt, aes(x = state, y = odds.ratio, fill = is_sign)) + 
-  geom_bar( stat = "identity", position = position_dodge()) +
-  geom_hline(yintercept = 1, color = "red") + 
-  labs(x = "",
-       y = "Odds ratio", 
-       title = "") +
-  theme(legend.position = "bottom",
-        legend.text = element_text(size = 20, colour = "black"),
-        panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 8),
-        axis.title = element_text(size = 20),
-        axis.text.x = element_text(size = 15, angle = 70, colour = "black"),
-        axis.text.y = element_text(size = 16, angle = 0, colour = "black")) +
-   scale_fill_manual("", values = c( "#999999", "#009E73")) 
+PlotChromHMMEnrichment(chromhmm.blood.enrich.perm.rslt, plt.title = "Histone mark enrichment for the delta meSNPs, delta vs baseline")
 ```
 
 ```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs. The Y-axis denotes the proportion of overlaps between meSNPs and blood cell type states.", eval = T, include = T}
@@ -498,7 +586,7 @@ chromhmm.blood.enrich.perm.rslt["prop"] <-  signif(chromhmm.blood.enrich.perm.rs
 ggplot(chromhmm.blood.enrich.perm.rslt, aes(x = state, y = prop)) + 
   geom_bar( stat = "identity", position = position_dodge()) +
   # geom_text(aes(label = paste0(n_snps_overlap, " \n(", prop, "%)")), position = position_dodge(width = 0.9), vjust = -0.25, cex = 2) + 
-  geom_text(aes(label = n_snps_overlap), position = position_dodge(width = 0.9), vjust = -0.25, cex = 3) + 
+  geom_text(aes(label = n_snps_overlap), position = position_dodge(width = 0.9), vjust = -0.25, cex = 5) + 
   labs(x = "",
        y = "Overlaps, %", 
        title = "") +
@@ -506,8 +594,9 @@ ggplot(chromhmm.blood.enrich.perm.rslt, aes(x = state, y = prop)) +
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
+        axis.title = element_text(size = 20),
+        axis.text.x = element_text(size = 0.75 * 20, angle = 90, hjust = 1, color = "black"),
+        axis.text.y = element_text(size = 0.75 * 20, angle = 90, color = "black")) +
    scale_fill_manual("", values = c( "#009E73")) 
 ```
 
@@ -579,35 +668,22 @@ ggplot(chromhmm.blood.enrich.perm.rslt, aes(x = state, y = odds.ratio, fill = is
 
 #### Delta vs Baseline
 
-```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs.  The Y-axis denotes the fold enrichment/depletion as compared to baseline meSNPs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permuation Fisher-tests emperical P <= 0.05.", eval = T, include = T}
-
-chromhmm.brain.enrich.perm.rslt["is_sign"] <- ifelse(chromhmm.brain.enrich.perm.rslt$p_val_emp < 0.05, "Significant", "Non-significant")
-
-ggplot(chromhmm.brain.enrich.perm.rslt, aes(x = state, y = odds.ratio, fill = is_sign)) + 
-  geom_bar( stat = "identity", position = position_dodge()) +
-  geom_hline(yintercept = 1, color = "red") + 
-  labs(x = "",
-       y = "Odds ratio", 
-       title = "") +
-    theme(legend.position = "bottom",
-        legend.text = element_text(size = 20, colour = "black"),
-        panel.grid.major = element_blank(),
-        panel.background = element_blank(),
-        plot.title = element_text(size = 8),
-        axis.title = element_text(size = 20),
-        axis.text.x = element_text(size = 20, angle = 25, colour = "black"),
-        axis.text.y = element_text(size = 16, angle = 0, colour = "black")) +
-   scale_fill_manual("", values = c( "#999999", "#009E73")) 
+```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs.  The Y-axis denotes the fold enrichment/depletion as compared to baseline meSNPs. Green bars indicate significant enrichment/depletion, grey bars non-significant differences based on permutation Fisher-tests empirical P <= 0.05. ", eval = T, include = T}
+chromhmm.brain.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_brain_enrichment.csv"))
+PlotChromHMMEnrichment(chromhmm.brain.enrich.perm.rslt, plt.title = "Histone mark enrichment for the delta meSNPs, delta vs baseline")
 ```
 
 ```{r out.width = "90%", fig.cap = "Histone mark enrichment for the delta meSNPs. The Y-axis denotes the proportion of overlaps between meSNPs and brain cell type states.", eval = T, include = T}
+
+chromhmm.brain.enrich.perm.rslt$state <- factor(chromhmm.brain.enrich.perm.rslt$state, levels = chromhmm.states$STATE)
+chromhmm.brain.enrich.perm.rslt$state <- sub("[0-9]*_", "", chromhmm.brain.enrich.perm.rslt$state)
 
 chromhmm.brain.enrich.perm.rslt["prop"] <- signif(chromhmm.brain.enrich.perm.rslt$n_snps_overlap / delta.meqtl.snp.anno.rds@peakNum * 100, 2)
 
 ggplot(chromhmm.brain.enrich.perm.rslt, aes(x = state, y = prop)) + 
   geom_bar( stat = "identity", position = position_dodge()) +
 # geom_text(aes(label = paste0(n_snps_overlap, " (", prop, "%)")), position = position_dodge(width = 0.9), vjust = -0.25, cex = 3) + 
-  geom_text(aes(label = n_snps_overlap), position = position_dodge(width = 0.9), vjust = -0.25, cex = 3) + 
+  geom_text(aes(label = n_snps_overlap), position = position_dodge(width = 0.9), vjust = -0.25, cex = 5) + 
   labs(x = "",
        y = "Overlaps, %", 
        title = "") +
@@ -615,8 +691,9 @@ ggplot(chromhmm.brain.enrich.perm.rslt, aes(x = state, y = prop)) +
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
         plot.title = element_text(size = 8),
-        axis.title = element_text(size = 8),
-        axis.text.x = element_text(angle = 90, hjust = 1)) +
+        axis.title = element_text(size = 20),
+        axis.text.x = element_text(size = 0.75 * 20, angle = 90, hjust = 1, color = "black"),
+        axis.text.y = element_text(size = 0.75 * 20, angle = 90, color = "black")) +
    scale_fill_manual("", values = c( "#009E73")) 
 ```
 
@@ -626,11 +703,17 @@ ggplot(chromhmm.brain.enrich.perm.rslt, aes(x = state, y = prop)) +
 out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/"
 chromhmm.brain.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_brain_enrichment_delta_vs_all.csv"))
 
-chromhmm.brain.enrich.perm.rslt$state <- factor(chromhmm.brain.enrich.perm.rslt$state, levels = chromhmm.states$STATE)
-levels(chromhmm.brain.enrich.perm.rslt$state) <- chromhmm.states$DESCRIPTION
+PlotChromHMMEnrichment(chromhmm.brain.enrich.perm.rslt, plt.title = "Histone mark enrichment for the delta meSNPs, delta vs all")
 ```
 
 #### Baseline vs All
+
+```{r eval = T, include = F}
+out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/"
+chromhmm.brain.enrich.perm.rslt <- read.csv2(paste0(out.dir.pre, "meqtl_snps_chromHMM_brain_enrichment_veh_vs_all.csv"))
+
+PlotChromHMMEnrichment(chromhmm.brain.enrich.perm.rslt, plt.title = "Histone mark enrichment for the delta meSNPs, baseline vs all")
+```
 
 ## GWAS Enrichment
 

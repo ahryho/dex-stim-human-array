@@ -8,6 +8,9 @@ library(parallel)
 library(foreach)
 library(doParallel)
 
+source("~/mpip/projects/dex-stim-human-array/code/integrative/meqtl/04_me-qtl_analysis/04_04_me-qtl_snp_annotation/EnrichmentWithPermutation_FUN.R")
+source("~/mpip/projects/dex-stim-human-array/code/integrative/meqtl/04_me-qtl_analysis/04_04_me-qtl_snp_annotation/RunEnrichmentChromHMM.R")
+
 out.dir.pre  <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/"
 
 meqtl.veh.snp.gr   <- readRDS(paste0(out.dir.pre, "output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/meqtl_veh_snps_with_maf_gr.rds"))
@@ -134,17 +137,6 @@ gwas.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gr)
 
 gwas.pd <- gwas.enrich.perm.rslt
 
-# filter GWAS CD datasets for genome-wide (gw) hits (p-value <= 5e-8) 
-# 
-# gwas.gw.enrich.perm.rslt <- EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
-#                                                       background = meqtl.veh.snp.gr, 
-#                                                       public = gwas.gw.gr, 
-#                                                       nperm = nperm)
-# 
-# gwas.gw.enrich.perm.rslt[["data"]] <- "GWAS_CD_2019_gw_p_5e-08"
-# gwas.gw.enrich.perm.rslt[["n_perm"]] <- nperm
-# gwas.gw.enrich.perm.rslt[["n_gwas_snps"]] <- length(gwas.gw.gr)
-
 (rslt <- rbind(gwas.cd, gwas.adhd, gwas.asd, gwas.bpd, gwas.mdd, gwas.ibd, gwas.bmi, gwas.scz, gwas.pd))
 
 # /05_me-qtl_enrichment/region_wise_independent_snps/
@@ -160,231 +152,138 @@ write.csv2(rslt,
 chromhmm.blood.states <- readRDS(paste0(out.dir.pre, "data/annotation/chromHMM/chromHMM_blood_states.Rds"))
 chromhmm.brain.states <- readRDS(paste0(out.dir.pre, "data/annotation/chromHMM/chromHMM_brain_states.Rds"))
 
-states.lst <- elementMetadata(chromhmm.blood.states)[, "type"] %>% unique() %>% sort()
-
 # chromHMM Blood
 
-no.cores <- detectCores() - 2
-cl <- makeCluster(no.cores)
-registerDoParallel(cl)
+## Delta vs Baseline
 
-nperm <- 1000
+out.fn <- paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_blood_enrichment_delta_vs_all.csv")
 
-chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
-                                     .combine = rbind, 
-                                     .packages =  c("GenomicRanges", "dplyr")) %dopar% {
-  state <- states.lst[i]                                     
-  public <- chromhmm.blood.states[(elementMetadata(chromhmm.blood.states)[, "type"]) == state, ] 
-  # rslt <- data.frame()
-  # rslt[c("n_snps_overlap", "or", "or_perm", "p_val", "p_val_perm", "p_val_emp"), ] <- 
-  EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
-                            background = meqtl.veh.snp.gr, 
-                            public = public, 
-                            nperm = nperm) 
-}
+nperm  <- 1000
 
-stopImplicitCluster()
+chromhmm.enrich.perm.rslt <- RunEnrichmentChromHMM(own = meqtl.delta.snp.gr, 
+                                                   background = meqtl.veh.snp.gr, 
+                                                   chromhmm.states = chromhmm.blood.states,
+                                                   out.fn = out.fn,
+                                                   fun = EnrichmentWithPermutation,
+                                                   nperm = nperm)
 
-chromhmm.enrich.perm.rslt <- cbind(chromhmm.enrich.perm.rslt %>% data.frame(row.names = NULL), 
-                                   state = states.lst)
+## Delta vs All
 
-chromhmm.enrich.perm.rslt[["data"]] <- "Blood_and_T-cells"
-chromhmm.enrich.perm.rslt[["n_perm"]] <- nperm
+out.fn <- paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_blood_enrichment_delta_vs_all.csv")
 
-chromhmm.enrich.perm.rslt
+nperm  <- 1000
 
-# /05_me-qtl_enrichment/region_wise_independent_snps/
+chromhmm.enrich.perm.rslt <- RunEnrichmentChromHMM(own = meqtl.delta.snp.gr, 
+                                                   background = background.all.gr, 
+                                                   chromhmm.states = chromhmm.blood.states,
+                                                   fun = EnrichmentWithPermutation,
+                                                   out.fn = out.fn,
+                                                   nperm = nperm)
 
-write.csv2(chromhmm.enrich.perm.rslt, 
-           file = paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_blood_enrichment.csv"), 
-           row.names = F, quote = F)
+## Baseline vs All
+
+out.fn <- paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_blood_enrichment_veh_vs_all.csv")
+
+nperm  <- 1000
+
+chromhmm.enrich.perm.rslt <- RunEnrichmentChromHMM(own = meqtl.veh.snp.gr, 
+                                                   background = background.all.gr, 
+                                                   chromhmm.states = chromhmm.blood.states,
+                                                   fun = EnrichmentWithPermutation,
+                                                   out.fn = out.fn,
+                                                   nperm = nperm)
 
 # chromHMM Brain
 
-no.cores <- detectCores() - 3
-cl <- makeCluster(no.cores)
-registerDoParallel(cl)
+## Delta vs Baseline
 
-nperm <- 1000
+out.fn <- paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_brain_enrichment_delta_vs_veh.csv")
 
-chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
-                                     .combine = rbind, 
-                                     .packages =  c("GenomicRanges", "dplyr")) %dopar% {
-                                       state <- states.lst[i]                                     
-                                       public <- chromhmm.brain.states[(elementMetadata(chromhmm.brain.states)[, "name"]) == state, ] 
-                                       # rslt <- data.frame()
-                                       # rslt[c("n_snps_overlap", "or", "or_perm", "p_val", "p_val_perm", "p_val_emp"), ] <- 
-                                       EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
-                                                                 background = meqtl.veh.snp.gr, 
-                                                                 public = public, 
-                                                                 nperm = nperm) 
-                                     }
+nperm  <- 1000
 
-stopImplicitCluster()
+chromhmm.enrich.perm.rslt <- RunEnrichmentChromHMM(own = meqtl.delta.snp.gr, 
+                                                   background = meqtl.veh.snp.gr, 
+                                                   chromhmm.states = chromhmm.brain.states,
+                                                   fun = EnrichmentWithPermutation,
+                                                   out.fn = out.fn,
+                                                   nperm = nperm)
 
-chromhmm.enrich.perm.rslt <- cbind(chromhmm.enrich.perm.rslt %>% data.frame(row.names = NULL), 
-                                   state = states.lst)
+## Delta vs All
 
-chromhmm.enrich.perm.rslt[["data"]] <- "Brain"
-chromhmm.enrich.perm.rslt[["n_perm"]] <- nperm
+out.fn <- paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_brain_enrichment_delta_vs_all.csv")
 
-chromhmm.enrich.perm.rslt
+nperm  <- 1000
 
-# /05_me-qtl_enrichment/region_wise_independent_snps/
+chromhmm.enrich.perm.rslt <- RunEnrichmentChromHMM(own = meqtl.delta.snp.gr, 
+                                                   background = background.all.gr, 
+                                                   chromhmm.states = chromhmm.brain.states,
+                                                   fun = EnrichmentWithPermutation,
+                                                   out.fn = out.fn,
+                                                   nperm = nperm)
 
-write.csv2(chromhmm.enrich.perm.rslt, 
-           file = paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_brain_enrichment.csv"), 
-           row.names = F, quote = F)
+## Baseline vs All
 
-# delta vs all
+out.fn <- paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_brain_enrichment_veh_vs_all.csv")
 
-# chromHMM Blood
+nperm  <- 1000
 
-no.cores <- detectCores() - 2
-cl <- makeCluster(no.cores)
-registerDoParallel(cl)
+chromhmm.enrich.perm.rslt <- RunEnrichmentChromHMM(own = meqtl.veh.snp.gr, 
+                                                   background = background.all.gr, 
+                                                   chromhmm.states = chromhmm.brain.states,
+                                                   fun = EnrichmentWithPermutation,
+                                                   out.fn = out.fn,
+                                                   nperm = nperm)
 
-nperm <- 1000
-
-chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
-                                     .combine = rbind, 
-                                     .packages =  c("GenomicRanges", "dplyr")) %dopar% {
-                                       state <- states.lst[i]                                     
-                                       public <- chromhmm.blood.states[(elementMetadata(chromhmm.blood.states)[, "type"]) == state, ] 
-                                       # rslt <- data.frame()
-                                       # rslt[c("n_snps_overlap", "or", "or_perm", "p_val", "p_val_perm", "p_val_emp"), ] <- 
-                                       EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
-                                                                 background = background.all.gr, 
-                                                                 public = public, 
-                                                                 nperm = nperm) 
-                                     }
-
-stopImplicitCluster()
-
-chromhmm.enrich.perm.rslt <- cbind(chromhmm.enrich.perm.rslt %>% data.frame(row.names = NULL), 
-                                   state = states.lst)
-
-chromhmm.enrich.perm.rslt[["data"]] <- "Blood_and_T-cells"
-chromhmm.enrich.perm.rslt[["n_perm"]] <- nperm
-
-chromhmm.enrich.perm.rslt
-
-# /05_me-qtl_enrichment/region_wise_independent_snps/
-
-write.csv2(chromhmm.enrich.perm.rslt, 
-           file = paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_blood_enrichment_delta_vs_all.csv"), 
-           row.names = F, quote = F)
-
-# chromHMM Brain
-
-no.cores <- detectCores() - 3
-cl <- makeCluster(no.cores)
-registerDoParallel(cl)
-
-nperm <- 1000
-
-chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
-                                     .combine = rbind, 
-                                     .packages =  c("GenomicRanges", "dplyr")) %dopar% {
-                                       state <- states.lst[i]                                     
-                                       public <- chromhmm.brain.states[(elementMetadata(chromhmm.brain.states)[, "name"]) == state, ] 
-                                       # rslt <- data.frame()
-                                       # rslt[c("n_snps_overlap", "or", "or_perm", "p_val", "p_val_perm", "p_val_emp"), ] <- 
-                                       EnrichmentWithPermutation(own = meqtl.delta.snp.gr, 
-                                                                 background = background.all.gr, 
-                                                                 public = public, 
-                                                                 nperm = nperm) 
-                                     }
-
-stopImplicitCluster()
-
-chromhmm.enrich.perm.rslt <- cbind(chromhmm.enrich.perm.rslt %>% data.frame(row.names = NULL), 
-                                   state = states.lst)
-
-chromhmm.enrich.perm.rslt[["data"]] <- "Brain"
-chromhmm.enrich.perm.rslt[["n_perm"]] <- nperm
-
-chromhmm.enrich.perm.rslt
-
-# /05_me-qtl_enrichment/region_wise_independent_snps/
-
-write.csv2(chromhmm.enrich.perm.rslt, 
-           file = paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_brain_enrichment_delta_vs_all.csv"), 
-           row.names = F, quote = F)
-
-
-# Baseline vs all
+# Run ChromHMM run enrichment for each blood (brain) cell type separately 
 
 # chromHMM Blood
 
-no.cores <- detectCores() - 2
-cl <- makeCluster(no.cores)
-registerDoParallel(cl)
+tissue <- "blood"
 
-nperm <- 1000
+if (!file.exists(paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_", tissue)))  
+  dir.create(paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_", tissue))
 
-chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
-                                     .combine = rbind, 
-                                     .packages =  c("GenomicRanges", "dplyr")) %dopar% {
-                                       state <- states.lst[i]                                     
-                                       public <- chromhmm.blood.states[(elementMetadata(chromhmm.blood.states)[, "type"]) == state, ] 
-                                       # rslt <- data.frame()
-                                       # rslt[c("n_snps_overlap", "or", "or_perm", "p_val", "p_val_perm", "p_val_emp"), ] <- 
-                                       EnrichmentWithPermutation(own = meqtl.veh.snp.gr, 
-                                                                 background = background.all.gr, 
-                                                                 public = public, 
-                                                                 nperm = nperm) 
-                                     }
+## Delta vs Baseline
 
-stopImplicitCluster()
+cell.types.lst <- elementMetadata(chromhmm.blood.states)[, "code"] %>% unique() %>% sort()
 
-chromhmm.enrich.perm.rslt <- cbind(chromhmm.enrich.perm.rslt %>% data.frame(row.names = NULL), 
-                                   state = states.lst)
+nperm  <- 1000
 
-chromhmm.enrich.perm.rslt[["data"]] <- "Blood_and_T-cells"
-chromhmm.enrich.perm.rslt[["n_perm"]] <- nperm
-
-chromhmm.enrich.perm.rslt
-
-# /05_me-qtl_enrichment/region_wise_independent_snps/
-
-write.csv2(chromhmm.enrich.perm.rslt, 
-           file = paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_blood_enrichment_veh_vs_all.csv"), 
-           row.names = F, quote = F)
+lapply(cell.types.lst, function(x){
+  
+  out.fn <- paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_", tissue, "/meqtl_snps_chromHMM_", tissue, "_enrichment_delta_vs_veh_", x, ".csv")
+  
+  RunEnrichmentChromHMM( 
+       own = meqtl.delta.snp.gr, 
+       background = meqtl.veh.snp.gr,
+       chromhmm.states = chromhmm.blood.states[ elementMetadata(chromhmm.blood.states)[, "code"] == x, ],
+       fun = EnrichmentWithPermutation,
+       out.fn = out.fn,
+       nperm = nperm)
+  })
 
 # chromHMM Brain
 
-no.cores <- detectCores() - 3
-cl <- makeCluster(no.cores)
-registerDoParallel(cl)
+tissue <- "brain"
 
-nperm <- 1000
+if (!file.exists(paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_", tissue)))  
+  dir.create(paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_", tissue))
 
-chromhmm.enrich.perm.rslt <- foreach(i =  seq_along(states.lst), 
-                                     .combine = rbind, 
-                                     .packages =  c("GenomicRanges", "dplyr")) %dopar% {
-                                       state <- states.lst[i]                                     
-                                       public <- chromhmm.brain.states[(elementMetadata(chromhmm.brain.states)[, "name"]) == state, ] 
-                                       # rslt <- data.frame()
-                                       # rslt[c("n_snps_overlap", "or", "or_perm", "p_val", "p_val_perm", "p_val_emp"), ] <- 
-                                       EnrichmentWithPermutation(own = meqtl.veh.snp.gr, 
-                                                                 background = background.all.gr, 
-                                                                 public = public, 
-                                                                 nperm = nperm) 
-                                     }
+## Delta vs Baseline
 
-stopImplicitCluster()
+cell.types.lst <- elementMetadata(chromhmm.brain.states)[, "code"] %>% unique() %>% sort()
 
-chromhmm.enrich.perm.rslt <- cbind(chromhmm.enrich.perm.rslt %>% data.frame(row.names = NULL), 
-                                   state = states.lst)
+nperm  <- 1000
 
-chromhmm.enrich.perm.rslt[["data"]] <- "Brain"
-chromhmm.enrich.perm.rslt[["n_perm"]] <- nperm
-
-chromhmm.enrich.perm.rslt
-
-# /05_me-qtl_enrichment/region_wise_independent_snps/
-
-write.csv2(chromhmm.enrich.perm.rslt, 
-           file = paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_brain_enrichment_veh_vs_all.csv"), 
-           row.names = F, quote = F)
+lapply(cell.types.lst[8:10], function(x){
+  
+  out.fn <- paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_", tissue, "/meqtl_snps_chromHMM_", tissue, "_enrichment_delta_vs_veh_", x, ".csv")
+  
+  RunEnrichmentChromHMM( 
+    own = meqtl.delta.snp.gr, 
+    background = meqtl.veh.snp.gr,
+    chromhmm.states = chromhmm.blood.states[ elementMetadata(chromhmm.brain.states)[, "code"] == x, ],
+    fun = EnrichmentWithPermutation,
+    out.fn = out.fn,
+    nperm = nperm)
+})

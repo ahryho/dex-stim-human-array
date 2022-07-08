@@ -63,7 +63,5 @@ EnrichmentWithPermutation <- function(own, background, public, nperm){
   p_value_permutat <- unlist(resampling)[attr(unlist(resampling), "names") == "p_value"] %>% mean() 
   or_permutat <- unlist(resampling)[attr(unlist(resampling), "names") == "odds ratio"] %>% mean() 
   
-  # c(n_snps_overlap = overlap, or, or_perm = or_permutat, p_val = p_value, p_val_perm = p_value_permutat, p_val_emp = p_value_emp)
-  
   return(c(n_snps_overlap = overlap, or, or_perm = or_permutat, p_val = p_value, p_val_perm = p_value_permutat, p_val_emp = p_value_emp)) 
 }

@@ -103,9 +103,13 @@ fwrite(gex.sub.veh.dex,
        quote = F, row.names = F, sep = ";")
 
 ###
-bio.dex.veh     <- fread(paste0(out.dir.pre, "veh_analysis/bio_mtrx_gex_veh.csv"))
-bio.sub.dex.veh <- bio.dex.veh[Feature %in% c("DNAm_SV1", "DNAm_SV2", "DNAm_SV3", "V1", "V2", "V3")]
+bio.dex.veh           <- fread(paste0(out.dir.pre, "veh_analysis/bio_mtrx_gex_veh.csv"))
+bio.sub.veh           <- bio.dex.veh[Feature %in% c("DNAm_SV1", "DNAm_SV2", "DNAm_SV3", "V1", "V2", "V3")]
+colnames(bio.sub.veh) <- c("Feature", sample.veh.ids$DNAm_ID)
+bio.sub.dex           <- bio.dex[Feature %in% c("DNAm_SV1", "DNAm_SV2", "DNAm_SV3", "V1", "V2", "V3")]
+colnames(bio.sub.dex) <- c("Feature", sample.dex.ids$DNAm_ID)
+bio.sub.veh.dex       <- cbind(bio.sub.veh, bio.sub.dex[, -1])
 
-fwrite(gex.sub.veh.dex, 
-       paste0(out.dir.pre, "veh_dex_analysis/bio_mtrx_gex_veh_svs_only.csv"),
+fwrite(bio.sub.veh.dex, 
+       paste0(out.dir.pre, "veh_dex_analysis/bio_mtrx_veh_dex_svs_only.csv"),
        quote = F, row.names = F, sep = ";")

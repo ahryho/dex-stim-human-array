@@ -76,10 +76,13 @@ dmps.450k
 ```
 
 ```{r set-up-params, out.width = "85%", fig.cap = "Model with DNAm BCCs and Genotype PCs", include = T, eval = T}
-fdr <- 0.05 #0.05
-fc  <- 0.00 #0.01
+fdr <- 0.01
+fc  <- 0.02
+
+lmem.rslt.delta.meqtl <- lmem.rslt[PROBE_ID %in% delta.meqtl.cpgs]
 
 VolcanoPlot(lmem.rslt, fdr, fc, "DNAm SVs and SNP PCs")
+VolcanoPlot(lmem.rslt.delta.meqtl, fdr, fc, "DNAm SVs and SNP PCs")
 ```
 
 # Get significant dmps

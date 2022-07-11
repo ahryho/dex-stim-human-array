@@ -321,19 +321,37 @@ ggplot(sign.pval.df, aes(x = Type, group = Treatment, fill = Treatment)) +
   scale_fill_manual(values = cbPalette[2:3]) 
 ```
 
+# Cell-type specificity on GR-induced (delta)-meQTLs
+
 ```{r}
-ind.meqtl.delta.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/me-qtl_cis_result_delta_fdr_005.csv") 
-delta.meqtl.cpgs   <- ind.meqtl.delta.df$gene %>% unique() 
+ind.meqtl.delta.df      <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/me-qtl_cis_result_delta_fdr_005.csv") 
+delta.meqtl.cpgs        <- ind.meqtl.delta.df$gene %>% unique() 
+```
+
+## Check if changes are significant
+
+```{r}
+sign.pval.delta.mqtl.df <- sign.pval.df[CpG_ID %in% delta.meqtl.cpgs, ] 
+blood.cell.types        <- levels(sign.pval.delta.mqtl.df$Type)
+
+test.res.df <- lapply(blood.cell.types, function(i){  # for each blood cell type
+  dex.fdr.lst <- sign.pval.delta.mqtl.df[Type == i][Treatment == "dex", fdr]
+  veh.fdr.lst <- sign.pval.delta.mqtl.df[Type == i][Treatment == "veh", fdr]
+  test.rslt   <- var.test(dex.fdr.lst, veh.fdr.lst)
+ 
+  return(data.frame(Type = i, "p-value" = test.rslt$p.value))
+  }) %>%
+  bind_rows()
 ```
 
 ```{r}
-sign.pval.df[CpG_ID %in% delta.meqtl.cpgs, ] %>%
-  ggplot(aes(x = Type, fill = Treatment)) +
+sign.pval.delta.mqtl.df <- left_join(sign.pval.delta.mqtl.df, test.res.df)
+ggplot(sign.pval.delta.mqtl.df, aes(x = Type, fill = Treatment)) +
   geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
-  # geom_text(aes(label =  scales::percent(prop.table(stat(count)))), 
-  # geom_text(aes(label = scales::percent(stat(count) / length(unique(sign.pval.df$CpG_ID)))), 
   geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 1)), 
-            stat = "count", vjust = -0.5, size = 5, position = position_dodge(width = .9)) + 
+            stat = "count", vjust = 1.5, size = 5, position = position_dodge(width = .9)) + 
+  geom_text(data = subset(sign.pval.delta.mqtl.df[Treatment == "veh"], p.value <= 0.05),
+            aes(label = "*"), stat = "count", vjust = .5,  fill = cbPalette[8], size = 16) +
   theme(legend.position = "bottom", # c(0.9, 0.9), 
         legend.title = element_blank(), 
         legend.text = element_text(size = 18),
@@ -348,8 +366,7 @@ sign.pval.df[CpG_ID %in% delta.meqtl.cpgs, ] %>%
 ```
 
 ```{r}
-sign.pval.df[CpG_ID %in% delta.meqtl.cpgs, ] %>%
-  ggplot(aes(x = Type, group = Treatment, fill = Treatment)) + 
+ggplot(sign.pval.delta.mqtl.df, aes(x = Type, group = Treatment, fill = Treatment)) + 
     geom_density(aes(y = stat(count) / length(delta.meqtl.cpgs), color = Treatment), 
              stat = "count",
              alpha = 0.2) + 

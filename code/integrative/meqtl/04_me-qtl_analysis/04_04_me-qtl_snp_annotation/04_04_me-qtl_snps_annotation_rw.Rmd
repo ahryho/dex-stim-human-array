@@ -119,36 +119,6 @@ delta.meqtl.snp.anno.df <- as.data.frame(delta.meqtl.snp.anno.rds@anno, row.name
 head(delta.meqtl.snp.anno.df, 10)
 ```
 
-<!-- #### Closest genes -->
-
-<!-- ```{r include = T, eval = T} -->
-<!-- head(cpg.closest.genes.dist.df, 100) -->
-<!-- ``` -->
-
-<!-- ### Genomic regions -->
-
-<!-- ```{r out.width = "90%", fig.cap = "Distribution of locations of the CpGs in different genomic regions based on Illumina EPIC annotation", include = T, eval = T} -->
-<!-- cbPalette <- c(  "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999") -->
-
-<!-- ggplot(meqtl.cpg.anno.df, aes(x = Model, fill = Relation_to_Island)) +  -->
-<!--   geom_bar( position = "fill") +  -->
-<!--   geom_text(aes(by = Model, # scales::percent(..count../tapply(..count.., ..x.., sum), accuracy = 0.1),  -->
-<!--                 y = (..count..)/sum(..count..)),  -->
-<!--             stat = "prop",  -->
-<!--             position = position_fill(vjust = .5), size = 3) + -->
-<!--   scale_y_continuous(labels = scales::percent) + -->
-<!--   labs(x = "", -->
-<!--        y = "Percentage of CpGs",  -->
-<!--        title = "") + -->
-<!--   theme(legend.position = "right", -->
-<!--         panel.grid.major = element_blank(), -->
-<!--         panel.background = element_blank(), -->
-<!--         plot.title = element_text(size = 8), -->
-<!--         axis.title = element_text(size = 8), -->
-<!--         axis.text.x = element_text(angle = 0, hjust = 0.5)) + -->
-<!--    scale_fill_manual("Type", values = cbPalette) -->
-<!-- ``` -->
-
 ### Gene regions
 
 ```{r include = F, eval = T}
@@ -187,67 +157,6 @@ ggplot(meqtl.snp.anno.stat.df, aes(x = Model, y = Frequency, fill = Feature)) +
         axis.text.x = element_text(angle = 0, hjust = 0.5)) +
    scale_fill_manual("Feature", values = cbPalette)
 ```
-
-
-
-<!-- ```{r include = F, eval = T} -->
-<!-- library(annotatr) -->
-<!-- library(AnnotationHub) -->
-<!-- library(TxDb.Hsapiens.UCSC.hg19.knownGene) -->
-
-<!-- annots <- c('hg19_cpgs', 'hg19_basicgenes') #, 'hg19_genes_intergenic', 'hg19_genes_intronexonboundaries') -->
-<!-- gene.annots <- c('hg19_basicgenes') #, 'hg19_genes_intergenic', 'hg19_genes_intronexonboundaries') -->
-
-<!-- annotations <- build_annotations( -->
-<!--   genome = "hg19", -->
-<!--   annotations = gene.annots -->
-<!-- ) -->
-<!-- ``` -->
-
-<!-- ```{r include = F, eval = T} -->
-<!-- delta.meqtls.cpg.annotated <- annotate_regions( -->
-<!--     regions = cpg.coord.range, -->
-<!--     annotations = annotations, -->
-<!--     ignore.strand = TRUE, -->
-<!--     quiet = FALSE) -->
-
-<!-- # print(delta.meqtls.cpg.annotated) -->
-<!-- # plot_annotation(annotated_regions = delta.meqtls.cpg.annotated) -->
-
-<!-- delta.meqtls.cpg.annotated.df <- data.frame(delta.meqtls.cpg.annotated) %>% setDT() -->
-
-<!-- delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_1to5kb", annot.type := "1-5kb"] -->
-<!-- delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_3UTRs", annot.type := "3UTRs"] -->
-<!-- delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_5UTRs", annot.type := "5UTRs"] -->
-<!-- delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_exons", annot.type := "exons"] -->
-<!-- delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_introns", annot.type := "introns"] -->
-<!-- delta.meqtls.cpg.annotated.df[annot.type == "hg19_genes_promoters", annot.type := "promoters"] -->
-<!-- # head(delta.meqtls.cpg.annotated.df) -->
-
-<!-- delta.meqtls.cpg.annotated.df <- delta.meqtls.cpg.annotated.df[, .(seqnames, start, end, annot.type)] %>% unique() -->
-
-<!-- delta.meqtls.cpg.annotated.df$annot.type <- factor(delta.meqtls.cpg.annotated.df$annot.type,  -->
-<!--                                                               levels = c("1-5kb", "promoters", "5UTRs", "introns", "exons", "3UTRs")) -->
-<!-- ``` -->
-
-<!-- ```{r out.width = "90%", fig.cap = "The distribution of CpGs in different gene regions", include = T, eval = T} -->
-<!-- ggplot(delta.meqtls.cpg.annotated.df, aes(x = annot.type)) +  -->
-<!--   geom_bar(aes(y = (..count..)/sum(..count..), fill = annot.type), position = position_dodge()) +  -->
-<!--   geom_text(aes(label = scales::percent((..count..)/sum(..count..), accuracy = 0.1), y = (..count..)/sum(..count..)),  -->
-<!--             stat = "count", vjust = -.5,  position = position_dodge(1), size = 3) + -->
-<!--   scale_y_continuous(labels = scales::percent) + -->
-<!--   labs(x = "Gene Region", -->
-<!--        y = "Percentage of CpG",  -->
-<!--        title = "From UCSC Genome Browser") + -->
-<!--   theme(legend.title = element_blank(),  -->
-<!--         legend.position = "none", #c(.1,.8), -->
-<!--         panel.grid.major = element_blank(), -->
-<!--         panel.background = element_blank(), -->
-<!--         plot.title = element_text(size = 8), -->
-<!--         axis.title = element_text(size = 8), -->
-<!--         axis.text.x = element_text(angle = 45, hjust = 0.5)) + -->
-<!--    scale_fill_manual(values = cbPalette) -->
-<!-- ``` -->
 
 ## Chromatin States {.tabset .tabset-fade .tabset-pills}
 
@@ -517,32 +426,61 @@ enrichment.all.df <- lapply(seq_along(enrichment.rslts.fn), function(i) {
 enrichment.all.df$state <- factor(enrichment.all.df$state, levels = chromhmm.states$STATE)
 levels(enrichment.all.df$state) <- sub("[0-9]*_", "", enrichment.all.df$state)
 
-plt.txt.size <- 20
-ggp.heatmap <- 
-  ggplot(enrichment.all.df, aes(state, ename, fill = p_val_emp)) + 
-    geom_tile(colour = "white", size = 0.25) +
+# Heatmap plot for emperical p-values
+
+plt.txt.size <- 18
+ggp.heatmap.pval <- 
+  ggplot(enrichment.all.df, aes(state, ename, fill = -log10(p_val_emp))) + 
+    geom_tile(colour = "white", size = 0.15) +
     theme(legend.position = "right",
-          legend.title = element_text(size = plt.txt.size, colour = "black"),
-          legend.text = element_text(size = plt.txt.size, colour = "black"),
+          legend.title = element_text(size = 0.75 * plt.txt.size, colour = "black"),
+          legend.text = element_text(size = 0.75 * plt.txt.size, colour = "black"),
+          legend.key.height= unit(2, 'cm'),
           panel.grid.major = element_blank(),
           panel.background = element_blank(),
           plot.title = element_text(size = 0.75 * plt.txt.size),
           axis.title = element_blank(),
           axis.text.x = element_text(size = 0.75 * plt.txt.size, angle = 90, colour = "black", hjust = 0.95, vjust = 0.2),
           axis.text.y = element_text(size = 0.75 * plt.txt.size, angle = 0, colour = "black")) +
-  scale_fill_viridis()
+    scale_fill_viridis(name = "-log10(P-value)")
+    # scale_fill_viridis(limits = c(0, 1), breaks = seq(0, 1, by = 0.1))
 
 add_slide(doc,
             layout = "Plot",
             master = "Basic") %>%
     ph_with(
-      value = ggp.heatmap,
+      value = ggp.heatmap.pval,
+      location = ph_location_label(ph_label = "Content Placeholder 2")
+    )
+
+# Heatmap plot for odd ratios
+
+ggp.heatmap.or <- 
+  ggplot(enrichment.all.df, aes(state, ename, fill = odds.ratio)) + 
+    geom_tile(colour = "white", size = 0.15) +
+    theme(legend.position = "right",
+          legend.title = element_text(size = 0.75 * plt.txt.size, colour = "black"),
+          legend.text = element_text(size = 0.75 * plt.txt.size, colour = "black"),
+          legend.key.height= unit(2, 'cm'),
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 0.75 * plt.txt.size),
+          axis.title = element_blank(),
+          axis.text.x = element_text(size = 0.75 * plt.txt.size, angle = 90, colour = "black", hjust = 0.95, vjust = 0.2),
+          axis.text.y = element_text(size = 0.75 * plt.txt.size, angle = 0, colour = "black")) +
+    scale_fill_viridis(limits = c(floor(min(enrichment.all.df$odds.ratio)), round(max(enrichment.all.df$odds.ratio))), 
+                       breaks = seq(floor(min(enrichment.all.df$odds.ratio)), round(max(enrichment.all.df$odds.ratio)), by = 0.25))
+
+  add_slide(doc,
+            layout = "Plot",
+            master = "Basic") %>%
+    ph_with(
+      value = ggp.heatmap.or,
       location = ph_location_label(ph_label = "Content Placeholder 2")
     )
 
 print(doc, target = paste0("~/bio/code/mpip/dex-stim-human-array/output/plots/enrichment/meqtl_snp_chromHMM_", tissue, "_enrichment.pptx"))
 ```
-
 
 ### Brain
 
@@ -554,12 +492,13 @@ enrichmnet.rslts.df <- lapply(enrichment.rslts.fn, read.csv2)
 
 doc <- read_pptx("~/bio/code/mpip/dex-stim-human-array/output/plots/enrichment/meqtl_snp_chromHMM_enrichment.pptx")
 
-lapply(seq_along(enrichmnet.rslts.df), function(i) {
+enrichment.all.df <- lapply(seq_along(enrichment.rslts.fn), function(i) {
   eid   <-  sub(".csv", "", sub(".*_", "", enrichment.rslts.fn[i]))
   ename <- epigenome[EID == eid, NAME] 
   plot.title <- paste0("Histone mark enrichment for the delta meSNPs for ", ename)
-  ggp <- PlotChromHMMEnrichment (enrichmnet.rslts.df[[i]], 
-                                 plt.title = plot.title)
+  
+  df  <- read.csv2(enrichment.rslts.fn[i])
+  ggp <- PlotChromHMMEnrichment(df, plt.title = plot.title)
   
   add_slide(doc,
             layout = "Plot",
@@ -568,7 +507,64 @@ lapply(seq_along(enrichmnet.rslts.df), function(i) {
       value = ggp,
       location = ph_location_label(ph_label = "Content Placeholder 2")
     )
-  })
+  return(data.frame(df, ename = ename))
+  }) %>%
+  bind_rows()
+
+enrichment.all.df$state <- factor(enrichment.all.df$state, levels = chromhmm.states$STATE)
+levels(enrichment.all.df$state) <- sub("[0-9]*_", "", enrichment.all.df$state)
+
+# Heatmap plot for emperical p-values
+
+plt.txt.size <- 18
+ggp.heatmap.pval <- 
+  ggplot(enrichment.all.df, aes(state, ename, fill = -log10(p_val_emp))) + 
+    geom_tile(colour = "white", size = 0.15) +
+    theme(legend.position = "right",
+          legend.title = element_text(size = 0.75 * plt.txt.size, colour = "black"),
+          legend.text = element_text(size = 0.75 * plt.txt.size, colour = "black"),
+          legend.key.height= unit(2, 'cm'),
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 0.75 * plt.txt.size),
+          axis.title = element_blank(),
+          axis.text.x = element_text(size = 0.75 * plt.txt.size, angle = 90, colour = "black", hjust = 0.95, vjust = 0.2),
+          axis.text.y = element_text(size = 0.75 * plt.txt.size, angle = 0, colour = "black")) +
+    scale_fill_viridis(name = "-log10(P-value)")
+
+add_slide(doc,
+            layout = "Plot",
+            master = "Basic") %>%
+    ph_with(
+      value = ggp.heatmap.pval,
+      location = ph_location_label(ph_label = "Content Placeholder 2")
+    )
+
+# Heatmap plot for odd ratios
+
+ggp.heatmap.or <- 
+  ggplot(enrichment.all.df, aes(state, ename, fill = odds.ratio)) + 
+    geom_tile(colour = "white", size = 0.15) +
+    theme(legend.position = "right",
+          legend.title = element_text(size = 0.75 * plt.txt.size, colour = "black"),
+          legend.text = element_text(size = 0.75 * plt.txt.size, colour = "black"),
+          legend.key.height= unit(2, 'cm'),
+          panel.grid.major = element_blank(),
+          panel.background = element_blank(),
+          plot.title = element_text(size = 0.75 * plt.txt.size),
+          axis.title = element_blank(),
+          axis.text.x = element_text(size = 0.75 * plt.txt.size, angle = 90, colour = "black", hjust = 0.95, vjust = 0.2),
+          axis.text.y = element_text(size = 0.75 * plt.txt.size, angle = 0, colour = "black")) +
+    scale_fill_viridis(limits = c(floor(min(enrichment.all.df$odds.ratio)), max(enrichment.all.df$odds.ratio)), 
+                       breaks = seq(floor(min(enrichment.all.df$odds.ratio)), max(enrichment.all.df$odds.ratio), by = 0.25))
+
+  add_slide(doc,
+            layout = "Plot",
+            master = "Basic") %>%
+    ph_with(
+      value = ggp.heatmap.or,
+      location = ph_location_label(ph_label = "Content Placeholder 2")
+    )
 
 print(doc, target = paste0("~/bio/code/mpip/dex-stim-human-array/output/plots/enrichment/meqtl_snp_chromHMM_", tissue, "_enrichment.pptx"))
 ```

@@ -62,18 +62,19 @@ chromhmm.blood.df   <- lapply(enrichment.rslts.fn, function(x){
   eid   =  sub(".csv", "", sub(".*_", "", x))
   ename = epigenome[EID == eid, NAME] 
   df    = read.csv2(x)
-  return(data.frame(df, ename = ename))
+  return(data.frame(df, eid = eid, ename = ename))
 }) %>% bind_rows() %>% setDT()
 
-types           <- chromhmm.blood.df[p_val_emp < p.val.thrsh, .(state, ename)]
-blood.df <- delta.meqtl.snp.chromhmm.anno.df[annot.code %in% types$ename][annot.name %in% types$state]
-cpg.gene.loc.df <- left_join(cpg.gene.loc.df, ind.meqtl.delta.df[, .(CpG_ID, SNP)])
-colnames(cpg.gene.loc.df) <- col.names
+types    <- chromhmm.blood.df[p_val_emp < p.val.thrsh, .(state, eid, ename)]
+blood.df <- delta.meqtl.snp.chromhmm.anno.df[annot.name %in% types$state][annot.code %in% types$eid]
+blood.df <- left_join(blood.df, ind.meqtl.delta.df[, .(CpG_ID, SNP)])
+blood.df[, Type := annot.name]#paste0(annot.name, "-", annot.code)]
+blood.df <- blood.df[,.(CpG_ID, Type, SNP)]
 
 # GWAS enrichment
 # 
 
-df <- rbind(cpg.isl.df, cpg.gene.loc.df, dmps.intersect.df)
+df <- rbind(cpg.isl.df, cpg.gene.loc.df, dmps.intersect.df, blood.df)
 df.lst <- split(df, df$Type)
 df.lst <- lapply(df.lst, function(df) df$SNP)
 

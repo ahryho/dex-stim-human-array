@@ -1,4 +1,5 @@
 setwd("~/bio/code/mpip/dex-stim-human-array/")
+source("code/util.R")
 
 ### Load eQTM results
 ### 
@@ -11,12 +12,12 @@ eqtm.dex.nom.df   <- fread(eqtm.dex.nom.fn,
 ### 
 dir.pre <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/meqtl_parallel_and_opposite_fc_groups/"
 
-meqtl.opposite.fc.df             <- fread(paste0(dir.pre, "meqtl_opposite_fc_gr_df.csv"))
-opposite.fc.grp.cpg <- meqtl.opposite.fc.df$CpG_ID %>% unique()
+meqtl.opposite.fc.df <- fread(paste0(dir.pre, "meqtl_opposite_fc_gr_df.csv"))
+opposite.fc.grp.cpg  <- meqtl.opposite.fc.df$CpG_ID %>% unique()
            
 ### Get overlap eQTM and meQTLs
 ###                                
-venn.rslt     <- GetVennPlt(meqtl.df = opposite.fc.grp.cpg, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
+venn.rslt     <- GetVennPlt(meqtl.df = meqtl.opposite.fc.df, eqtm.df = eqtm.dex.nom.df, cbPal.col = "#999999")
 venn.eqtm.df  <- eqtm.dex.nom.df[CpG_ID %in% venn.rslt$cpgs, .(CpG_ID, ENSG_ID)] 
 venn.meqtl.df <- meqtl.opposite.fc.df[CpG_ID %in% venn.rslt$cpgs][, .(meQTL_ID, CpG_ID, SNP)] %>% unique()
 
@@ -112,4 +113,13 @@ bio.sub.veh.dex       <- cbind(bio.sub.veh, bio.sub.dex[, -1])
 
 fwrite(bio.sub.veh.dex, 
        paste0(out.dir.pre, "veh_dex_analysis/bio_mtrx_veh_dex_svs_only.csv"),
+       quote = F, row.names = F, sep = ";")
+
+### mapping for CpG and ENSG
+### 
+mapping.full.df  <- fread("~/bio/code/mpip/dex-stim-human-array/data/mapping/mapping_cpg_gene_ensg_full.csv" )
+mapping.bioxm.df <- na.omit(rbind(mapping.full.df[CpG_ID %in% cpg.ids], mapping.full.df[Ensemble_ID %in% ensg.ids]))[,.(CpG_ID, Ensemble_ID)]
+
+fwrite(mapping.bioxm.df, 
+       paste0(out.dir.pre, "mapping_parmegene_cpg_ensg.csv"),
        quote = F, row.names = F, sep = ";")

@@ -79,9 +79,14 @@ dmps.450k
 fdr <- 0.01
 fc  <- 0.02
 
+VolcanoPlot(lmem.rslt, fdr, fc, "DNAm SVs and SNP PCs")
+```
+
+```{r, fig.cap = "Volcano plot for delta (GR)-meQTL CpGs"}
+ind.meqtl.delta.df      <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/me-qtl_cis_indp_rw_delta_fdr_005.csv") 
+delta.meqtl.cpgs        <- ind.meqtl.delta.df$gene %>% unique() 
 lmem.rslt.delta.meqtl <- lmem.rslt[PROBE_ID %in% delta.meqtl.cpgs]
 
-VolcanoPlot(lmem.rslt, fdr, fc, "DNAm SVs and SNP PCs")
 VolcanoPlot(lmem.rslt.delta.meqtl, fdr, fc, "DNAm SVs and SNP PCs")
 ```
 

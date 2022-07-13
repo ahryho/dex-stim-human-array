@@ -1,0 +1,221 @@
+---
+title: "Cell-type specific enrichment analysis"
+subtitle: "Dexamethasone-Stimulated Human Array Project"
+output:
+  html_notebook
+editor_options:
+  chunk_output_type: inline
+---
+
+```{r, warning=FALSE, message=FALSE}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(corrplot)
+library(factoextra)
+library(viridis)
+library(ggpubr)
+```
+
+```{r}
+cbPalette <- c( "#0072B2", "#009E73", "#E69F00", "#F0E442", "#D55E00", "#CC79A7", "#56B4E9", "#999999")
+```
+
+```{r}
+treatment   <- "veh"
+
+pval.veh.df <- fread(paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_pvals_",treatment, ".csv"))
+
+pval.veh.bcc.df <- pval.veh.df[, 1:13]
+```
+
+```{r}
+fdr.bcc.df <- matrix(p.adjust(as.vector(as.matrix(pval.veh.bcc.df[, 2:13])), method='fdr'), 
+                     ncol=12) %>%
+  data.frame()
+
+fdr.bcc.df <- cbind(pval.veh.bcc.df$CpG_ID, fdr.bcc.df)
+colnames(fdr.bcc.df) <- colnames(pval.veh.bcc.df)
+```
+
+```{r}
+sign.pval.df <- fdr.bcc.df %>% reshape2::melt(measure.vars = colnames(fdr.bcc.df)[2:13]) %>% setDT()
+colnames(sign.pval.df) <- c("CpG_ID", "Type", "fdr")
+
+sign.pval.df <- sign.pval.df[fdr <= 0.05]
+sign.pval.df <- na.omit(sign.pval.df)
+sign.pval.df
+```
+
+```{r}
+veh.sign.pval.df <- sign.pval.df
+veh.sign.pval.df[["Treatment"]] <- treatment
+```
+
+DEX 
+
+```{r}
+treatment   <- "dex"
+
+pval.dex.df <- fread(paste0("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/cell_type_enrichment/dnam_cell_type_enrichment_pvals_",treatment, ".csv"))
+
+pval.dex.bcc.df <- pval.dex.df[, 1:13]
+```
+
+```{r}
+fdr.bcc.df <- matrix(p.adjust(as.vector(as.matrix(pval.dex.bcc.df[, 2:13])), method ='fdr'), 
+                     ncol=12) %>%
+  data.frame()
+
+fdr.bcc.df <- cbind(pval.dex.bcc.df$CpG_ID, fdr.bcc.df)
+colnames(fdr.bcc.df) <- colnames(pval.dex.bcc.df)
+```
+
+```{r}
+sign.pval.df <- fdr.bcc.df %>% reshape2::melt(measure.vars = colnames(fdr.bcc.df)[2:13]) %>% setDT()
+colnames(sign.pval.df) <- c("CpG_ID", "Type", "fdr")
+sign.pval.df <- sign.pval.df[fdr <= 0.05]
+
+sign.pval.df <- na.omit(sign.pval.df)
+sign.pval.df
+```
+```{r}
+dex.sign.pval.df <- sign.pval.df
+dex.sign.pval.df[["Treatment"]] <- treatment
+```
+
+
+## Distribution plots for Basleine and Dex together
+
+```{r}
+sign.pval.df <- rbind(veh.sign.pval.df, dex.sign.pval.df)
+```
+
+```{r}
+# perc.labels <- (table(sign.pval.df$Type) / nrow(fdr.bcc.df)) %>% as.numeric() %>% scales::percent()
+
+ggplot(sign.pval.df, aes(x = Type, fill = Treatment)) +
+  geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
+  # geom_text(aes(label =  scales::percent(prop.table(stat(count)))), 
+  # geom_text(aes(label = scales::percent(stat(count) / length(unique(sign.pval.df$CpG_ID)))), 
+  geom_text(aes(label = scales::percent(stat(count) / nrow(fdr.bcc.df), accuracy = 1)), 
+            stat = "count", vjust = -0.5, size = 3, position = position_dodge(width = .9)) + 
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10), 
+        axis.title = element_text(size = 10),
+        axis.text = element_text(size = 10)) + 
+  labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
+       x = "", y = "") +
+  scale_fill_manual(values = cbPalette[2:3]) 
+```
+
+```{r}
+ggplot(sign.pval.df, aes(x = Type, group = Treatment, fill = Treatment)) + 
+  geom_density(aes(y = stat(count) / nrow(fdr.bcc.df), color = Treatment), 
+           stat = "count",
+           alpha = 0.2) + 
+  scale_y_continuous(labels = scales::percent) + 
+  labs(x = " ", y = "", 
+       title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types") + 
+  theme(legend.title = element_blank(), 
+        legend.position = "bottom", 
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(), 
+        plot.title = element_text(size = 8), 
+        axis.title = element_text(size = 8), 
+        axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+  scale_color_manual(values = cbPalette[2:3]) +
+  scale_fill_manual(values = cbPalette[2:3]) 
+```
+
+# Cell-type specificity on GR-induced (delta)-meQTLs
+
+```{r}
+ind.meqtl.delta.df      <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/me-qtl_cis_result_delta_fdr_005.csv") 
+delta.meqtl.cpgs        <- ind.meqtl.delta.df$gene %>% unique() 
+sign.pval.delta.mqtl.df <- sign.pval.df[CpG_ID %in% delta.meqtl.cpgs, ] 
+```
+
+## Check if changes are significant
+
+### Distribution of P-values for each blood cell-type
+
+Kolmogorov-Smirnov test: Do 2 samples follow the same distribution?
+
+```{r}
+blood.cell.types        <- levels(sign.pval.delta.mqtl.df$Type)
+
+test.res.df <- lapply(blood.cell.types, function(i){  # for each blood cell type
+  dex.fdr.lst <- sign.pval.delta.mqtl.df[Type == i][Treatment == "dex", fdr]
+  veh.fdr.lst <- sign.pval.delta.mqtl.df[Type == i][Treatment == "veh", fdr]
+  test.rslt   <- wilcox.test(dex.fdr.lst, veh.fdr.lst)
+ 
+  return(data.frame(Type = i, "p-value" = test.rslt$p.value))
+  }) %>%
+  bind_rows()
+
+sign.pval.delta.mqtl.df <- left_join(sign.pval.delta.mqtl.df, test.res.df)
+```
+
+```{r}
+ggplot(sign.pval.delta.mqtl.df, aes(x = -log10(fdr), fill = Treatment)) + 
+  geom_density(alpha = 0.3, aes(color = Treatment)) +
+  geom_text(data = subset(unique(sign.pval.delta.mqtl.df[, .(Treatment, Type, p.value)])),
+            aes(x = -Inf, y = -Inf, label = paste0("KS test = ", signif(p.value, 3))), 
+            hjust = -0.5, vjust = -15, size = 5, color = "black" ) +
+  facet_wrap(~ Type, scales = "free", ncol = 4) +
+  theme(legend.position = "bottom", # c(.9,.9), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10, color = "black"),
+        axis.title = element_text(size = 10, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"),
+        strip.text.x = element_text(size = 10, margin = margin())) +
+  labs(title = "Distribution of FDRs of GR-meQTL CpGs across bloss cell type", x = "-log10 FDR", y = "") +
+  scale_fill_manual(values = cbPalette[2:3]) +
+  scale_color_manual(values = cbPalette[2:3]) 
+```
+
+```{r}
+ggplot(sign.pval.delta.mqtl.df, aes(x = Type, fill = Treatment)) +
+  geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
+  geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 1)), 
+            stat = "count", vjust = 1.5, size = 5, position = position_dodge(width = .9)) + 
+  geom_text(data = subset(sign.pval.delta.mqtl.df[Treatment == "veh"], p.value <= 0.05),
+            aes(label = "*"), stat = "count", vjust = .5,  fill = cbPalette[8], size = 16) +
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
+        legend.text = element_text(size = 18),
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 18), 
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18, colour = "black")) + 
+  labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
+       x = "", y = "") +
+  scale_fill_manual(values = cbPalette[2:3]) 
+```
+
+```{r}
+ggplot(sign.pval.delta.mqtl.df, aes(x = Type, group = Treatment, fill = Treatment)) + 
+    geom_density(aes(y = stat(count) / length(delta.meqtl.cpgs), color = Treatment), 
+             stat = "count",
+             alpha = 0.2) + 
+    scale_y_continuous(labels = scales::percent) + 
+    labs(x = " ", y = "", 
+         title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types") + 
+    theme(legend.title = element_blank(), 
+          legend.position = "bottom", 
+          panel.grid.major = element_blank(), 
+          panel.background = element_blank(), 
+          plot.title = element_text(size = 8), 
+          axis.title = element_text(size = 8), 
+          axis.text.x = element_text(angle = 0, hjust = 0.5)) +
+    scale_color_manual(values = cbPalette[2:3]) +
+    scale_fill_manual(values = cbPalette[2:3]) 
+```

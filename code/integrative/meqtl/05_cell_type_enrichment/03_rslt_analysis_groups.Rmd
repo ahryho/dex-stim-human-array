@@ -150,7 +150,7 @@ tca.sign.mu.median.veh.df <- aggregate(tca_mu_val ~ Model + Type, tca.sign.mu.pv
 tca.sign.mu.median.veh.df[["Treatment"]] <- treatment
 ```
 
-DEX 
+DEX
 
 ```{r}
 treatment   <- "dex"
@@ -181,6 +181,7 @@ sign.pval.df[CpG_ID %in% parallel.fc.veh.dex.ids$CpG_ID, Model := "parallel_fc_v
 sign.pval.df <- na.omit(sign.pval.df)
 sign.pval.df
 ```
+
 ```{r}
 dex.sign.pval.df <- sign.pval.df
 dex.sign.pval.df[["Treatment"]] <- treatment
@@ -214,7 +215,6 @@ stats %>%
        x = "Blood cell type", y = "") +
   scale_fill_brewer(palette = "Dark2")
 ```
-
 
 ```{r}
 ggplot(sign.pval.df, aes(x = Type, group = Model, fill = Model)) + 

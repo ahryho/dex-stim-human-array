@@ -1,3 +1,7 @@
+library(data.table)
+library(dplyr)
+library(UpSetR)
+
 dir.pre     <- "~/bio/code/mpip/dex-stim-human-array/"
 out.dir.pre <- paste0(dir.pre, "output/data/integrative/matrixEQTL/meqtls/")
 
@@ -84,7 +88,7 @@ library(UpSetR)
 upset(fromList(df.lst), 
       sets = names(df.lst),
       nsets = length(df.lst), 
-     # nintersects = 20, 
+      nintersects = 100, 
       mainbar.y.label = "Number of intersections", 
       text.scale = 1, 
       keep.order = T,

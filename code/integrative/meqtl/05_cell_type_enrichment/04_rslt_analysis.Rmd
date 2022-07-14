@@ -141,6 +141,47 @@ sign.pval.delta.mqtl.df <- sign.pval.df[CpG_ID %in% delta.meqtl.cpgs, ]
 
 ## Check if changes are significant
 
+### Enrichment GE-meQTL CpGs over all CpGs
+
+```{r}
+blood.cell.types        <- levels(sign.pval.delta.mqtl.df$Type)
+
+enrich.res.df <- lapply(blood.cell.types, function(i){  # for each blood cell type
+  
+  treatment <- "dex"
+  
+  type.sign      <- nrow(sign.pval.df[Type == i][Treatment == treatment])
+  type.non.sign  <- nrow(sign.pval.df[Treatment == treatment]) - type.sign
+  meqtl.sign     <- nrow(sign.pval.delta.mqtl.df[Type == i][Treatment == treatment])
+  meqtl.non.sign <- nrow(sign.pval.delta.mqtl.df[Treatment == treatment]) - meqtl.sign
+  
+  conf.mtrx <- matrix(c(type.sign, meqtl.sign, 
+                        type.non.sign, meqtl.non.sign), 
+                      2, 2, byrow = TRUE)
+  
+  test.rslt <- fisher.test(conf.mtrx)
+  dex.pval  <- test.rslt$p.value
+  
+  treatment <- "veh"
+  
+  type.sign      <- nrow(sign.pval.df[Type == i][Treatment == treatment])
+  type.non.sign  <- nrow(sign.pval.df[Treatment == treatment]) - type.sign
+  meqtl.sign     <- nrow(sign.pval.delta.mqtl.df[Type == i][Treatment == treatment])
+  meqtl.non.sign <- nrow(sign.pval.delta.mqtl.df[Treatment == treatment]) - meqtl.sign
+  
+  conf.mtrx <- matrix(c(type.sign, meqtl.sign, 
+                        type.non.sign, meqtl.non.sign), 
+                      2, 2, byrow = TRUE)
+  
+  test.rslt <- fisher.test(conf.mtrx)
+  veh.pval  <- test.rslt$p.value
+  
+  
+  return(data.frame(Type = i, dex_pval = dex.pval, veh_pval = veh.pval))
+  }) %>%
+  bind_rows()
+```
+
 ### Distribution of P-values for each blood cell-type
 
 Kolmogorov-Smirnov test: Do 2 samples follow the same distribution?
@@ -151,7 +192,7 @@ blood.cell.types        <- levels(sign.pval.delta.mqtl.df$Type)
 test.res.df <- lapply(blood.cell.types, function(i){  # for each blood cell type
   dex.fdr.lst <- sign.pval.delta.mqtl.df[Type == i][Treatment == "dex", fdr]
   veh.fdr.lst <- sign.pval.delta.mqtl.df[Type == i][Treatment == "veh", fdr]
-  test.rslt   <- wilcox.test(dex.fdr.lst, veh.fdr.lst)
+  test.rslt   <- ks.test(dex.fdr.lst, veh.fdr.lst)
  
   return(data.frame(Type = i, "p-value" = test.rslt$p.value))
   }) %>%

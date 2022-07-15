@@ -10,7 +10,7 @@ library(org.Hs.eg.db)
 
 library(annotatr)
 
-out.dir.pre  <- "~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/"
+out.dir.pre  <- "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/"
 
 system(paste0("ls -lha ", out.dir.pre))
 
@@ -129,18 +129,19 @@ saveRDS(snp.anno,
 
 ## 7. Chromatin annotation
 
-chromhmm.all.states <- readRDS("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_all_states.Rds")
+chromhmm.all.states <- readRDS("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/annotation/chromHMM/chromHMM_all_states.Rds")
 colnames(values(chromhmm.all.states))[1] <- "type"
 chromhmm.all.states <- subset(chromhmm.all.states, !(seqnames %in% c("chrM", "chrX", "chrY")))
 
 # Subset Blood and T-cells
 
-chromhmm.epigenomes <- read.csv("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/epigenomes.tsv", sep = "\t")
-chromhmm.blood.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Blood & T-cell", "EID"]
+chromhmm.epigenomes <- read.csv("/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/annotation/chromHMM/epigenomes.tsv", sep = "\t")
+chromhmm.blood.eids <- chromhmm.epigenomes[chromhmm.epigenomes$GROUP == "Blood & T-cell" |
+                                             chromhmm.epigenomes$EID %in% c("E029", "E030", "E032", "E046") , "EID"]
 
 chromhmm.blood.states <- chromhmm.all.states[(elementMetadata(chromhmm.all.states)[, "code"] %in% chromhmm.blood.eids)]
 
-saveRDS(chromhmm.blood.states, "~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/chromHMM_blood_states.Rds")
+saveRDS(chromhmm.blood.states, "/binder/mgp/workspace/2020_DexStim_Array_Human/dex-stim-human-array/data/annotation/chromHMM/chromHMM_blood_states.Rds")
 
 chromhmm.blood.states <- subset(chromhmm.blood.states, !(seqnames %in% c("chrM", "chrX", "chrY")))
 

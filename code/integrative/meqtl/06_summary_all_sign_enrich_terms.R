@@ -1,6 +1,8 @@
 library(data.table)
 library(dplyr)
 library(UpSetR)
+library(ComplexHeatmap)
+library(RColorBrewer)
 
 dir.pre     <- "~/bio/code/mpip/dex-stim-human-array/"
 out.dir.pre <- paste0(dir.pre, "output/data/integrative/matrixEQTL/meqtls/")
@@ -44,10 +46,6 @@ dmps.intersect <- intersect(ind.meqtl.delta.df$CpG_ID, dmps.cpgs$CpG_ID)
 dmps.intersect.df <- data.frame(CpG_ID = dmps.intersect, Type = "GR-DMPs")
 dmps.intersect.df <- left_join(dmps.intersect.df, ind.meqtl.delta.df[, .(CpG_ID, SNP)])
 
-# Cell-type specific 
-# 
-
-
 # ChromHMM enrichment
 
 epigenome <- fread("~/bio/code/mpip/dex-stim-human-array/data/annotation/chromHMM/epigenomes.tsv",
@@ -73,27 +71,55 @@ types    <- chromhmm.blood.df[p_val_emp < p.val.thrsh, .(state, eid, ename)]
 blood.df <- delta.meqtl.snp.chromhmm.anno.df[annot.name %in% types$state][annot.code %in% types$eid]
 blood.df <- left_join(blood.df, ind.meqtl.delta.df[, .(CpG_ID, SNP)])
 blood.df[, Type := annot.name]#paste0(annot.name, "-", annot.code)]
-blood.df <- blood.df[,.(CpG_ID, Type, SNP)]
+blood.df <- blood.df[,.(CpG_ID, Type, SNP)] %>% unique()
 
 # GWAS enrichment
 # 
 
-df <- rbind(cpg.isl.df, cpg.gene.loc.df, dmps.intersect.df, blood.df)
-df.lst <- split(df, df$Type)
+
+df <- rbind(cpg.isl.df, cpg.gene.loc.df, blood.df, dmps.intersect.df)
+df.lst <- split(df[, c("Type", "SNP")], df$Type)
 df.lst <- lapply(df.lst, function(df) df$SNP)
+
+nb.cols <- length(unique(df$Type))
+mycolors <- colorRampPalette(brewer.pal(8, "Paired"))(nb.cols)
+
+m <- as.data.frame(list_to_matrix(df.lst))
 
 library(UpSetR)
 
-
-upset(fromList(df.lst), 
-      sets = names(df.lst),
+upset(m, 
+      sets = unique(df$Type), # names(df.lst),
       nsets = length(df.lst), 
-      nintersects = 100, 
-      mainbar.y.label = "Number of intersections", 
+      queries = list(list(query = intersects, params = list("Island", "Promoter (<=1kb)", "15_Quies"), color = "red"),
+                     list(query = intersects, params = list("Island", "Promoter (<=1kb)", "15_Quies", "14_ReprPCWk"), color = "red"),
+                     list(query = intersects, params = list("Island", "Promoter (<=1kb)", "15_Quies", "14_ReprPCWk", "5_TxWk"), color = "red"),
+                     list(query = intersects, params = list("Island", "Promoter (<=1kb)", "15_Quies", "4_Tx", "5_TxWk"), color = "red")),
+      nintersects = 73, 
+      sets.bar.color = mycolors,
+      mainbar.y.label = "Nr of intersections\nmeSNPs", 
+      text.scale = 1.3, 
+      keep.order = T,
+      line.size = 0.1,
+      mb.ratio = c(0.3, 0.7),
+      # sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
+      order.by = c("freq"), # "degree"), 
+      group.by = "degree")
+
+
+df.lst.interest <- list(`7_Enh` = df.lst$`7_Enh`,
+                        `GR-DMPs` = df.lst$`GR-DMPs`,
+                        `Promoter (<=1kb)` = df.lst$`Promoter (<=1kb)`,
+                        Island = df.lst$Island)
+
+upset(fromList(df.lst.interest), 
+      sets = names(df.lst.interest),
+      nsets = length(df.lst.interest), 
+      nintersects = 50, 
+      sets.bar.color = mycolors[1:4],
+      mainbar.y.label = "Number of intersections, meSNPs", 
       text.scale = 1, 
       keep.order = T,
+      line.size = 0.1,
       # sets.bar.color = c( "#0072B2", "#009E73", "#E69F00"), 
       order.by = "freq")
-
-ggplot(plt.df, aes(x = SNP, y = Type)) +
-  geom_point()

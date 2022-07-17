@@ -98,15 +98,16 @@ ggplot(sign.pval.df, aes(x = Type, fill = Treatment)) +
   geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
   # geom_text(aes(label =  scales::percent(prop.table(stat(count)))), 
   # geom_text(aes(label = scales::percent(stat(count) / length(unique(sign.pval.df$CpG_ID)))), 
-  geom_text(aes(label = scales::percent(stat(count) / nrow(fdr.bcc.df), accuracy = 1)), 
-            stat = "count", vjust = -0.5, size = 3, position = position_dodge(width = .9)) + 
+  geom_text(aes(label = scales::percent(stat(count) / nrow(fdr.bcc.df), accuracy = 0.1)), 
+            stat = "count", vjust = -0.5, size = 5, position = position_dodge(width = .9)) + 
   theme(legend.position = "bottom", # c(0.9, 0.9), 
         legend.title = element_blank(), 
+        legend.text = element_text(size = 18),
         panel.grid.major = element_blank(), 
         panel.background = element_blank(),
-        plot.title = element_text(size = 10), 
-        axis.title = element_text(size = 10),
-        axis.text = element_text(size = 10)) + 
+        plot.title = element_text(size = 18), 
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18)) + 
   labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
        x = "", y = "") +
   scale_fill_manual(values = cbPalette[2:3]) 
@@ -139,14 +140,80 @@ delta.meqtl.cpgs        <- ind.meqtl.delta.df$gene %>% unique()
 sign.pval.delta.mqtl.df <- sign.pval.df[CpG_ID %in% delta.meqtl.cpgs, ] 
 ```
 
+```{r}
+ggplot(sign.pval.delta.mqtl.df, aes(x = Type, fill = Treatment)) +
+  geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
+  geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 1)), 
+            stat = "count", vjust = -.5, size = 5, position = position_dodge(width = .9)) + 
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
+        legend.text = element_text(size = 18),
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 18), 
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18, colour = "black")) + 
+  labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
+       x = "", y = "") +
+  scale_fill_manual(values = cbPalette[2:3]) 
+```
+
 ## Check if changes are significant
+
+### Enrichment GE-meQTL CpGs between dex and baseline
+
+```{r}
+blood.cell.types        <- unique(sign.pval.delta.mqtl.df$Type)
+
+enrich.res.df <- lapply(blood.cell.types, function(i){  # for each blood cell type
+
+  dex.sign      <- nrow(sign.pval.delta.mqtl.df[Type == i][Treatment == "dex"])
+  dex.non.sign  <- nrow(sign.pval.delta.mqtl.df[Treatment == "dex"]) - dex.sign
+  veh.sign     <- nrow(sign.pval.delta.mqtl.df[Type == i][Treatment == "veh"])
+  veh.non.sign <- nrow(sign.pval.delta.mqtl.df[Treatment == "veh"]) - veh.sign
+  
+  conf.mtrx <- matrix(c(dex.sign, veh.sign, 
+                        dex.non.sign, veh.non.sign), 
+                      2, 2, byrow = T)
+  
+  test.rslt <- fisher.test(conf.mtrx)
+  
+  return(data.frame(Type = i, p.value = test.rslt$p.value))
+  }) %>%
+  bind_rows()
+
+enrich.res.df[["Treatment"]] <- "veh"
+```
+
+
+```{r}
+ggplot(sign.pval.delta.mqtl.df, aes(x = Type, fill = Treatment)) +
+  geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
+  geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 1)), 
+            stat = "count", vjust = 1.5, size = 5, position = position_dodge(width = .9)) + 
+  geom_text(data = subset(enrich.res.df, p.value <= 0.05),
+            aes(label = "*"), stat = "count", vjust = .5,  fill = cbPalette[8], size = 16) +
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
+        legend.text = element_text(size = 18),
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 18), 
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18, colour = "black")) + 
+  labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
+       x = "", y = "") +
+  scale_fill_manual(values = cbPalette[2:3]) 
+```
 
 ### Enrichment GE-meQTL CpGs over all CpGs
 
 ```{r}
-blood.cell.types        <- levels(sign.pval.delta.mqtl.df$Type)
+blood.cell.types        <- unique(sign.pval.delta.mqtl.df$Type)
 
 enrich.res.df <- lapply(blood.cell.types, function(i){  # for each blood cell type
+  
+  ### DEX ###
   
   treatment <- "dex"
   
@@ -160,7 +227,9 @@ enrich.res.df <- lapply(blood.cell.types, function(i){  # for each blood cell ty
                       2, 2, byrow = TRUE)
   
   test.rslt <- fisher.test(conf.mtrx)
-  dex.pval  <- test.rslt$p.value
+  dex.df    <- data.frame(Type = i, p.value = test.rslt$p.value, Treatment = treatment)
+  
+  ### Basleine ###
   
   treatment <- "veh"
   
@@ -174,12 +243,34 @@ enrich.res.df <- lapply(blood.cell.types, function(i){  # for each blood cell ty
                       2, 2, byrow = TRUE)
   
   test.rslt <- fisher.test(conf.mtrx)
-  veh.pval  <- test.rslt$p.value
+  veh.df    <- data.frame(Type = i, p.value = test.rslt$p.value, Treatment = treatment)
   
-  
-  return(data.frame(Type = i, dex_pval = dex.pval, veh_pval = veh.pval))
+  return(rbind(dex.df, veh.df))
   }) %>%
   bind_rows()
+
+reshape(enrich.res.df, idvar = "Type", timevar = "Treatment", direction = "wide")
+```
+
+```{r}
+ggplot(sign.pval.delta.mqtl.df, aes(x = Type, fill = Treatment)) +
+  geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
+  geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 1)), 
+            stat = "count", vjust = 1.5, size = 5, position = position_dodge(width = .9)) + 
+  geom_label(data = subset(enrich.res.df, p.value <= 0.05),
+            aes(label = "*"), 
+            stat = "count", vjust = -1.5, size = 5, position = position_dodge(width = 1)) +
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
+        legend.text = element_text(size = 18),
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 18), 
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18, colour = "black")) + 
+  labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
+       x = "", y = "") +
+  scale_fill_manual(values = cbPalette[2:3]) 
 ```
 
 ### Distribution of P-values for each blood cell-type

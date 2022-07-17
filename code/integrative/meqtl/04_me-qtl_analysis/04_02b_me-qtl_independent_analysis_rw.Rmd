@@ -333,6 +333,14 @@ ggVennDiagram(meqtls.meqtls,
     scale_color_manual(values = cbPalette) +
     scale_fill_gradient(low = alpha(cbPalette[2], 0.5), high = alpha(cbPalette[1], 0.5))
 ```
+```{r}
+plot(euler(meqtls.meqtls),labels =  c(paste0("Delta, ", perc.olap.delta.with.veh), 
+                                 paste0("Baseline, ", perc.olap.veh.with.delta)),
+      
+     fills = list(fill = c(alpha(cbPalette[2], 0.5), alpha(cbPalette[1], 0.5)), alpha = 0.7),
+     edges = list(col = "white", lex = 2),
+     quantities = list(type = c("counts"), cex = 1))
+```
 
 ### SNP level
   
@@ -601,22 +609,29 @@ library(mltools)
 library(ggrepel)
 
 meqtl.delta.full.df <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/region_wise_independent_snps/me-qtl_cis_indp_rw_delta_fdr_005_with_distances.csv")
+meqtl.delta.full.df[, abs_dist := dist]
+meqtl.delta.full.df[strand == "-", dist := - abs_dist ]
 
-bins.df <- data.frame(DistanceInterval = bin_data(data.table::data.table(meqtl.delta.full.df), binCol = "dist", bins =seq(-1e6, 1e6, by = 100000) , returnDT = F))
+fdr.thr <- 0.05
+
+avg.dist <- median(meqtl.delta.full.df$abs_dist)
+
+bins.df <- data.frame(DistanceInterval = mltools::bin_data(data.table::data.table(meqtl.delta.full.df), binCol = "dist", bins =seq(-1e6, 1e6, by = 100000) , returnDT = F))
 
 ggplot(bins.df, aes(DistanceInterval)) + 
   geom_bar(position = "identity", fill = cbPalette[2], colour = cbPalette[2], alpha = 0.1) +
   stat_count(geom = "text", 
              aes(label = comma(..count.., accuracy = 1L)),
-             position = position_dodge(1),  vjust = -1, colour = "black", cex = 2) +
+             position = position_dodge(1),  vjust = -1, colour = "black", cex = 4) +
+  annotate(geom = "text", x = 5,  y = 700, label = paste0("Median of distances between \nCpG and SNP: ", avg.dist, " bp"), color = "red", size = 12, fontface = "bold") +
   theme(legend.position = c(.1,.9), 
         legend.title = element_blank(),
         panel.grid.major = element_blank(),
         panel.background = element_blank(),
         axis.text.y = element_blank(),
-        axis.text.x = element_text(angle = 45, vjust = 0.8),
-        plot.title = element_text(size = 10),
-        axis.title = element_text(size = 8)) +
+        axis.text.x = element_text(angle = 45, vjust = 0.8, size = 14, color = "black"),
+        plot.title = element_text(size = 18),
+        axis.title = element_text(size = 18)) +
   labs(title = paste0("Distribution of cis-meQTLs, FDR = ", fdr.thr), 
        x = "Distance Interval, bp", 
        y = "No. cis-meQTLs") + 

@@ -156,7 +156,7 @@ chromhmm.brain.states <- readRDS(paste0(out.dir.pre, "data/annotation/chromHMM/c
 
 ## Delta vs Baseline
 
-out.fn <- paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_blood_enrichment_delta_vs_all.csv")
+out.fn <- paste0(out.dir.pre, "output/data/integrative/matrixEQTL/05_me-qtl_enrichment/region_wise_independent_snps/meqtl_snps_chromHMM_blood_enrichment_delta_vs_veh.csv")
 
 nperm  <- 1000
 

@@ -32,7 +32,6 @@ pheno           <- read.csv2(pheno.fn) #, na.strings = "#N/A")
 dnam.veh.ids    <- pheno[pheno$Include == 1 & pheno$Group == "veh", "DNAm_ID"]
 pheno           <- pheno[pheno$Include == 1 & pheno$Group == treatment, ]
 
-pheno$Sample_ID         <- as.factor(pheno$Sample_ID)
 pheno$Age               <- as.numeric(pheno$Age)
 pheno$BMI_D1            <- as.numeric(pheno$BMI_D1)
 pheno$PC1               <- as.numeric(pheno$PC1)
@@ -43,13 +42,15 @@ pheno$DNAm_SmokingScore <- as.numeric(pheno$DNAm_SmokingScore)
 
 bcc.df <- read.csv2(bcc.fn)
 bcc.df <- bcc.df[match(dnam.veh.ids, bcc.df$DNAm_ID,), ] # put in the same order bcc df as pheno df
-cov.df <- cbind(bcc.df[, -1], pheno[, c("Sex", "Age", "BMI_D1", "Status", "DNAm_SmokingScore", "PC1", "PC2")])
+cov.df <- cbind(bcc.df[, -1], pheno[, c("DNA_ID", "Sex", "Age", "BMI_D1", "Status", "DNAm_SmokingScore", "PC1", "PC2")])
 
 # 2. Making sure about samples in the same order for all dfs
 
-samples.ids <- as.character(pheno$DNA_ID)
+samples.ids <- as.character(cov.df$DNA_ID)
 table(colnames(beta.mtrx) %in% samples.ids)
 all(samples.ids == colnames(beta.mtrx))
+
+cov.df <- cov.df[, -which(colnames(cov.df) == "DNA_ID")]
 
 # 3. Build model
 
@@ -57,10 +58,13 @@ no.cores <- detectCores() - 1
 cl <- makeCluster(no.cores)
 registerDoParallel(cl)
 
+# cpg <- 1 #cg26928153
 # res <- foreach(cpg = 1:3, .combine = rbind) %dopar% {
 res <- foreach(cpg =  1:nrow(beta.mtrx), .combine = rbind) %dopar% {
-  lm.model <- lm(beta.mtrx[cpg, ] ~ (. - 1), data = cov.df)
-  mdl.coef <- summary(lm.model)$coefficients
+  lm.model <- lm(beta.mtrx[cpg, ] ~ ., data = cov.df[, -which(colnames(cov.df) %in% c("Neu"))])
+  lm.neu   <- lm(beta.mtrx[cpg, ] ~ Neu + Sex + Age + BMI_D1 + Status + DNAm_SmokingScore + PC1 +PC2, 
+                 data = cov.df)
+  mdl.coef <- rbind(summary(lm.model)$coefficients, Neu = summary(lm.neu)$coefficients["Neu", ])
   pvals <- sapply(colnames(cov.df), function(x){
     if (x %in% rownames(mdl.coef)){
       return(mdl.coef[x,'Pr(>|t|)'])

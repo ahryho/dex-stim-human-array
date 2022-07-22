@@ -287,8 +287,9 @@ sign.hits.df[, c("veh", "delta")] %>% as.matrix() %>%
     geom_col() +
     geom_text(aes(label = comma(cnt, accuracy = 1L), y = cnt), 
                   stat = "identity", 
-                  vjust = -0.2, size = 2.5) + 
+                  vjust = -0.5, size = 3) + 
     scale_y_continuous(labels = scientific) +
+   scale_x_discrete(labels = c("baseline", "dex")) +
     # scale_fill_viridis(discrete = TRUE, alpha = 0.9, option = "C") +
     labs(title = " ", y = "Count", x = " ") + 
     facet_wrap(~ Var1, ncol = 3) +

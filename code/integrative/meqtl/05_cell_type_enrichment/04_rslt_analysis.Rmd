@@ -138,6 +138,12 @@ ggplot(sign.pval.df, aes(x = Type, group = Treatment, fill = Treatment)) +
 ind.meqtl.delta.df      <- fread("~/bio/code/mpip/dex-stim-human-array/output/data/integrative/matrixEQTL/meqtls/me-qtl_cis_result_delta_fdr_005.csv") 
 delta.meqtl.cpgs        <- ind.meqtl.delta.df$gene %>% unique() 
 sign.pval.delta.mqtl.df <- sign.pval.df[CpG_ID %in% delta.meqtl.cpgs, ] 
+
+sign.pval.cpgs.dex <- sign.pval.delta.mqtl.df[Treatment == "dex", CpG_ID]
+sign.pval.cpgs.veh <- sign.pval.delta.mqtl.df[Treatment == "veh", CpG_ID]
+
+intersect.cpgs          <- intersect(sign.pval.cpgs.dex, sign.pval.cpgs.veh) 
+sign.pval.delta.mqtl.df <- sign.pval.delta.mqtl.df[CpG_ID %in% intersect.cpgs,]
 ```
 
 ```{r}
@@ -350,4 +356,76 @@ ggplot(sign.pval.delta.mqtl.df, aes(x = Type, group = Treatment, fill = Treatmen
           axis.text.x = element_text(angle = 0, hjust = 0.5)) +
     scale_color_manual(values = cbPalette[2:3]) +
     scale_fill_manual(values = cbPalette[2:3]) 
+```
+
+# Cell-type specificity on DMPs
+
+```{r}
+dmps.sign.anno.fn <- "~/bio/code/mpip/dex-stim-human-array/output/data/methylation/02_dmp/dmps_fdr01_fc02_anno_full.csv"
+dmps.sign.anno.df <- fread(dmps.sign.anno.fn)
+dmps              <- dmps.sign.anno.df$PROBE_ID %>% unique() 
+sign.pval.dmps.df <- sign.pval.df[CpG_ID %in% dmps, ] 
+
+sign.pval.dmps.dex <- sign.pval.dmps.df[Treatment == "dex", CpG_ID]
+sign.pval.dmps.veh <- sign.pval.dmps.df[Treatment == "veh", CpG_ID]
+
+intersect.dmps     <- intersect(sign.pval.dmps.dex, sign.pval.dmps.veh) 
+sign.pval.dmps.df  <- sign.pval.dmps.df[CpG_ID %in% intersect.dmps,]
+```
+
+Kolmogorov-Smirnov test: Do 2 samples follow the same distribution?
+
+```{r}
+blood.cell.types        <- levels(sign.pval.delta.mqtl.df$Type)
+
+test.res.df <- lapply(blood.cell.types, function(i){  # for each blood cell type
+  dex.fdr.lst <- sign.pval.dmps.df[Type == i][Treatment == "dex", fdr]
+  veh.fdr.lst <- sign.pval.dmps.df[Type == i][Treatment == "veh", fdr]
+  test.rslt   <- ks.test(dex.fdr.lst, veh.fdr.lst)
+ 
+  return(data.frame(Type = i, "p-value" = test.rslt$p.value))
+  }) %>%
+  bind_rows()
+
+sign.pval.dmps.df <- left_join(sign.pval.dmps.df, test.res.df)
+```
+```{r}
+ggplot(sign.pval.dmps.df, aes(x = -log10(fdr), fill = Treatment)) + 
+  geom_density(alpha = 0.3, aes(color = Treatment)) +
+  geom_text(data = subset(unique(sign.pval.dmps.df[, .(Treatment, Type, p.value)])),
+            aes(x = -Inf, y = -Inf, label = paste0("KS test = ", signif(p.value, 3))), 
+            hjust = -0.5, vjust = -15, size = 5, color = "black" ) +
+  facet_wrap(~ Type, scales = "free", ncol = 4) +
+  theme(legend.position = "bottom", # c(.9,.9), 
+        legend.title = element_blank(),
+        panel.grid.major = element_blank(),
+        panel.background = element_blank(),
+        plot.title = element_text(size = 10, color = "black"),
+        axis.title = element_text(size = 10, color = "black"),
+        axis.text.x = element_text(size = 10, color = "black"),
+        axis.text.y = element_text(size = 10, color = "black"),
+        strip.text.x = element_text(size = 10, margin = margin())) +
+  labs(title = "Distribution of FDRs of GR-DMPs across bloss cell type", x = "-log10 FDR", y = "") +
+  scale_fill_manual(values = cbPalette[2:3]) +
+  scale_color_manual(values = cbPalette[2:3]) 
+```
+
+```{r}
+ggplot(sign.pval.dmps.df, aes(x = Type, fill = Treatment)) +
+  geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
+  geom_text(aes(label = scales::percent(stat(count) / length(dmps), accuracy = 1)), 
+            stat = "count", vjust = 1.5, size = 5, position = position_dodge(width = .9)) + 
+  geom_text(data = subset(sign.pval.dmps.df[Treatment == "veh"], p.value <= 0.05),
+             aes(label = "*"), stat = "count", vjust = 0.4,size = 16) +
+  theme(legend.position = "bottom", # c(0.9, 0.9), 
+        legend.title = element_blank(), 
+        legend.text = element_text(size = 18),
+        panel.grid.major = element_blank(), 
+        panel.background = element_blank(),
+        plot.title = element_text(size = 18), 
+        axis.title = element_text(size = 18),
+        axis.text = element_text(size = 18, colour = "black")) + 
+  labs(title = "Distribution of GR-DMPs across 12 blood cell types",
+       x = "", y = "") +
+  scale_fill_manual(values = cbPalette[2:3]) 
 ```

@@ -89,12 +89,13 @@ dex.sign.pval.df[["Treatment"]] <- treatment
 
 ```{r}
 sign.pval.df <- rbind(veh.sign.pval.df, dex.sign.pval.df)
+intersect.cpgs <- intersect(dex.sign.pval.df$CpG_ID, veh.sign.pval.df$CpG_ID)
 ```
 
 ```{r}
 # perc.labels <- (table(sign.pval.df$Type) / nrow(fdr.bcc.df)) %>% as.numeric() %>% scales::percent()
 
-ggplot(sign.pval.df, aes(x = Type, fill = Treatment)) +
+ggplot(sign.pval.df[CpG_ID %in% intersect.cpgs], aes(x = Type, fill = Treatment)) +
   geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
   # geom_text(aes(label =  scales::percent(prop.table(stat(count)))), 
   # geom_text(aes(label = scales::percent(stat(count) / length(unique(sign.pval.df$CpG_ID)))), 
@@ -113,7 +114,7 @@ ggplot(sign.pval.df, aes(x = Type, fill = Treatment)) +
   scale_fill_manual(values = cbPalette[2:3]) 
 ```
 
-```{r}
+```{r eval = F, include = F}
 ggplot(sign.pval.df, aes(x = Type, group = Treatment, fill = Treatment)) + 
   geom_density(aes(y = stat(count) / nrow(fdr.bcc.df), color = Treatment), 
            stat = "count",
@@ -149,7 +150,7 @@ sign.pval.delta.mqtl.df <- sign.pval.delta.mqtl.df[CpG_ID %in% intersect.cpgs,]
 ```{r}
 ggplot(sign.pval.delta.mqtl.df, aes(x = Type, fill = Treatment)) +
   geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
-  geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 1)), 
+  geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 0.1)), 
             stat = "count", vjust = -.5, size = 5, position = position_dodge(width = .9)) + 
   theme(legend.position = "bottom", # c(0.9, 0.9), 
         legend.title = element_blank(), 
@@ -284,7 +285,8 @@ ggplot(sign.pval.delta.mqtl.df, aes(x = Type, fill = Treatment)) +
 Kolmogorov-Smirnov test: Do 2 samples follow the same distribution?
 
 ```{r}
-blood.cell.types        <- levels(sign.pval.delta.mqtl.df$Type)
+blood.cell.types        <- unique(sign.pval.delta.mqtl.df$Type)
+# blood.cell.types        <- levels(sign.pval.delta.mqtl.df$Type)
 
 test.res.df <- lapply(blood.cell.types, function(i){  # for each blood cell type
   dex.fdr.lst <- sign.pval.delta.mqtl.df[Type == i][Treatment == "dex", fdr]
@@ -322,18 +324,18 @@ ggplot(sign.pval.delta.mqtl.df, aes(x = -log10(fdr), fill = Treatment)) +
 ```{r}
 ggplot(sign.pval.delta.mqtl.df, aes(x = Type, fill = Treatment)) +
   geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
-  geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 1)), 
-            stat = "count", vjust = 1.5, size = 5, position = position_dodge(width = .9)) + 
+  geom_text(aes(label = scales::percent(stat(count) / length(delta.meqtl.cpgs), accuracy = 0.1)), 
+            stat = "count", vjust = -0.5, size = 5, position = position_dodge(width = 0.9)) + 
   geom_text(data = subset(sign.pval.delta.mqtl.df[Treatment == "veh"], p.value <= 0.05),
-            aes(label = "*"), stat = "count", vjust = .5,  fill = cbPalette[8], size = 16) +
+            aes(label = "*"), stat = "count", vjust = 0.15,  size = 16) +
   theme(legend.position = "bottom", # c(0.9, 0.9), 
         legend.title = element_blank(), 
-        legend.text = element_text(size = 18),
+        legend.text = element_text(size = 16),
         panel.grid.major = element_blank(), 
         panel.background = element_blank(),
-        plot.title = element_text(size = 18), 
-        axis.title = element_text(size = 18),
-        axis.text = element_text(size = 18, colour = "black")) + 
+        plot.title = element_text(size = 16), 
+        axis.title = element_text(size = 16),
+        axis.text = element_text(size = 16, colour = "black")) + 
   labs(title = "Distribution of CpGs significant at FDR = 0.05 across 12 blood cell types",
        x = "", y = "") +
   scale_fill_manual(values = cbPalette[2:3]) 
@@ -376,7 +378,7 @@ sign.pval.dmps.df  <- sign.pval.dmps.df[CpG_ID %in% intersect.dmps,]
 Kolmogorov-Smirnov test: Do 2 samples follow the same distribution?
 
 ```{r}
-blood.cell.types        <- levels(sign.pval.delta.mqtl.df$Type)
+blood.cell.types        <- unique(sign.pval.delta.mqtl.df$Type)
 
 test.res.df <- lapply(blood.cell.types, function(i){  # for each blood cell type
   dex.fdr.lst <- sign.pval.dmps.df[Type == i][Treatment == "dex", fdr]
@@ -413,18 +415,18 @@ ggplot(sign.pval.dmps.df, aes(x = -log10(fdr), fill = Treatment)) +
 ```{r}
 ggplot(sign.pval.dmps.df, aes(x = Type, fill = Treatment)) +
   geom_bar(stat = "count", alpha = 1, position = position_dodge(width = .9)) +
-  geom_text(aes(label = scales::percent(stat(count) / length(dmps), accuracy = 1)), 
-            stat = "count", vjust = 1.5, size = 5, position = position_dodge(width = .9)) + 
+  geom_text(aes(label = scales::percent(stat(count) / length(dmps), accuracy = 0.1)), 
+            stat = "count", vjust = -0.1, size = 5, position = position_dodge(width = .9)) + 
   geom_text(data = subset(sign.pval.dmps.df[Treatment == "veh"], p.value <= 0.05),
-             aes(label = "*"), stat = "count", vjust = 0.4,size = 16) +
+             aes(label = "*"), stat = "count", vjust = 0.15,size = 16) +
   theme(legend.position = "bottom", # c(0.9, 0.9), 
         legend.title = element_blank(), 
-        legend.text = element_text(size = 18),
+        legend.text = element_text(size = 16),
         panel.grid.major = element_blank(), 
         panel.background = element_blank(),
-        plot.title = element_text(size = 18), 
-        axis.title = element_text(size = 18),
-        axis.text = element_text(size = 18, colour = "black")) + 
+        plot.title = element_text(size = 16), 
+        axis.title = element_text(size = 16),
+        axis.text = element_text(size = 16, colour = "black")) + 
   labs(title = "Distribution of GR-DMPs across 12 blood cell types",
        x = "", y = "") +
   scale_fill_manual(values = cbPalette[2:3]) 
